@@ -1,36 +1,20 @@
-# dependencies (bun install)
-node_modules
+# Node modules
+/node_modules
 
-# output
-out
-dist
-*.tgz
+# Compilation output
+/dist
 
-# code coverage
-coverage
-*.lcov
+# pnpm deploy output
+/bundle
 
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+# Hardhat Build Artifacts
+/artifacts
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+# Hardhat compilation (v2) support directory
+/cache
 
-# caches
-.eslintcache
-.cache
-*.tsbuildinfo
+# Typechain output
+/types
 
-# IntelliJ based IDEs
-.idea
-
-# Finder (MacOS) folder config
-.DS_Store
-
-/generated/prisma
+# Hardhat coverage reports
+/coverage

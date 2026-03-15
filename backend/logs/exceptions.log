@@ -1,0 +1,1733 @@
+2026-03-11 14:15:34 [[31merror[39m]: [31muncaughtException: argument handler is required[39m
+[31mTypeError: argument handler is required[39m
+[31m    at use (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:385:15)[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/routes.ts:8:8[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+TypeError: argument handler is required
+    at use (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:385:15)
+    at /home/dimas/project/decentrashare/backend/src/routes.ts:8:8
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Wed Mar 11 2026 14:15:34 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 29761,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 104820736,
+      "heapTotal": 9096192,
+      "heapUsed": 6900151,
+      "external": 2420315,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      0.91,
+      1.42,
+      0.99
+    ],
+    "uptime": 11364
+  },
+  "trace": [
+    {
+      "column": 15,
+      "file": "/home/dimas/project/decentrashare/backend/node_modules/router/index.js",
+      "function": "use",
+      "line": 385,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 8,
+      "file": "/home/dimas/project/decentrashare/backend/src/routes.ts",
+      "function": null,
+      "line": 8,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:33:34 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:33:34 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 156852,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 100724736,
+      "heapTotal": 9141248,
+      "heapUsed": 6566237,
+      "external": 2354113,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.82,
+      2.1,
+      1.54
+    ],
+    "uptime": 11253
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:34:20 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:34:20 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 157506,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 103649280,
+      "heapTotal": 9322496,
+      "heapUsed": 6960361,
+      "external": 2468285,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.13,
+      2.11,
+      1.57
+    ],
+    "uptime": 11299
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:35:04 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:35:04 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 158119,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts",
+      "--verbose"
+    ],
+    "memoryUsage": {
+      "rss": 104202240,
+      "heapTotal": 9096192,
+      "heapUsed": 6877369,
+      "external": 2419053,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.29,
+      2.16,
+      1.61
+    ],
+    "uptime": 11342
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:36:06 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:36:06 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 159017,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 102555648,
+      "heapTotal": 9127936,
+      "heapUsed": 6887920,
+      "external": 2421972,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      3.13,
+      2.44,
+      1.75
+    ],
+    "uptime": 11405
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:36:40 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:36:40 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 159508,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 104390656,
+      "heapTotal": 9226240,
+      "heapUsed": 6502705,
+      "external": 2353349,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      4.42,
+      2.82,
+      1.9
+    ],
+    "uptime": 11438
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:38:37 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:38:37 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 161801,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 102326272,
+      "heapTotal": 9241600,
+      "heapUsed": 6517290,
+      "external": 2355150,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.83,
+      2.73,
+      1.97
+    ],
+    "uptime": 11556
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:38:58 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:38:58 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 162258,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 105463808,
+      "heapTotal": 9174016,
+      "heapUsed": 6575185,
+      "external": 2358901,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.78,
+      2.73,
+      1.99
+    ],
+    "uptime": 11576
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:39:04 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:39:04 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 162389,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 102932480,
+      "heapTotal": 8820736,
+      "heapUsed": 6848587,
+      "external": 2434607,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.8,
+      2.73,
+      2
+    ],
+    "uptime": 11583
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:40:39 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:40:39 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 163799,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun"
+    ],
+    "memoryUsage": {
+      "rss": 102993920,
+      "heapTotal": 9272320,
+      "heapUsed": 6692236,
+      "external": 2386768,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.12,
+      2.54,
+      2
+    ],
+    "uptime": 11678
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:42:41 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:42:41 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 165687,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 104742912,
+      "heapTotal": 9208832,
+      "heapUsed": 6489773,
+      "external": 2345313,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      3.09,
+      2.91,
+      2.21
+    ],
+    "uptime": 11799
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:43:19 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:43:19 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 166227,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 103030784,
+      "heapTotal": 9191424,
+      "heapUsed": 6483555,
+      "external": 2345271,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.78,
+      2.85,
+      2.22
+    ],
+    "uptime": 11838
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:44:34 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:44:34 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 167424,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun"
+    ],
+    "memoryUsage": {
+      "rss": 104378368,
+      "heapTotal": 9073664,
+      "heapUsed": 6608107,
+      "external": 2359519,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      3.31,
+      3.02,
+      2.33
+    ],
+    "uptime": 11913
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:44:44 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:44:44 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 167596,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 103137280,
+      "heapTotal": 9175040,
+      "heapUsed": 6864064,
+      "external": 2419172,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.87,
+      2.94,
+      2.31
+    ],
+    "uptime": 11922
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-12 14:45:25 [[31merror[39m]: [31muncaughtException: handleGetMe is not defined[39m
+[31mReferenceError: handleGetMe is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at asyncModuleEvaluation (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetMe is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts:22:46
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at asyncModuleEvaluation (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu Mar 12 2026 14:45:25 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 168189,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun"
+    ],
+    "memoryUsage": {
+      "rss": 103071744,
+      "heapTotal": 9194496,
+      "heapUsed": 6864568,
+      "external": 2434764,
+      "arrayBuffers": 3876
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.36,
+      2.8,
+      2.29
+    ],
+    "uptime": 11964
+  },
+  "trace": [
+    {
+      "column": 46,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/auth/auth.routes.ts",
+      "function": null,
+      "line": 22,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "asyncModuleEvaluation",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}

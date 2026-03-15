@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import authRoutes from './modules/auth/auth.routes'
+import documentRoutes from './modules/document/document.routes'
 
 const router = Router()
 
 // API Routes
 router.use('/auth', authRoutes)
+router.use('/documents', documentRoutes)
 
 // Health check endpoint
 router.get('/health', (req, res) => {

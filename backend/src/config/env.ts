@@ -1,7 +1,4 @@
 import { z } from 'zod'
-import dotenv from 'dotenv'
-
-dotenv.config()
 
 const envSchema = z.object({
   PORT: z.string().default('3000'),
@@ -24,6 +21,15 @@ const envSchema = z.object({
 
   // Webhook
   WEBHOOK_BASE_URL: z.string().default('http://localhost:3000'),
+
+  // Pinata IPFS
+  PINATA_JWT: z.string(),
+  PINATA_GATEWAY_URL: z.string().default('https://gateway.pinata.cloud/ipfs/'),
+
+  // Blockchain
+  GANACHE_URL: z.string().default('http://127.0.0.1:7545'),
+  CONTRACT_ADDRESS: z.string().optional(),
+  DEPLOYER_PRIVATE_KEY: z.string().optional(),
 })
 
 const parseEnv = () => {
@@ -69,5 +75,15 @@ export const config = {
 
   webhook: {
     baseUrl: env.WEBHOOK_BASE_URL,
+  },
+
+  ipfs: {
+    pinataJwt: env.PINATA_JWT,
+    gatewayUrl: env.PINATA_GATEWAY_URL,
+  },
+
+  blockchain: {
+    ganacheUrl: env.GANACHE_URL,
+    contractAddress: env.CONTRACT_ADDRESS,
   },
 }

@@ -32,7 +32,7 @@ const startServer = async () => {
         process.exit(1)
       }, 30000)
     }
-
+ 
     process.on('SIGTERM', () => shutdown('SIGTERM'))
     process.on('SIGINT', () => shutdown('SIGINT'))
 

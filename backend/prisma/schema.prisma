@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -13,16 +10,87 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PrivacyLevel {
+  PRIVATE
+  PUBLIC
+  LINK_ONLY
+  SPECIFIC_USER
+}
+
 model User {
-  id            String   @id @default(uuid())
-  walletAddress String   @unique
-  nonce         String
-  username      String?  @unique
-  email         String?  @unique
-  avatarUrl     String?
-  isRegistered  Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String    @id @default(uuid())
+  walletAddress   String    @unique
+  username        String?   @unique
+  email           String?   @unique
+  avatarUrl       String?
+  role            Role      @default(USER)
+  isRegistered    Boolean   @default(false)
+  nonce           String?
+  nonceExpiresAt  DateTime?
+  refreshToken    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  documents       Document[]
+  folders         Folder[]
+  sharedDocuments DocumentAccess[]
 
   @@map("users")
+}
+
+model Folder {
+  id        String     @id @default(uuid())
+  name      String
+  ownerId   String
+  owner     User       @relation(fields: [ownerId], references: [id])
+  documents Document[]
+  createdAt DateTime   @default(now())
+
+  @@map("folders")
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  ipfsHash     String   @unique
+  fileHash     String   @unique
+  blockchainTx String
+  isOnChain    Boolean  @default(false)
+  
+  privacy      PrivacyLevel @default(PRIVATE)
+  
+  isArchived   Boolean  @default(false)
+  deletedAt    DateTime? 
+
+  folderId     String?
+  folder       Folder?  @relation(fields: [folderId], references: [id])
+
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id])
+
+  sharedWith   DocumentAccess[]
+
+  createdAt    DateTime @default(now())
+
+  @@map("documents")
+}
+
+model DocumentAccess {
+  id         String   @id @default(uuid())
+  documentId String
+  userId     String
+  document   Document @relation(fields: [documentId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([documentId, userId]) // Mencegah duplikasi akses
+  @@map("document_access")
 }
