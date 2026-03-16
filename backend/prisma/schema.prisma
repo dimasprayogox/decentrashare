@@ -22,6 +22,11 @@ enum PrivacyLevel {
   SPECIFIC_USER
 }
 
+enum AccessRoleFolder {
+  VIEWER
+  EDITOR
+}
+
 model User {
   id              String    @id @default(uuid())
   walletAddress   String    @unique
@@ -39,6 +44,7 @@ model User {
   documents       Document[]
   folders         Folder[]
   sharedDocuments DocumentAccess[]
+  sharedFolders   FolderAccess[]
 
   @@map("users")
 }
@@ -49,7 +55,17 @@ model Folder {
   ownerId   String
   owner     User       @relation(fields: [ownerId], references: [id])
   documents Document[]
+  sharedWith FolderAccess[]
+
+  privacy      PrivacyLevel   @default(PRIVATE)
+  shareToken   String?        @unique
+
+  isArchived   Boolean        @default(false) // Tambahkan ini
+  deletedAt    DateTime?      // Tambahkan ini untuk tracking kapan diarsip
+
   createdAt DateTime   @default(now())
+  
+  
 
   @@map("folders")
 }
@@ -93,4 +109,19 @@ model DocumentAccess {
 
   @@unique([documentId, userId]) // Mencegah duplikasi akses
   @@map("document_access")
+}
+
+model FolderAccess {
+  id        String   @id @default(uuid())
+  folderId  String
+  userId    String
+  
+  folder    Folder   @relation(fields: [folderId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  role AccessRoleFolder @default(VIEWER)
+
+  createdAt DateTime @default(now())
+
+  @@unique([folderId, userId]) // Mencegah duplikasi akses pada folder yang sama
+  @@map("folder_access")
 }

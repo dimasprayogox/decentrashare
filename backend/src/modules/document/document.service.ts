@@ -6,6 +6,61 @@ import fs from 'fs';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
 
+/**
+ * Validates document access based on ownership, folder inheritance, and direct sharing.
+ * Implements a hybrid access control model.
+ */
+export const validateDocumentAccess = async (documentId: string, userId: string) => {
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: {
+      folder: {
+        include: {
+          sharedWith: true // Check folder-level permissions
+        }
+      },
+      sharedWith: true // Check file-level permissions
+    }
+  });
+
+  if (!document) {
+    throw new Error("Document not found.");
+  }
+
+  // 1. Owner Access: The creator always has full access
+  if (document.ownerId === userId) {
+    return document;
+  }
+
+  // 2. Folder Inheritance: Check if the parent folder grants access
+  if (document.folder) {
+    // Public Folder access
+    if (document.folder.privacy === 'PUBLIC') {
+      return document;
+    }
+
+    // Shared Folder access: If user is in the folder's access list
+    const hasFolderAccess = document.folder.sharedWith.some(
+      (access) => access.userId === userId
+    );
+    if (hasFolderAccess) {
+      return document;
+    }
+  }
+
+  // 3. Direct Document Access: Check specific file sharing or public status
+  const hasDirectAccess = document.sharedWith.some(
+    (access) => access.userId === userId
+  );
+  
+  if (hasDirectAccess || document.privacy === 'PUBLIC') {
+    return document;
+  }
+
+  // 4. Unauthorized
+  throw new Error("Access denied. You do not have permission to view this document.");
+};
+
 export const uploadMultipleFiles = async (
   files: Express.Multer.File[],
   userId: string,
@@ -86,22 +141,6 @@ export const getRootDocuments = async (userId: string) => {
   });
 };
 
-/** * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN (Sesuai kode kamu)
- */
-export const createFolder = async (name: string, userId: string) => {
-  return await prisma.folder.create({
-    data: { name, ownerId: userId }
-  });
-};
-
-export const getUserFolders = async (userId: string) => {
-  return await prisma.folder.findMany({
-    where: { ownerId: userId },
-    orderBy: { createdAt: 'desc' }
-  });
-};
-
-
 /**
  * Mengambil semua dokumen milik user yang aktif (tidak diarsip)
  */
@@ -120,125 +159,97 @@ export const getUserDocuments = async (userId: string) => {
   });
 };
 
-
 /**
- * Memindahkan banyak dokumen sekaligus ke folder lain atau ke root
+ * Archive banyak dokumen sekaligus (Soft Delete)
  */
-export const moveMultipleDocuments = async (
-  documentIds: string[], 
-  userId: string, 
-  targetFolderId: string | null
-) => {
-  // 1. Jika pindah ke folder (bukan root), pastikan folder tersebut milik user
-  if (targetFolderId) {
-    const folder = await prisma.folder.findFirst({
-      where: { id: targetFolderId, ownerId: userId }
-    });
-    if (!folder) throw new Error("Target folder not found or access denied.");
-  }
-
-  // 2. Update semua dokumen yang ID-nya ada di dalam array dan dimiliki oleh userId
-  const updateResult = await prisma.document.updateMany({
+export const archiveMultipleDocuments = async (documentIds: string[], userId: string) => {
+  return await prisma.document.updateMany({
     where: {
       id: { in: documentIds },
-      ownerId: userId
+      ownerId: userId,
+      isArchived: false
     },
-    data: {
-      folderId: targetFolderId // Bisa UUID atau null
-    }
-  });
-
-  if (updateResult.count === 0) {
-    throw new Error("No documents were moved. Check if you are the owner.");
-  }
-
-  return updateResult;
-};
-
-/**
- * Soft delete: Arsipkan dokumen (hanya pemilik)
- */
-export const archiveDocument = async (documentId: string, userId: string) => {
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
-  });
-
-  if (!document) {
-    throw new Error('Document not found.');
-  }
-
-  if (document.ownerId !== userId) {
-    throw new Error('Forbidden. You are not the owner of this document.');
-  }
-
-  if (document.isArchived) {
-    throw new Error('Document is already archived.');
-  }
-
-  return await prisma.document.update({
-    where: { id: documentId },
     data: {
       isArchived: true,
-      deletedAt: new Date(),
-    },
+      deletedAt: new Date()
+    }
   });
 };
 
 /**
- * Restore dokumen yang sudah diarsipkan (hanya pemilik)
+ * Restore banyak dokumen sekaligus
  */
-export const restoreDocument = async (documentId: string, userId: string) => {
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
-  });
-
-  if (!document) {
-    throw new Error('Document not found.');
-  }
-
-  if (document.ownerId !== userId) {
-    throw new Error('Forbidden. You are not the owner of this document.');
-  }
-
-  if (!document.isArchived) {
-    throw new Error('Document is not archived.');
-  }
-
-  return await prisma.document.update({
-    where: { id: documentId },
+export const restoreMultipleDocuments = async (documentIds: string[], userId: string) => {
+  return await prisma.document.updateMany({
+    where: {
+      id: { in: documentIds },
+      ownerId: userId,
+      isArchived: true
+    },
     data: {
       isArchived: false,
-      deletedAt: null,
-    },
+      deletedAt: null
+    }
   });
 };
 
 /**
- * Mengubah level privasi dokumen (hanya pemilik)
+ * Mengubah Judul Dokumen (Rename)
  */
-export const updatePrivacy = async (
-  documentId: string,
-  userId: string,
-  privacy: PrivacyLevel
-) => {
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
-  });
+export const renameDocument = async (documentId: string, userId: string, newTitle: string) => {
+  const doc = await prisma.document.findUnique({ where: { id: documentId } });
 
-  if (!document) {
-    throw new Error('Document not found.');
-  }
-
-  if (document.ownerId !== userId) {
-    throw new Error('Forbidden. You are not the owner of this document.');
+  if (!doc || doc.ownerId !== userId) {
+    throw new Error("Document not found or unauthorized.");
   }
 
   return await prisma.document.update({
     where: { id: documentId },
-    data: { privacy },
+    data: { title: newTitle }
   });
 };
 
+/**
+ * Update privasi untuk banyak dokumen sekaligus
+ */
+export const updateMultipleDocumentsPrivacy = async (
+  updates: { documentId: string, privacy: PrivacyLevel, targetUserIds?: string[] }[],
+  userId: string
+) => {
+  return await prisma.$transaction(async (tx) => {
+    const results = [];
+
+    for (const item of updates) {
+      // 1. Validasi kepemilikan
+      const doc = await tx.document.findUnique({ where: { id: item.documentId } });
+      if (!doc || doc.ownerId !== userId) continue; 
+
+      // 2. Update Privacy Level
+      await tx.document.update({
+        where: { id: item.documentId },
+        data: { privacy: item.privacy }
+      });
+
+      // 3. Jika SPECIFIC_USER, kelola aksesnya
+      if (item.privacy === 'SPECIFIC_USER' && item.targetUserIds) {
+        // Hapus akses lama jika ingin di-reset, atau biarkan jika ingin menambah
+        for (const targetId of item.targetUserIds) {
+          await tx.documentAccess.upsert({
+            where: {
+              documentId_userId: { documentId: item.documentId, userId: targetId }
+            },
+            update: {}, 
+            create: { documentId: item.documentId, userId: targetId }
+          });
+        }
+      }
+
+      results.push(item.documentId);
+    }
+
+    return { updatedCount: results.length };
+  });
+};
 /**
  * Berbagi dokumen ke user tertentu berdasarkan username (hanya pemilik)
  */

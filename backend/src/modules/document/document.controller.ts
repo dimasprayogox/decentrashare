@@ -3,6 +3,40 @@ import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as documentService from './document.service';
 
+
+/**
+ * GET /api/documents/:id
+ * Fetches document details with hybrid access validation
+ */
+export const handleGetDocumentDetail = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Unauthorized. Please provide a valid token.' 
+      });
+    }
+
+    // Execute the hybrid access validation service
+    const document = await documentService.validateDocumentAccess(id, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Document details retrieved successfully.',
+      data: document
+    });
+  } catch (error: any) {
+    // Use 403 Forbidden for access denials
+    return res.status(403).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
 export const handleUpload = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const files = req.files as Express.Multer.File[]; // Menggunakan req.files untuk multi-upload
@@ -32,50 +66,6 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
       success: true,
       message: 'File processing completed',
       results, // Mengembalikan array status per file (sukses/gagal/duplikat)
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * POST /api/documents/folders
- * Membuat folder baru
- */
-export const handleCreateFolder = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { name } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    if (!name) return res.status(400).json({ success: false, message: 'Folder name is required' });
-
-    const folder = await documentService.createFolder(name, userId);
-
-    return res.status(201).json({
-      success: true,
-      data: folder,
-      message: 'Folder created successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * GET /api/documents/folders
- * Mengambil daftar folder milik user
- */
-export const handleGetMyFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-
-    const folders = await documentService.getUserFolders(userId);
-
-    return res.status(200).json({
-      success: true,
-      data: folders,
     });
   } catch (error) {
     next(error);
@@ -145,104 +135,97 @@ export const handleGetMyDocuments = async (req: AuthRequest, res: Response, next
 };
 
 /**
- * PATCH /api/documents/:id/archive
- * Soft delete: arsipkan dokumen
+ * PATCH /api/documents/bulk-archive
+ * Mengarsipkan banyak dokumen sekaligus
  */
-export const handleArchiveDocument = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleArchiveMultipleDocuments = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { documentIds } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'documentIds must be a non-empty array' });
     }
 
-    const document = await documentService.archiveDocument(id, userId);
+    const result = await documentService.archiveMultipleDocuments(documentIds, userId);
 
     return res.status(200).json({
       success: true,
-      data: document,
-      message: 'Document archived successfully',
+      message: `Successfully archived ${result.count} documents`,
+      data: result
     });
   } catch (error: any) {
-    if (error.message.includes('Forbidden') || error.message.includes('not found')) {
-      return res.status(error.message.includes('Forbidden') ? 403 : 404).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    next(error);
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
 /**
- * PATCH /api/documents/:id/restore
- * Restore dokumen yang sudah diarsipkan
+ * PATCH /api/documents/bulk-restore
+ * Mengembalikan banyak dokumen dari arsip
  */
-export const handleRestoreDocument = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleRestoreMultipleDocuments = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { documentIds } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const document = await documentService.restoreDocument(id, userId);
+    const result = await documentService.restoreMultipleDocuments(documentIds, userId);
 
     return res.status(200).json({
       success: true,
-      data: document,
-      message: 'Document restored successfully',
+      message: `Successfully restored ${result.count} documents`,
+      data: result
     });
   } catch (error: any) {
-    if (error.message.includes('Forbidden') || error.message.includes('not found')) {
-      return res.status(error.message.includes('Forbidden') ? 403 : 404).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    next(error);
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
 /**
- * PATCH /api/documents/:id/privacy
- * Ubah level privasi dokumen
+ * PATCH /api/documents/:id/rename
+ * Mengubah judul dokumen
  */
-export const handleUpdatePrivacy = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleRenameDocument = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { privacy } = req.body;
+    const { title } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!title) return res.status(400).json({ success: false, message: 'New title is required' });
 
-    const validPrivacyLevels = Object.values(PrivacyLevel);
-    if (!privacy || !validPrivacyLevels.includes(privacy)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid privacy level. Valid values: ${validPrivacyLevels.join(', ')}`,
-      });
-    }
-
-    const document = await documentService.updatePrivacy(id, userId, privacy as PrivacyLevel);
+    const document = await documentService.renameDocument(id, userId, title);
 
     return res.status(200).json({
       success: true,
-      data: document,
-      message: `Document privacy updated to "${privacy}"`,
+      message: 'Document renamed successfully',
+      data: document
     });
   } catch (error: any) {
-    if (error.message.includes('Forbidden') || error.message.includes('not found')) {
-      return res.status(error.message.includes('Forbidden') ? 403 : 404).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    next(error);
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const handleUpdateMultipleDocumentsPrivacy = async (req: AuthRequest, res: Response) => {
+  try {
+    const { updates } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!Array.isArray(updates)) return res.status(400).json({ message: 'Format data harus array updates' });
+
+    const result = await documentService.updateMultipleDocumentsPrivacy(updates, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: `Berhasil memperbarui ${result.updatedCount} dokumen.`,
+      data: result
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
