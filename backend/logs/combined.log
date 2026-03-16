@@ -1288,3 +1288,201 @@
 {"duration":11,"level":"info","message":"[setoud70n] 200 11ms","requestId":"setoud70n","statusCode":200,"timestamp":"2026-03-16 00:19:58"}
 {"ip":"::ffff:127.0.0.1","level":"info","message":"[6bdlahdye] GET /api/documents/admin/stats","method":"GET","requestId":"6bdlahdye","timestamp":"2026-03-16 00:20:37","url":"/api/documents/admin/stats","userAgent":"insomnia/12.3.1"}
 {"duration":11,"level":"info","message":"[6bdlahdye] 200 11ms","requestId":"6bdlahdye","statusCode":200,"timestamp":"2026-03-16 00:20:37"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-03-16 00:22:18"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-03-16 00:22:18"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-03-16 00:22:18"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-03-16 00:22:18"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-03-16 00:22:18"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:16:22"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:16:22"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:16:22"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:16:22"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:16:22"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:23:10"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:23:10"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:23:10"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:23:10"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:23:10"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:23:17"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:23:17"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:23:17"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:23:17"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:23:17"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:26:16"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:26:17"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:26:17"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:26:17"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:26:17"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:29:02"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:29:02"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:29:02"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:29:02"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:29:02"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:45:41"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:45:41"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:45:41"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:45:41"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:45:41"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:45:42"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:45:42"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:45:42"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:45:42"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:45:42"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:47:08"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:47:08"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:47:08"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:47:08"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:47:08"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:47:15"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:47:15"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:47:15"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:47:15"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:47:15"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:47:16"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:47:16"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:47:16"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:47:16"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:47:16"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:48:16"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:48:16"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:48:16"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:48:16"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:48:16"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:50:07"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:50:07"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:50:07"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:50:07"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:50:07"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:50:09"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:50:09"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:50:09"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:50:09"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:50:09"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 11:50:10"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 11:50:10"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 11:50:10"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 11:50:10"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 11:50:10"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 12:35:31"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 12:35:31"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 12:35:31"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 12:35:31"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 12:35:31"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[6b9xj133q] GET /api/auth/nonce/0xD979f5F19f53A4a26d22a4C497da1Adfc6BD51cd","method":"GET","requestId":"6b9xj133q","timestamp":"2026-03-16 12:58:32","url":"/api/auth/nonce/0xD979f5F19f53A4a26d22a4C497da1Adfc6BD51cd","userAgent":"insomnia/12.3.1"}
+{"duration":106,"level":"info","message":"[6b9xj133q] 200 106ms","requestId":"6b9xj133q","statusCode":200,"timestamp":"2026-03-16 12:58:32"}
+{"ip":"::1","level":"info","message":"[aj2uy6sot] GET /api/health","method":"GET","requestId":"aj2uy6sot","timestamp":"2026-03-16 12:59:31","url":"/api/health","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}
+{"duration":5,"level":"info","message":"[aj2uy6sot] 200 5ms","requestId":"aj2uy6sot","statusCode":200,"timestamp":"2026-03-16 12:59:31"}
+{"ip":"::1","level":"info","message":"[ojayztscr] GET /favicon.ico","method":"GET","requestId":"ojayztscr","timestamp":"2026-03-16 12:59:31","url":"/favicon.ico","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}
+{"duration":4,"level":"info","message":"[ojayztscr] 404 4ms","requestId":"ojayztscr","statusCode":404,"timestamp":"2026-03-16 12:59:31"}
+{"ip":"::1","level":"info","message":"[kq7qgjej2] GET /.well-known/appspecific/com.chrome.devtools.json","method":"GET","requestId":"kq7qgjej2","timestamp":"2026-03-16 12:59:35","url":"/.well-known/appspecific/com.chrome.devtools.json","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}
+{"duration":2,"level":"info","message":"[kq7qgjej2] 404 2ms","requestId":"kq7qgjej2","statusCode":404,"timestamp":"2026-03-16 12:59:35"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[kcjllsqto] GET /api/auth/nonce/0x3a44c3a687599c2cba8ae58015d9a2792d96ac7c241e9dd9b4a6943031b1543f","method":"GET","requestId":"kcjllsqto","timestamp":"2026-03-16 13:10:15","url":"/api/auth/nonce/0x3a44c3a687599c2cba8ae58015d9a2792d96ac7c241e9dd9b4a6943031b1543f","userAgent":"insomnia/12.3.1"}
+{"duration":37,"level":"info","message":"[kcjllsqto] 200 37ms","requestId":"kcjllsqto","statusCode":200,"timestamp":"2026-03-16 13:10:15"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[ekfeysp31] GET /api/auth/nonce/0x14A08Cd77943dF0D4C2B3B858148e3A60102c514","method":"GET","requestId":"ekfeysp31","timestamp":"2026-03-16 13:23:15","url":"/api/auth/nonce/0x14A08Cd77943dF0D4C2B3B858148e3A60102c514","userAgent":"insomnia/12.3.1"}
+{"duration":45,"level":"info","message":"[ekfeysp31] 200 45ms","requestId":"ekfeysp31","statusCode":200,"timestamp":"2026-03-16 13:23:15"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[ps4e2xxwy] POST /api/auth/register","method":"POST","requestId":"ps4e2xxwy","timestamp":"2026-03-16 13:25:18","url":"/api/auth/register","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"Unhandled error: User already registered.","stack":"Error: User already registered.\n    at <anonymous> (/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:104:36)\n    at async <anonymous> (/home/dimas/project/decentrashare/backend/src/modules/auth/auth.controller.ts:73:26)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-03-16 13:25:18"}
+{"duration":14,"level":"info","message":"[ps4e2xxwy] 500 14ms","requestId":"ps4e2xxwy","statusCode":500,"timestamp":"2026-03-16 13:25:18"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[9kl2y9n85] POST /api/auth/register","method":"POST","requestId":"9kl2y9n85","timestamp":"2026-03-16 13:25:34","url":"/api/auth/register","userAgent":"insomnia/12.3.1"}
+{"level":"info","message":"[AUTH] New user registered: 0x14a08cd77943df0d4c2b3b858148e3a60102c514","timestamp":"2026-03-16 13:25:34"}
+{"duration":53,"level":"info","message":"[9kl2y9n85] 201 53ms","requestId":"9kl2y9n85","statusCode":201,"timestamp":"2026-03-16 13:25:34"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[ej9h9lwq1] GET /api/auth/me","method":"GET","requestId":"ej9h9lwq1","timestamp":"2026-03-16 13:25:47","url":"/api/auth/me","userAgent":"insomnia/12.3.1"}
+{"duration":11,"level":"info","message":"[ej9h9lwq1] 200 11ms","requestId":"ej9h9lwq1","statusCode":200,"timestamp":"2026-03-16 13:25:47"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[xp62ckt31] GET /api/documents/folder","method":"GET","requestId":"xp62ckt31","timestamp":"2026-03-16 13:51:09","url":"/api/documents/folder","userAgent":"insomnia/12.3.1"}
+{"duration":2,"level":"info","message":"[xp62ckt31] 404 2ms","requestId":"xp62ckt31","statusCode":404,"timestamp":"2026-03-16 13:51:09"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[ijw0bruea] POST /api/documents/folder","method":"POST","requestId":"ijw0bruea","timestamp":"2026-03-16 13:51:19","url":"/api/documents/folder","userAgent":"insomnia/12.3.1"}
+{"duration":3,"level":"info","message":"[ijw0bruea] 404 3ms","requestId":"ijw0bruea","statusCode":404,"timestamp":"2026-03-16 13:51:19"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[gfaavfir3] POST /api/documents/folders","method":"POST","requestId":"gfaavfir3","timestamp":"2026-03-16 13:52:17","url":"/api/documents/folders","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"[AUTH_MIDDLEWARE] Access denied: jwt expired - IP: ::ffff:127.0.0.1","timestamp":"2026-03-16 13:52:17"}
+{"duration":4,"level":"info","message":"[gfaavfir3] 401 4ms","requestId":"gfaavfir3","statusCode":401,"timestamp":"2026-03-16 13:52:17"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[onzlu0xt9] POST /api/documents/folders","method":"POST","requestId":"onzlu0xt9","timestamp":"2026-03-16 13:52:19","url":"/api/documents/folders","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"[AUTH_MIDDLEWARE] Access denied: jwt expired - IP: ::ffff:127.0.0.1","timestamp":"2026-03-16 13:52:19"}
+{"duration":10,"level":"info","message":"[onzlu0xt9] 401 10ms","requestId":"onzlu0xt9","statusCode":401,"timestamp":"2026-03-16 13:52:19"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[dayee2aph] GET /api/auth/me","method":"GET","requestId":"dayee2aph","timestamp":"2026-03-16 13:52:32","url":"/api/auth/me","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"[AUTH_MIDDLEWARE] Access denied: jwt expired - IP: ::ffff:127.0.0.1","timestamp":"2026-03-16 13:52:32"}
+{"duration":3,"level":"info","message":"[dayee2aph] 401 3ms","requestId":"dayee2aph","statusCode":401,"timestamp":"2026-03-16 13:52:32"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[sik1p6wm5] GET /api/auth/nonce/0x14A08Cd77943dF0D4C2B3B858148e3A60102c514","method":"GET","requestId":"sik1p6wm5","timestamp":"2026-03-16 14:07:59","url":"/api/auth/nonce/0x14A08Cd77943dF0D4C2B3B858148e3A60102c514","userAgent":"insomnia/12.3.1"}
+{"duration":33,"level":"info","message":"[sik1p6wm5] 200 33ms","requestId":"sik1p6wm5","statusCode":200,"timestamp":"2026-03-16 14:07:59"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[zrn2m9jex] POST /api/auth/login","method":"POST","requestId":"zrn2m9jex","timestamp":"2026-03-16 14:09:13","url":"/api/auth/login","userAgent":"insomnia/12.3.1"}
+{"level":"info","message":"[AUTH] Login success for wallet: 0x14a08cd77943df0d4c2b3b858148e3a60102c514","timestamp":"2026-03-16 14:09:13"}
+{"duration":55,"level":"info","message":"[zrn2m9jex] 200 55ms","requestId":"zrn2m9jex","statusCode":200,"timestamp":"2026-03-16 14:09:13"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[h9pplcgeb] GET /api/auth/me","method":"GET","requestId":"h9pplcgeb","timestamp":"2026-03-16 14:09:28","url":"/api/auth/me","userAgent":"insomnia/12.3.1"}
+{"duration":4,"level":"info","message":"[h9pplcgeb] 200 4ms","requestId":"h9pplcgeb","statusCode":200,"timestamp":"2026-03-16 14:09:28"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[6hs72m7bb] POST /api/documents/folders","method":"POST","requestId":"6hs72m7bb","timestamp":"2026-03-16 14:09:36","url":"/api/documents/folders","userAgent":"insomnia/12.3.1"}
+{"duration":33,"level":"info","message":"[6hs72m7bb] 201 33ms","requestId":"6hs72m7bb","statusCode":201,"timestamp":"2026-03-16 14:09:36"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[111lul9hc] POST /api/documents/upload","method":"POST","requestId":"111lul9hc","timestamp":"2026-03-16 14:44:21","url":"/api/documents/upload","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"[AUTH_MIDDLEWARE] Access denied: jwt expired - IP: ::ffff:127.0.0.1","timestamp":"2026-03-16 14:44:21"}
+{"duration":3,"level":"info","message":"[111lul9hc] 401 3ms","requestId":"111lul9hc","statusCode":401,"timestamp":"2026-03-16 14:44:21"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:44:43"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:44:43"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:44:43"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:44:43"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:44:43"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[ku4a8h5vl] GET /api/auth/nonce/0x14A08Cd77943dF0D4C2B3B858148e3A60102c514","method":"GET","requestId":"ku4a8h5vl","timestamp":"2026-03-16 14:45:01","url":"/api/auth/nonce/0x14A08Cd77943dF0D4C2B3B858148e3A60102c514","userAgent":"insomnia/12.3.1"}
+{"duration":16,"level":"info","message":"[ku4a8h5vl] 200 16ms","requestId":"ku4a8h5vl","statusCode":200,"timestamp":"2026-03-16 14:45:01"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[q64lh1oyv] POST /api/auth/login","method":"POST","requestId":"q64lh1oyv","timestamp":"2026-03-16 14:45:29","url":"/api/auth/login","userAgent":"insomnia/12.3.1"}
+{"level":"info","message":"[AUTH] Login success for wallet: 0x14a08cd77943df0d4c2b3b858148e3a60102c514","timestamp":"2026-03-16 14:45:29"}
+{"duration":76,"level":"info","message":"[q64lh1oyv] 200 76ms","requestId":"q64lh1oyv","statusCode":200,"timestamp":"2026-03-16 14:45:29"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[u7hl8w28z] POST /api/documents/upload","method":"POST","requestId":"u7hl8w28z","timestamp":"2026-03-16 14:45:46","url":"/api/documents/upload","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"[UPLOAD] Error processing satu.png:","timestamp":"2026-03-16 14:45:46"}
+{"level":"info","message":"[IPFS] Uploading to Pinata: Screenshot from 2026-02-13 18-30-27.png","timestamp":"2026-03-16 14:45:47"}
+{"level":"info","message":"[CHAIN] Recording to blockchain: Screenshot from 2026-02-13 18-30-27.png","timestamp":"2026-03-16 14:45:53"}
+{"level":"info","message":"[IPFS] Uploading to Pinata: Screenshot from 2026-02-23 10-55-32.png","timestamp":"2026-03-16 14:45:54"}
+{"level":"info","message":"[CHAIN] Recording to blockchain: Screenshot from 2026-02-23 10-55-32.png","timestamp":"2026-03-16 14:45:56"}
+{"duration":9955,"level":"info","message":"[u7hl8w28z] 201 9955ms","requestId":"u7hl8w28z","statusCode":201,"timestamp":"2026-03-16 14:45:56"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[6d0oaf0hp] GET /api/documents/me","method":"GET","requestId":"6d0oaf0hp","timestamp":"2026-03-16 14:47:47","url":"/api/documents/me","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"[AUTH_MIDDLEWARE] Access denied: jwt expired - IP: ::ffff:127.0.0.1","timestamp":"2026-03-16 14:47:47"}
+{"duration":11,"level":"info","message":"[6d0oaf0hp] 401 11ms","requestId":"6d0oaf0hp","statusCode":401,"timestamp":"2026-03-16 14:47:47"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[2wq0gvvhl] GET /api/documents/me","method":"GET","requestId":"2wq0gvvhl","timestamp":"2026-03-16 14:47:58","url":"/api/documents/me","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"[AUTH_MIDDLEWARE] Access denied: jwt malformed - IP: ::ffff:127.0.0.1","timestamp":"2026-03-16 14:47:58"}
+{"duration":11,"level":"info","message":"[2wq0gvvhl] 401 11ms","requestId":"2wq0gvvhl","statusCode":401,"timestamp":"2026-03-16 14:47:58"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[1fvillin1] GET /api/documents/me","method":"GET","requestId":"1fvillin1","timestamp":"2026-03-16 14:48:18","url":"/api/documents/me","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"Unhandled error: documentService.getUserDocuments is not a function. (In 'documentService.getUserDocuments(userId)', 'documentService.getUserDocuments' is undefined)","stack":"TypeError: documentService.getUserDocuments is not a function. (In 'documentService.getUserDocuments(userId)', 'documentService.getUserDocuments' is undefined)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/src/modules/document/document.controller.ts:94:45)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/lib/route.js:157:13)\n    at authMiddleware (/home/dimas/project/decentrashare/backend/src/middlewares/auth.middleware.ts:43:5)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/lib/route.js:157:13)\n    at dispatch (/home/dimas/project/decentrashare/backend/node_modules/router/lib/route.js:117:3)\n    at handle (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:435:11)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:295:15)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:291:5)\n    at handle (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:186:3)\n    at router (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:60:12)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:342:13)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:297:9)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:291:5)\n    at handle (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:186:3)\n    at router (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:60:12)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:342:13)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:297:9)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:291:5)\n    at requestLogger (/home/dimas/project/decentrashare/backend/src/utils/logger.ts:109:3)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:342:13)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:297:9)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:291:5)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:342:13)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:297:9)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:291:5)\n    at read (/home/dimas/project/decentrashare/backend/node_modules/body-parser/lib/read.js:53:5)\n    at urlencodedParser (/home/dimas/project/decentrashare/backend/node_modules/body-parser/lib/types/urlencoded.js:57:5)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:342:13)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:297:9)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:291:5)\n    at read (/home/dimas/project/decentrashare/backend/node_modules/body-parser/lib/read.js:53:5)\n    at jsonParser (/home/dimas/project/decentrashare/backend/node_modules/body-parser/lib/types/json.js:88:5)\n    at handleRequest (/home/dimas/project/decentrashare/backend/node_modules/router/lib/layer.js:152:17)\n    at trimPrefix (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:342:13)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:297:9)\n    at next (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:291:5)\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/express-rate-limit/dist/index.mjs:779:7)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-03-16 14:48:18"}
+{"duration":13,"level":"info","message":"[1fvillin1] 500 13ms","requestId":"1fvillin1","statusCode":500,"timestamp":"2026-03-16 14:48:18"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:49:58"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:49:58"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:49:58"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:49:58"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:49:58"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[mdz5e04ov] GET /api/documents/me","method":"GET","requestId":"mdz5e04ov","timestamp":"2026-03-16 14:50:00","url":"/api/documents/me","userAgent":"insomnia/12.3.1"}
+{"duration":27,"level":"info","message":"[mdz5e04ov] 200 27ms","requestId":"mdz5e04ov","statusCode":200,"timestamp":"2026-03-16 14:50:00"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:56:08"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:56:08"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:56:08"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:56:08"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:56:08"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:56:09"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:56:09"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:56:09"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:56:09"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:56:09"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:56:38"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:56:38"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:56:38"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:56:38"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:56:38"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:59:00"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:59:00"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:59:00"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:59:00"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:59:00"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:59:20"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:59:20"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:59:20"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:59:20"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:59:20"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:59:21"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:59:21"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:59:21"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:59:21"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:59:21"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:59:22"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:59:22"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:59:22"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:59:22"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:59:22"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-03-16 14:59:25"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-03-16 14:59:25"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-03-16 14:59:25"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-03-16 14:59:25"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-03-16 14:59:25"}

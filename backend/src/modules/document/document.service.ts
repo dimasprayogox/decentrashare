@@ -6,69 +6,153 @@ import fs from 'fs';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
 
-export const uploadFileFullFlow = async (
-  file: Express.Multer.File,
-  metadata: { title: string; description?: string; userId: string }
+export const uploadMultipleFiles = async (
+  files: Express.Multer.File[],
+  userId: string,
+  folderId?: string
 ) => {
-  try {
-    // 1) Hash file (SHA-256)
-    const fileHash = await generateFileHash(file.path);
+  const results = [];
 
-    // 2) Upload ke Pinata (IPFS)
-    const fileBuffer = fs.readFileSync(file.path);
-    const blob = new Blob([fileBuffer]);
-    const fileToUpload = new File([blob], file.originalname, { type: file.mimetype });
-
-    logger.info(`[IPFS] Uploading file to Pinata: ${file.originalname}`);
-    const upload = await pinata.upload.file(fileToUpload);
-
-    // 3) Record ke Blockchain
-    logger.info(`[CHAIN] Recording file to blockchain: CID=${upload.IpfsHash}`);
-    const blockchainTx = await blockchainService.recordToBlockchain(
-      upload.IpfsHash,
-      file.originalname,
-      fileHash
-    );
-
-    // 4) Simpan metadata ke DB
-    const document = await prisma.document.create({
-      data: {
-        title: metadata.title,
-        description: metadata.description,
-        fileName: file.originalname,
-        fileSize: file.size,
-        mimeType: file.mimetype,
-        ipfsHash: upload.IpfsHash,
-        fileHash,
-        blockchainTx,
-        isOnChain: true,
-        ownerId: metadata.userId,
-      },
+  // SECURITY CHECK: Pastikan folderId (jika ada) milik user yang sedang login
+  if (folderId) {
+    const folder = await prisma.folder.findFirst({
+      where: { id: folderId, ownerId: userId }
     });
-
-    logger.info(`[UPLOAD] Success. CID=${upload.IpfsHash} TX=${blockchainTx}`);
-    return document;
-  } catch (error) {
-    logger.error('[UPLOAD] Full flow error:', error);
-    throw error;
-  } finally {
-    if (fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
+    if (!folder) {
+      throw new Error("Target folder not found or access denied.");
     }
   }
+
+  for (const file of files) {
+    try {
+      const fileHash = await generateFileHash(file.path);
+
+      // CEK DUPLIKAT
+      const existingFile = await prisma.document.findUnique({
+        where: { fileHash }
+      });
+
+      if (existingFile) {
+        throw new Error(`Duplicate detected. File contents already exist in the system.`);
+      }
+
+      // UPLOAD IPFS
+      const fileBuffer = fs.readFileSync(file.path);
+      const blob = new Blob([fileBuffer]);
+      const fileToUpload = new File([blob], file.originalname, { type: file.mimetype });
+      const upload = await pinata.upload.file(fileToUpload);
+
+      // RECORD BLOCKCHAIN
+      const blockchainTx = await blockchainService.recordToBlockchain(
+        upload.IpfsHash,
+        file.originalname,
+        fileHash
+      );
+
+      // SAVE DB
+      const document = await prisma.document.create({
+        data: {
+          title: file.originalname,
+          fileName: file.originalname,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          ipfsHash: upload.IpfsHash,
+          fileHash,
+          blockchainTx,
+          isOnChain: true,
+          ownerId: userId,
+          folderId: folderId || null, // Jika null, masuk ke Root
+        },
+      });
+
+      results.push({ success: true, fileName: file.originalname, data: document });
+    } catch (error: any) {
+      results.push({ success: false, fileName: file.originalname, error: error.message });
+    } finally {
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    }
+  }
+  return results;
 };
 
+export const getRootDocuments = async (userId: string) => {
+  return await prisma.document.findMany({
+    where: {
+      ownerId: userId,
+      folderId: null, // Kuncinya di sini
+      isArchived: false,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+/** * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN (Sesuai kode kamu)
+ */
+export const createFolder = async (name: string, userId: string) => {
+  return await prisma.folder.create({
+    data: { name, ownerId: userId }
+  });
+};
+
+export const getUserFolders = async (userId: string) => {
+  return await prisma.folder.findMany({
+    where: { ownerId: userId },
+    orderBy: { createdAt: 'desc' }
+  });
+};
+
+
 /**
- * Mengambil daftar dokumen milik user yang belum diarsipkan
+ * Mengambil semua dokumen milik user yang aktif (tidak diarsip)
  */
 export const getUserDocuments = async (userId: string) => {
   return await prisma.document.findMany({
     where: {
       ownerId: userId,
-      isArchived: false,
+      isArchived: false, // Hanya ambil yang belum dihapus/diarsip
     },
-    orderBy: { createdAt: 'desc' },
+    include: {
+      folder: true, // Sertakan info folder agar di UI bisa kelihatan foldernya
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
   });
+};
+
+
+/**
+ * Memindahkan banyak dokumen sekaligus ke folder lain atau ke root
+ */
+export const moveMultipleDocuments = async (
+  documentIds: string[], 
+  userId: string, 
+  targetFolderId: string | null
+) => {
+  // 1. Jika pindah ke folder (bukan root), pastikan folder tersebut milik user
+  if (targetFolderId) {
+    const folder = await prisma.folder.findFirst({
+      where: { id: targetFolderId, ownerId: userId }
+    });
+    if (!folder) throw new Error("Target folder not found or access denied.");
+  }
+
+  // 2. Update semua dokumen yang ID-nya ada di dalam array dan dimiliki oleh userId
+  const updateResult = await prisma.document.updateMany({
+    where: {
+      id: { in: documentIds },
+      ownerId: userId
+    },
+    data: {
+      folderId: targetFolderId // Bisa UUID atau null
+    }
+  });
+
+  if (updateResult.count === 0) {
+    throw new Error("No documents were moved. Check if you are the owner.");
+  }
+
+  return updateResult;
 };
 
 /**

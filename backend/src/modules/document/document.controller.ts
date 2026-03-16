@@ -5,17 +5,19 @@ import * as documentService from './document.service';
 
 export const handleUpload = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { title, description } = req.body;
-    const file = req.file;
+    const files = req.files as Express.Multer.File[]; // Menggunakan req.files untuk multi-upload
+    const { folderId } = req.body;
     const userId = req.user?.userId;
 
-    if (!file) {
+    // 1) Validasi file wajib ada
+    if (!files || files.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No file provided. Please upload a document.',
+        message: 'No files provided. Please upload at least one document.',
       });
     }
 
+    // 2) Validasi user ID
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -23,32 +25,112 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
       });
     }
 
-    const document = await documentService.uploadFileFullFlow(file, {
-      title: title || file.originalname,
-      description,
-      userId,
-    });
+    // 3) Panggil service untuk proses multi-upload (Hash -> IPFS -> Chain -> DB)
+    const results = await documentService.uploadMultipleFiles(files, userId, folderId);
 
     return res.status(201).json({
       success: true,
-      data: document,
-      message: 'Document successfully uploaded to IPFS and recorded on blockchain',
+      message: 'File processing completed',
+      results, // Mengembalikan array status per file (sukses/gagal/duplikat)
     });
   } catch (error) {
     next(error);
   }
 };
 
+/**
+ * POST /api/documents/folders
+ * Membuat folder baru
+ */
+export const handleCreateFolder = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { name } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!name) return res.status(400).json({ success: false, message: 'Folder name is required' });
+
+    const folder = await documentService.createFolder(name, userId);
+
+    return res.status(201).json({
+      success: true,
+      data: folder,
+      message: 'Folder created successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/documents/folders
+ * Mengambil daftar folder milik user
+ */
+export const handleGetMyFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const folders = await documentService.getUserFolders(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: folders,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/documents/root
+ * Mengambil file yang tidak berada dalam folder
+ */
+export const handleGetRootDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const documents = await documentService.getRootDocuments(userId);
+    return res.status(200).json({ success: true, data: documents });
+  } catch (error) { next(error); }
+};
+
+/**
+ * PATCH /api/documents/bulk-move
+ * Memindahkan banyak dokumen sekaligus
+ */
+export const handleMoveMultipleDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { documentIds, targetFolderId } = req.body; // documentIds: ["uuid1", "uuid2"]
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'documentIds must be a non-empty array' });
+    }
+
+    const result = await documentService.moveMultipleDocuments(documentIds, userId, targetFolderId);
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully moved ${result.count} documents`,
+      data: result
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/documents/me
+ * Mengambil daftar dokumen milik user (yang tidak diarsipkan secara default)
+ */
 export const handleGetMyDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
     const documents = await documentService.getUserDocuments(userId);
 

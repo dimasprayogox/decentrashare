@@ -1731,3 +1731,120 @@ ReferenceError: handleGetMe is not defined
     }
   ]
 }
+2026-03-16 14:59:48 [[31merror[39m]: [31muncaughtException: handleGetRootDocuments is not defined[39m
+[31mReferenceError: handleGetRootDocuments is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:61:59[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetRootDocuments is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:61:59
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Mon Mar 16 2026 14:59:48 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 8417,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 130285568,
+      "heapTotal": 21865472,
+      "heapUsed": 7853596,
+      "external": 2778401,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      3.3,
+      1.98,
+      1.4
+    ],
+    "uptime": 14595
+  },
+  "trace": [
+    {
+      "column": 59,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 61,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
