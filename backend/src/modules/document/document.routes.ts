@@ -4,16 +4,20 @@ import {
   handleGetMyDocuments,
   handleGetDocumentDetail,
   handleRenameDocument,
-  handleArchiveMultipleDocuments,
-  handleRestoreMultipleDocuments,
-  handleUpdateMultipleDocumentsPrivacy,
-  handleShareToUser,
+  handleArchiveDocuments,
+  handleGetArchivedDocuments,
+  handleRestoreDocuments,
+  handlePermanentDelete,
+  handleUpdateDocumentPrivacy,
+  handleShareDocuments,
   handleRevokeAccess,
   handleGetSharedUsers,   
   handleGetAllDocumentsAdmin,
   handleGetSystemStatsAdmin,
   handleGetRootDocuments,
-  handleMoveMultipleDocuments,
+  handleMoveDocuments,
+  handleGetSharedWithMe,
+  handleGetActivityLogs
 } from "./document.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requireAdmin } from "../../middlewares/role.middleware";
@@ -27,29 +31,36 @@ router.use(authMiddleware);
 router.post("/upload", uploadMiddleware.array("files", 10), handleUpload);
 
 // GET /api/documents/me
-router.get("/me", handleGetMyDocuments);
+router.get("/", handleGetMyDocuments);
 
-// GET /api/documents/:id
-router.get("/:id", handleGetDocumentDetail);
 
 // Rute massal (statis) di atas
-router.patch("/archive", handleArchiveMultipleDocuments);
-router.patch("/estore", handleRestoreMultipleDocuments);
+router.patch("/archive", handleArchiveDocuments);
+router.get("/archived", handleGetArchivedDocuments);
+router.patch("/restore", handleRestoreDocuments);
+router.delete('/destroy', handlePermanentDelete);
 // PATCH /api/documents/:id/privacy
-router.patch("/privacy", handleUpdateMultipleDocumentsPrivacy);
+router.patch("/privacy", handleUpdateDocumentPrivacy);
 
-// Rute dengan ID di bawah
-router.patch("/:id/rename", handleRenameDocument);
 
 
 // POST /api/documents/:id/share  → share ke user
-router.post("/:id/share", handleShareToUser);
-
+router.post("/shared", handleShareDocuments);
 // DELETE /api/documents/:id/share → cabut akses
-router.delete("/:id/share", handleRevokeAccess);
-
+router.delete("/shared", handleRevokeAccess);
 // GET /api/documents/:id/share → lihat siapa yang punya akses
-router.get("/:id/share", handleGetSharedUsers);
+router.post("/shared-details", handleGetSharedUsers);
+
+router.get("/shared-with-me", handleGetSharedWithMe);
+
+router.get('/logs', handleGetActivityLogs);
+
+// Rute dengan ID di bawah
+// GET /api/documents/:id
+router.get("/:id", handleGetDocumentDetail);
+router.patch("/:id/rename", handleRenameDocument);
+
+
 
 
 
@@ -58,7 +69,7 @@ router.get("/:id/share", handleGetSharedUsers);
 router.get("/root", handleGetRootDocuments);
 
 // Pindahkan banyak file sekaligus
-router.patch("/bulk-move", handleMoveMultipleDocuments);
+router.patch("/move", handleMoveDocuments);
 
 
 

@@ -27,6 +27,10 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
     throw new Error("Document not found.");
   }
 
+  if (document.isArchived) { 
+    throw new Error("Document is in trash.");
+  }
+
   // 1. Owner Access: The creator always has full access
   if (document.ownerId === userId) {
     return document;
@@ -68,62 +72,82 @@ export const uploadMultipleFiles = async (
 ) => {
   const results = [];
 
-  // SECURITY CHECK: Pastikan folderId (jika ada) milik user yang sedang login
+  // 1. SECURITY CHECK: Pastikan folder tujuan milik si Bos
+  let targetPrivacy: PrivacyLevel = 'PRIVATE';
   if (folderId) {
     const folder = await prisma.folder.findFirst({
       where: { id: folderId, ownerId: userId }
     });
-    if (!folder) {
-      throw new Error("Target folder not found or access denied.");
-    }
+    if (!folder) throw new Error("Target folder not found or access denied.");
+    
+    // File baru otomatis ikut privasi folder (Google Drive Style)
+    targetPrivacy = folder.privacy;
   }
 
   for (const file of files) {
     try {
       const fileHash = await generateFileHash(file.path);
 
-      // CEK DUPLIKAT
+      // 2. CEK DUPLIKAT (Berdasarkan Konten File)
       const existingFile = await prisma.document.findUnique({
         where: { fileHash }
       });
+      if (existingFile) throw new Error(`Duplicate detected. This file already exists.`);
 
-      if (existingFile) {
-        throw new Error(`Duplicate detected. File contents already exist in the system.`);
-      }
-
-      // UPLOAD IPFS
+      // 3. UPLOAD KE IPFS (Pinata)
       const fileBuffer = fs.readFileSync(file.path);
-      const blob = new Blob([fileBuffer]);
-      const fileToUpload = new File([blob], file.originalname, { type: file.mimetype });
-      const upload = await pinata.upload.file(fileToUpload);
+      const upload = await pinata.upload.file(
+        new File([new Blob([fileBuffer])], file.originalname, { type: file.mimetype })
+      );
 
-      // RECORD BLOCKCHAIN
+      // 4. RECORD KE BLOCKCHAIN (Kekuatan Utama Decentrashare!)
       const blockchainTx = await blockchainService.recordToBlockchain(
         upload.IpfsHash,
         file.originalname,
         fileHash
       );
 
-      // SAVE DB
-      const document = await prisma.document.create({
-        data: {
-          title: file.originalname,
-          fileName: file.originalname,
-          fileSize: file.size,
-          mimeType: file.mimetype,
-          ipfsHash: upload.IpfsHash,
-          fileHash,
-          blockchainTx,
-          isOnChain: true,
-          ownerId: userId,
-          folderId: folderId || null, // Jika null, masuk ke Root
-        },
+      // 5. SAVE KE DB & LOG AKTIVITAS (Pakai Transaction agar aman)
+      const newDocument = await prisma.$transaction(async (tx) => {
+        const doc = await tx.document.create({
+          data: {
+            title: file.originalname,
+            fileName: file.originalname,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            ipfsHash: upload.IpfsHash,
+            fileHash,
+            blockchainTx,
+            isOnChain: true,
+            ownerId: userId,
+            folderId: folderId || null,
+            privacy: targetPrivacy, // Sinkronisasi otomatis
+          },
+        });
+
+        // CATAT KE ACTIVITY LOG
+        await tx.activityLog.create({
+          data: {
+            userId: userId,
+            action: "UPLOAD",
+            entityType: "DOCUMENT",
+            entityId: doc.id,
+            entityName: doc.title,
+            fileHash: doc.fileHash,
+            ipfsHash: doc.ipfsHash,
+            blockchainTx: doc.blockchainTx,
+            details: `Successfully uploaded to ${folderId ? 'Folder' : 'Root'}.`
+          }
+        });
+
+        return doc;
       });
 
-      results.push({ success: true, fileName: file.originalname, data: document });
+      results.push({ success: true, fileName: file.originalname, data: newDocument });
     } catch (error: any) {
       results.push({ success: false, fileName: file.originalname, error: error.message });
     } finally {
+      // Bersihkan file sementara di server
       if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
     }
   }
@@ -141,6 +165,53 @@ export const getRootDocuments = async (userId: string) => {
   });
 };
 
+export const moveMultipleDocuments = async (
+  documentIds: string[], 
+  userId: string, 
+  targetFolderId: string | null
+) => {
+  return await prisma.$transaction(async (tx) => {
+    let targetPrivacy: PrivacyLevel = 'PRIVATE';
+
+    if (targetFolderId) {
+      const folder = await tx.folder.findFirst({
+        where: {
+          id: targetFolderId,
+          OR: [
+            { ownerId: userId },
+            { sharedWith: { some: { userId: userId, role: 'EDITOR' } } }
+          ]
+        }
+      });
+
+      if (!folder) throw new Error("Target folder not found or No Permission.");
+      targetPrivacy = folder.privacy;
+    }
+
+    // LOG 2: Cek apakah file-file ini sebenarnya ada di DB dan milik Bos
+    const checkDocs = await tx.document.findMany({
+      where: { id: { in: documentIds }, ownerId: userId }
+    });
+    const result = await tx.document.updateMany({
+      where: {
+        id: { in: documentIds },
+        ownerId: userId,
+        isArchived: false
+      },
+      data: { 
+        folderId: targetFolderId,
+        privacy: targetPrivacy 
+      }
+    });
+
+    return { 
+      count: result.count, 
+      appliedPrivacy: targetPrivacy,
+      location: targetFolderId ? "Folder" : "Root" 
+    };
+  });
+};
+
 /**
  * Mengambil semua dokumen milik user yang aktif (tidak diarsip)
  */
@@ -148,10 +219,10 @@ export const getUserDocuments = async (userId: string) => {
   return await prisma.document.findMany({
     where: {
       ownerId: userId,
-      isArchived: false, // Hanya ambil yang belum dihapus/diarsip
+      isArchived: false,
     },
     include: {
-      folder: true, // Sertakan info folder agar di UI bisa kelihatan foldernya
+      folder: true, 
     },
     orderBy: {
       createdAt: 'desc',
@@ -161,8 +232,9 @@ export const getUserDocuments = async (userId: string) => {
 
 /**
  * Archive banyak dokumen sekaligus (Soft Delete)
+ * Ditambah logika: Set privacy ke PRIVATE agar akses orang lain terputus otomatis
  */
-export const archiveMultipleDocuments = async (documentIds: string[], userId: string) => {
+export const archiveDocuments = async (documentIds: string[], userId: string) => {
   return await prisma.document.updateMany({
     where: {
       id: { in: documentIds },
@@ -177,19 +249,81 @@ export const archiveMultipleDocuments = async (documentIds: string[], userId: st
 };
 
 /**
- * Restore banyak dokumen sekaligus
+ * Get all archived documents for the current user (Trash List)
  */
-export const restoreMultipleDocuments = async (documentIds: string[], userId: string) => {
+export const getArchivedDocuments = async (userId: string) => {
+  return await prisma.document.findMany({
+    where: {
+      ownerId: userId,
+      isArchived: true,
+    },
+    include: {
+      folder: { select: { id: true, name: true } }
+    },
+    orderBy: { deletedAt: 'desc' }, 
+  });
+};
+
+/**
+ * Restore banyak dokumen sekaligus dari Trash
+ */
+export const restoreDocuments = async (documentIds: string[], userId: string) => {
   return await prisma.document.updateMany({
     where: {
       id: { in: documentIds },
       ownerId: userId,
-      isArchived: true
+      isArchived: true 
     },
     data: {
       isArchived: false,
-      deletedAt: null
+      deletedAt: null 
     }
+  });
+};
+
+/**
+ * Permanently delete multiple documents and log their blockchain metadata for audit
+ */
+export const destroyMultipleDocuments = async (documentIds: string[], userId: string) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Ambil data dokumen (untuk log)
+    const docs = await tx.document.findMany({
+      where: { id: { in: documentIds }, ownerId: userId, isArchived: true }
+    });
+
+    if (docs.length === 0) return { count: 0 };
+
+    // 2. CATAT KE ACTIVITY LOG (Sesuai skema baru)
+    await tx.activityLog.createMany({
+      data: docs.map(doc => ({
+        userId: userId,
+        action: "PERMANENT_DELETE",
+        entityType: "DOCUMENT",
+        entityId: doc.id,
+        entityName: doc.title,
+        fileHash: doc.fileHash,
+        ipfsHash: doc.ipfsHash,
+        blockchainTx: doc.blockchainTx,
+        details: "Document and its access records permanently purged."
+      }))
+    });
+
+    // --- LANGKAH BARU: BERSIHKAN RELASI ---
+    // 3. Hapus semua record akses (Foreign Key) yang terkait dokumen ini
+    await tx.documentAccess.deleteMany({
+      where: { documentId: { in: documentIds } }
+    });
+
+    // 4. SEKARANG BARU HAPUS DOKUMEN UTAMANYA
+    const deleteResult = await tx.document.deleteMany({
+      where: {
+        id: { in: documentIds },
+        ownerId: userId,
+        isArchived: true
+      }
+    });
+
+    return { count: deleteResult.count };
   });
 };
 
@@ -197,7 +331,8 @@ export const restoreMultipleDocuments = async (documentIds: string[], userId: st
  * Mengubah Judul Dokumen (Rename)
  */
 export const renameDocument = async (documentId: string, userId: string, newTitle: string) => {
-  const doc = await prisma.document.findUnique({ where: { id: documentId } });
+  const doc = await prisma.document.findFirst({ where: { id: documentId, ownerId: userId,
+      isArchived: false } });
 
   if (!doc || doc.ownerId !== userId) {
     throw new Error("Document not found or unauthorized.");
@@ -209,205 +344,209 @@ export const renameDocument = async (documentId: string, userId: string, newTitl
   });
 };
 
-/**
- * Update privasi untuk banyak dokumen sekaligus
+
+  /**
+ * Update Privacy Level Massal untuk Document & Auto-Cleanup (Flexible Bulk Patch)
+ * Membersihkan data akses jika status BUKAN 'SPECIFIC_USER'
  */
-export const updateMultipleDocumentsPrivacy = async (
-  updates: { documentId: string, privacy: PrivacyLevel, targetUserIds?: string[] }[],
-  userId: string
+export const updateDocumentsPrivacy = async (
+  ownerId: string,
+  updates: { documentId: string; newPrivacy: PrivacyLevel }[]
 ) => {
   return await prisma.$transaction(async (tx) => {
     const results = [];
 
     for (const item of updates) {
-      // 1. Validasi kepemilikan
-      const doc = await tx.document.findUnique({ where: { id: item.documentId } });
-      if (!doc || doc.ownerId !== userId) continue; 
-
-      // 2. Update Privacy Level
-      await tx.document.update({
-        where: { id: item.documentId },
-        data: { privacy: item.privacy }
+      // 1. Update status privasi dokumen (hanya jika pemiliknya sesuai)
+      const docUpdate = await tx.document.updateMany({
+        where: { 
+          id: item.documentId, 
+          ownerId: ownerId,
+          isArchived: false
+        },
+        data: { privacy: item.newPrivacy }
       });
 
-      // 3. Jika SPECIFIC_USER, kelola aksesnya
-      if (item.privacy === 'SPECIFIC_USER' && item.targetUserIds) {
-        // Hapus akses lama jika ingin di-reset, atau biarkan jika ingin menambah
-        for (const targetId of item.targetUserIds) {
-          await tx.documentAccess.upsert({
-            where: {
-              documentId_userId: { documentId: item.documentId, userId: targetId }
-            },
-            update: {}, 
-            create: { documentId: item.documentId, userId: targetId }
-          });
-        }
+      // 2. LOGIKA CLEANUP TOTAL:
+      // Jika status baru BUKAN 'SPECIFIC_USER', hapus semua akses user agar tidak menumpuk.
+      let accessDeleted = 0;
+      if (item.newPrivacy !== 'SPECIFIC_USER') {
+        const deleted = await tx.documentAccess.deleteMany({
+          where: { documentId: item.documentId }
+        });
+        accessDeleted = deleted.count;
       }
 
-      results.push(item.documentId);
+      results.push({
+        documentId: item.documentId,
+        status: docUpdate.count > 0 ? 'updated' : 'failed/unauthorized',
+        newPrivacy: item.newPrivacy,
+        accessRevoked: accessDeleted
+      });
     }
 
-    return { updatedCount: results.length };
+    return results;
   });
 };
-/**
- * Berbagi dokumen ke user tertentu berdasarkan username (hanya pemilik)
- */
-export const shareToUser = async (
-  documentId: string,
-  ownerId: string,
-  targetUsername: string
-) => {
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
-  });
 
-  if (!document) {
-    throw new Error('Document not found.');
-  }
-
-  if (document.ownerId !== ownerId) {
-    throw new Error('Forbidden. You are not the owner of this document.');
-  }
-
-  const targetUser = await prisma.user.findUnique({
-    where: { username: targetUsername },
-  });
-
-  if (!targetUser) {
-    throw new Error(`User with username "${targetUsername}" not found.`);
-  }
-
-  if (targetUser.id === ownerId) {
-    throw new Error('You cannot share a document with yourself.');
-  }
-
-  // Cek apakah sudah pernah di-share
-  const existingAccess = await prisma.documentAccess.findUnique({
-    where: {
-      documentId_userId: {
-        documentId,
-        userId: targetUser.id,
-      },
-    },
-  });
-
-  if (existingAccess) {
-    throw new Error(`Document already shared with user "${targetUsername}".`);
-  }
-
-  // Pastikan privacy diubah ke SPECIFIC_USER jika belum
-  if (document.privacy !== PrivacyLevel.SPECIFIC_USER) {
-    await prisma.document.update({
-      where: { id: documentId },
-      data: { privacy: PrivacyLevel.SPECIFIC_USER },
-    });
-  }
-
-  const access = await prisma.documentAccess.create({
-    data: {
-      documentId,
-      userId: targetUser.id,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          walletAddress: true,
-          avatarUrl: true,
-        },
-      },
-    },
-  });
-
-  logger.info(`[SHARE] Document ${documentId} shared with user ${targetUsername}`);
-  return access;
-};
 
 /**
- * Mencabut akses dokumen dari user tertentu (hanya pemilik)
+ * Shares multiple documents to multiple users simultaneously
+ * Only for users who DO NOT have access yet
  */
-export const revokeAccess = async (
-  documentId: string,
+export const shareDocumentsToUsers = async (
   ownerId: string,
-  targetUsername: string
+  shares: { documentId: string; targetUsers: string[] }[] // Langsung array ID User
 ) => {
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
+  return await prisma.$transaction(async (tx) => {
+    const finalResults = [];
+
+    for (const item of shares) {
+      // 1. Validasi Kepemilikan Dokumen
+      const doc = await tx.document.findFirst({ where: { id: item.documentId, ownerId: ownerId, isArchived: false } });
+      if (!doc || doc.ownerId !== ownerId) continue;
+
+      // 2. Loop User yang akan diberi akses
+      const docResults = [];
+      for (const targetUserId of item.targetUsers) {
+        if (targetUserId === ownerId) continue;
+
+        // Pakai upsert dengan update kosong karena tidak ada role
+        await tx.documentAccess.upsert({
+          where: {
+            documentId_userId: { 
+              documentId: item.documentId, 
+              userId: targetUserId 
+            }
+          },
+          update: {}, // Tidak ada data yang diubah jika sudah ada
+          create: { 
+            documentId: item.documentId, 
+            userId: targetUserId 
+          }
+        });
+        docResults.push({ userId: targetUserId, status: 'granted' });
+      }
+
+      // 3. Otomatis set privacy ke SPECIFIC_USER
+      await tx.document.update({
+        where: { id: item.documentId },
+        data: { privacy: 'SPECIFIC_USER' }
+      });
+
+      finalResults.push({ documentId: item.documentId, sharedWith: docResults });
+    }
+
+    return finalResults;
   });
-
-  if (!document) {
-    throw new Error('Document not found.');
-  }
-
-  if (document.ownerId !== ownerId) {
-    throw new Error('Forbidden. You are not the owner of this document.');
-  }
-
-  const targetUser = await prisma.user.findUnique({
-    where: { username: targetUsername },
-  });
-
-  if (!targetUser) {
-    throw new Error(`User with username "${targetUsername}" not found.`);
-  }
-
-  const existingAccess = await prisma.documentAccess.findUnique({
-    where: {
-      documentId_userId: {
-        documentId,
-        userId: targetUser.id,
-      },
-    },
-  });
-
-  if (!existingAccess) {
-    throw new Error(`User "${targetUsername}" does not have access to this document.`);
-  }
-
-  await prisma.documentAccess.delete({
-    where: {
-      documentId_userId: {
-        documentId,
-        userId: targetUser.id,
-      },
-    },
-  });
-
-  logger.info(`[SHARE] Access to document ${documentId} revoked from user ${targetUsername}`);
-  return { message: `Access revoked for user "${targetUsername}".` };
 };
+
+
+/**
+ * Revoke (Delete) access from multiple users for multiple documents
+ */
+export const revokeDocumentsAccess = async (
+  ownerId: string,
+  revokes: { documentId: string; targetUserIds: string[] }[]
+) => {
+  return await prisma.$transaction(async (tx) => {
+    const finalResults = [];
+
+    for (const item of revokes) {
+      // 1. Validasi Kepemilikan Dokumen (Langsung masukkan ownerId ke query)
+      const doc = await tx.document.findFirst({ 
+        where: { 
+          id: item.documentId, 
+          ownerId: ownerId, // Pastikan Bos pemiliknya
+          isArchived: false 
+        } 
+      });
+
+      // Jika dokumen tidak ditemukan atau bukan milik Bos, skip ke dokumen berikutnya
+      if (!doc) {
+        finalResults.push({ 
+          documentId: item.documentId, 
+          status: "failed", 
+          message: "Document not found or unauthorized" 
+        });
+        continue;
+      }
+
+      // 2. Hapus Akses User dari tabel DocumentAccess
+      const deleteResult = await tx.documentAccess.deleteMany({
+        where: {
+          documentId: item.documentId,
+          userId: { in: item.targetUserIds } // Menghapus semua user yang ada di list
+        }
+      });
+
+      // 3. Check Sisa Akses: Jika sudah tidak ada yang punya akses langsung
+      const remainingAccess = await tx.documentAccess.count({
+        where: { documentId: item.documentId }
+      });
+
+      let updatedPrivacy = doc.privacy;
+      if (remainingAccess === 0) {
+        // Jika benar-benar kosong, gembok lagi filenya (PRIVATE)
+        const updatedDoc = await tx.document.update({
+          where: { id: item.documentId },
+          data: { privacy: 'PRIVATE' }
+        });
+        updatedPrivacy = updatedDoc.privacy;
+      }
+
+      finalResults.push({ 
+        documentId: item.documentId, 
+        revokedCount: deleteResult.count, // Harusnya sekarang > 0
+        newStatus: updatedPrivacy
+      });
+    }
+
+    return finalResults;
+  });
+};
+
 
 /**
  * Mengambil daftar user yang memiliki akses ke dokumen (hanya pemilik)
  */
-export const getSharedUsers = async (documentId: string, ownerId: string) => {
-  const document = await prisma.document.findUnique({
-    where: { id: documentId },
-  });
-
-  if (!document) {
-    throw new Error('Document not found.');
-  }
-
-  if (document.ownerId !== ownerId) {
-    throw new Error('Forbidden. You are not the owner of this document.');
-  }
-
-  return await prisma.documentAccess.findMany({
-    where: { documentId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          walletAddress: true,
-          avatarUrl: true,
+/**
+ * Mengambil daftar user yang memiliki akses ke banyak dokumen sekaligus (Hanya Pemilik)
+ */
+export const getDocumentsSharedUsers = async (documentIds: string[], ownerId: string) => {
+  // 1. Ambil semua dokumen yang diminta dan pastikan Bos adalah pemiliknya
+// 1. Ambil semua dokumen yang ID-nya ada dalam array dan dimiliki oleh Bos
+  const documents = await prisma.document.findMany({
+    where: {
+      id: { in: documentIds }, // Menggunakan operator 'in' untuk mencari banyak ID
+      ownerId: ownerId
+    },
+    select: {
+      id: true,
+      title: true,
+      privacy: true,
+      sharedWith: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              walletAddress: true,
+              avatarUrl: true,
+            },
+          },
         },
       },
-    },
+    }
   });
+
+  // 2. Validasi: Jika jumlah dokumen yang ditemukan tidak sama dengan yang diminta, 
+  // berarti ada ID yang salah atau bukan milik Bos (Opsional: bisa dilempar error atau biarkan saja)
+  if (documents.length === 0) {
+    throw new Error('No valid documents found or unauthorized access.');
+  }
+
+  return documents;
 };
 
 export const getAllDocumentsForAdmin = async () => {
@@ -434,3 +573,52 @@ export const getSystemStatsForAdmin = async () => {
 
   return { totalFiles, totalUsers }
 }
+
+/**
+ * Mengambil daftar dokumen milik orang lain yang dibagikan ke saya (Versi Tanpa Error createdAt)
+ */
+export const getSharedWithMeDocuments = async (userId: string) => {
+  const sharedAccess = await prisma.documentAccess.findMany({
+    where: { 
+      userId: userId,
+      document: {
+        isArchived: false 
+      }
+    },
+    include: {
+      document: {
+        include: {
+          owner: {
+            select: {
+              id: true,
+              username: true,
+              walletAddress: true,
+              avatarUrl: true
+            }
+          }
+        }
+      }
+    },
+    // Kita hapus orderBy createdAt-nya karena kolomnya tidak ada di schema
+  });
+
+  return sharedAccess.map(item => ({
+    accessId: item.id,
+    document: item.document
+  }));
+};
+
+/**
+ * Mengambil log aktivitas milik user (Terbaru ke Terlama)
+ */
+export const getActivityLogs = async (userId: string) => {
+  return await prisma.activityLog.findMany({
+    where: {
+      userId: userId
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 50, // Ambil 50 aktivitas terakhir saja biar ringan
+  });
+};

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "document_access" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

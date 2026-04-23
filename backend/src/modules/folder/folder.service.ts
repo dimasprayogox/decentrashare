@@ -4,18 +4,6 @@ import { logger } from '../../utils/logger';
 import crypto from 'node:crypto';
 import { AccessRoleFolder } from '@prisma/client'; // Kuncinya di sini agar tidak undefined
 
-
-export const getRootDocuments = async (userId: string) => {
-  return await prisma.document.findMany({
-    where: {
-      ownerId: userId,
-      folderId: null, // Kuncinya di sini
-      isArchived: false,
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-};
-
 /** * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN (Sesuai kode kamu)
  */
 export const createFolder = async (name: string, userId: string) => {
@@ -159,209 +147,159 @@ export const getUserFolders = async (userId: string) => {
 };
 
 /**
- * Memindahkan banyak dokumen sekaligus ke folder lain atau ke root
+ * Flexible Folder Sharing: Different folders to different users with specific roles
  */
-export const moveMultipleDocuments = async (documentIds: string[], userId: string, targetFolderId: string | null) => {
-  
-  if (!userId) throw new Error("Service Error: userId is required");
-
-  if (targetFolderId) {
-    // Cari folder secara manual untuk debug
-    const folder = await prisma.folder.findFirst({
-      where: { 
-        id: targetFolderId,
-        ownerId: userId // Harus cocok dengan ID yang login
-      }
-    });
-
-    if (!folder) {
-      // Jika masuk sini, berarti ID folder salah ATAU folder itu punya orang lain
-      throw new Error(`Folder tidak ditemukan atau Bos bukan pemilik folder tersebut.`);
-    }
-  }
-
-  // Lanjutkan update
-  return await prisma.document.updateMany({
-    where: {
-      id: { in: documentIds },
-      ownerId: userId
-    },
-    data: { folderId: targetFolderId }
-  });
-};
-/**
- * Berbagi folder ke banyak user (Hanya untuk user yang BELUM punya akses)
- */
-export const shareFolderToMultipleUsers = async (
-  folderId: string, 
-  ownerId: string, 
-  shares: { targetUserId: string, role: AccessRoleFolder }[]
+export const shareFoldersFlexible = async (
+  ownerId: string,
+  shares: { folderId: string; targetUsers: { userId: string; role: AccessRoleFolder }[] }[]
 ) => {
-  // 1. Validasi folder dan kepemilikan
-  const folder = await prisma.folder.findUnique({ where: { id: folderId } });
-  if (!folder || folder.ownerId !== ownerId) {
-    throw new Error('Folder not found or unauthorized.');
-  }
+  return await prisma.$transaction(async (tx) => {
+    const finalResults = [];
 
-  // --- VALIDASI PRIVACY LEVEL ---
-  if (folder.privacy === 'PRIVATE') {
-    throw new Error('Cannot share a PRIVATE folder. Please change privacy level to SPECIFIC_USER or LINK_ONLY first.');
-  }
+    for (const item of shares) {
+      // 1. Validasi Kepemilikan Folder
+      const folder = await tx.folder.findUnique({ where: { id: item.folderId } });
+      if (!folder || folder.ownerId !== ownerId) continue;
 
-  // 2. Eksekusi secara paralel
-  const results = await Promise.all(
-    shares.map(async (share) => {
-      try {
-        if (share.targetUserId === ownerId) {
-          return { success: false, userId: share.targetUserId, error: "Cannot share with yourself" };
-        }
+      // 2. Loop User yang akan diberi akses ke folder ini
+      const folderResults = [];
+      for (const target of item.targetUsers) {
+        if (target.userId === ownerId) continue;
 
-        // --- CEK APAKAH AKSES SUDAH ADA ---
-        const existingAccess = await prisma.folderAccess.findUnique({
+        // Gunakan upsert: Jika sudah ada update rolenya, jika belum buat baru
+        const access = await tx.folderAccess.upsert({
           where: {
-            folderId_userId: { folderId, userId: share.targetUserId },
+            folderId_userId: { folderId: item.folderId, userId: target.userId }
           },
+          update: { role: target.role }, 
+          create: { 
+            folderId: item.folderId, 
+            userId: target.userId, 
+            role: target.role 
+          }
         });
-
-        if (existingAccess) {
-          return { 
-            success: false, 
-            userId: share.targetUserId, 
-            error: "User already has access. Use PATCH to change their role." 
-          };
-        }
-
-        // Jika belum ada, baru kita CREATE (Bukan Upsert)
-        const access = await prisma.folderAccess.create({
-          data: { 
-            folderId, 
-            userId: share.targetUserId, 
-            role: share.role 
-          },
-          include: { user: { select: { username: true } } }
-        });
-
-        return { success: true, userId: share.targetUserId, role: share.role, data: access };
-      } catch (error: any) {
-        return { success: false, userId: share.targetUserId, error: error.message };
+        folderResults.push({ userId: target.userId, role: target.role, status: 'granted' });
       }
-    })
-  );
 
-  return results;
+      // 3. AUTOMATIC PRIVACY SYNC (Google Drive Style)
+      // Saat dishare ke orang tertentu, folder & isinya otomatis jadi SPECIFIC_USER
+      await tx.folder.update({
+        where: { id: item.folderId },
+        data: { privacy: 'SPECIFIC_USER' }
+      });
+
+      await tx.document.updateMany({
+        where: { folderId: item.folderId, ownerId },
+        data: { privacy: 'SPECIFIC_USER' }
+      });
+
+      finalResults.push({ folderId: item.folderId, sharedWith: folderResults });
+    }
+
+    return finalResults;
+  });
 };
 
-/**
- * Mengambil daftar user yang memiliki akses ke folder (hanya pemilik)
+  /**
+ * Mengambil daftar user yang memiliki akses ke banyak folder sekaligus (Hanya Pemilik)
  */
-export const getSharedUsers = async (folderId: string, ownerId: string) => {
-  // 1. Pastikan folder tersebut memang milik si pemanggil
-  const folder = await prisma.folder.findUnique({
-    where: { id: folderId },
-  });
-
-  if (!folder || folder.ownerId !== ownerId) {
-    throw new Error('Forbidden. You are not the owner of this folder.');
-  }
-
-  // 2. Ambil data akses beserta info usernya
-  return await prisma.folderAccess.findMany({
-    where: { folderId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          walletAddress: true,
-          avatarUrl: true,
+export const getFoldersSharedUsers = async (folderIds: string[], ownerId: string) => {
+  const folders = await prisma.folder.findMany({
+    where: {
+      id: { in: folderIds },
+      ownerId: ownerId
+    },
+    select: {
+      id: true,
+      name: true,
+      privacy: true,
+      sharedWith: { // Relasi ke tabel folderAccess
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              walletAddress: true,
+              avatarUrl: true,
+            },
+          },
         },
       },
-    },
-  });
-};
-
-/**
- * Update akses banyak user sekaligus (Massal)
- */
-export const updateMultipleFolderAccessRoles = async (
-  folderId: string, 
-  ownerId: string, 
-  updates: { targetUserId: string, newRole: AccessRoleFolder }[]
-) => {
-  // 1. Pastikan folder milik si pengirim
-  const folder = await prisma.folder.findUnique({ where: { id: folderId } });
-  if (!folder || folder.ownerId !== ownerId) {
-    throw new Error('Unauthorized or folder not found.');
-  }
-
-   // --- VALIDASI PRIVACY LEVEL ---
-  if (folder.privacy === 'PRIVATE') {
-    throw new Error('Cannot share a PRIVATE folder. Please change privacy level to SPECIFIC_USER or LINK_ONLY first.');
-  }
-
-  // 2. Eksekusi update secara paralel
-  const results = await Promise.all(
-    updates.map(async (item) => {
-      try {
-        const updatedAccess = await prisma.folderAccess.update({
-          where: {
-            folderId_userId: {
-              folderId: folderId,
-              userId: item.targetUserId
-            }
-          },
-          data: { role: item.newRole },
-          include: { user: { select: { username: true } } }
-        });
-
-        return { success: true, userId: item.targetUserId, newRole: item.newRole, username: updatedAccess.user.username };
-      } catch (error: any) {
-        // Jika ID user tidak ditemukan di daftar shared, kirim error spesifik per user
-        return { success: false, userId: item.targetUserId, error: "Access record not found" };
-      }
-    })
-  );
-
-  return results;
-};
-
-/**
- * Mencabut akses banyak user sekaligus dari sebuah folder
- */
-export const revokeMultipleFolderAccess = async (
-  folderId: string, 
-  ownerId: string, 
-  targetUserIds: string[] // Menerima array ID user
-) => {
-  // 1. Validasi kepemilikan folder
-  const folder = await prisma.folder.findUnique({ where: { id: folderId } });
-  if (!folder || folder.ownerId !== ownerId) {
-    throw new Error('Unauthorized or folder not found.');
-  }
-
-  // 2. Hapus semua akses yang cocok dengan folderId dan list userId
-  const deleteResult = await prisma.folderAccess.deleteMany({
-    where: {
-      folderId: folderId,
-      userId: { in: targetUserIds }
     }
   });
 
-  logger.info(`[REVOKE] Removed ${deleteResult.count} users from folder ${folderId}`);
-  
-  return {
-    count: deleteResult.count,
-    message: `Successfully revoked access for ${deleteResult.count} users.`
-  };
+  if (folders.length === 0) {
+    throw new Error('Folders not found or you are not the owner.');
+  }
+
+  return folders;
 };
 
+/**
+ * Revoke (Delete) access from multiple users for multiple folders
+ */
+export const revokeFoldersAccess = async (
+  ownerId: string,
+  revokes: { folderId: string; targetUserIds: string[] }[]
+) => {
+  return await prisma.$transaction(async (tx) => {
+    const finalResults = [];
+
+    for (const item of revokes) {
+      // 1. Validasi Kepemilikan Folder
+      const folder = await tx.folder.findUnique({ where: { id: item.folderId } });
+      if (!folder || folder.ownerId !== ownerId) continue;
+
+      // 2. Hapus Akses User dari tabel FolderAccess
+      const deleteResult = await tx.folderAccess.deleteMany({
+        where: {
+          folderId: item.folderId,
+          userId: { in: item.targetUserIds }
+        }
+      });
+
+      // 3. Check: Jika sudah tidak ada lagi yang punya akses, 
+      // kembalikan folder & semua isinya ke PRIVATE (Google Drive Style)
+      const remainingAccess = await tx.folderAccess.count({
+        where: { folderId: item.folderId }
+      });
+
+      if (remainingAccess === 0) {
+        // Kunci Foldernya
+        await tx.folder.update({
+          where: { id: item.folderId },
+          data: { privacy: 'PRIVATE' }
+        });
+
+        // Kunci semua isinya (Penting untuk keamanan!)
+        await tx.document.updateMany({
+          where: { folderId: item.folderId, ownerId },
+          data: { privacy: 'PRIVATE' }
+        });
+      }
+
+      finalResults.push({ 
+        folderId: item.folderId, 
+        revokedCount: deleteResult.count,
+        newStatus: remainingAccess === 0 ? 'PRIVATE' : 'SPECIFIC_USER'
+      });
+    }
+
+    return finalResults;
+  });
+};
 
 /**
- * Mengambil daftar folder milik orang lain yang dibagikan ke saya
+ * Mengambil daftar folder milik orang lain yang dibagikan ke saya (Lengkap dengan Isi Dokumen)
  */
 export const getSharedWithMeFolders = async (userId: string) => {
   const sharedAccess = await prisma.folderAccess.findMany({
-    where: { userId: userId },
+    where: { 
+      userId: userId,
+      folder: {
+        isArchived: false // Pastikan foldernya sendiri tidak sedang diarsip
+      }
+    },
     include: {
       folder: {
         include: {
@@ -373,8 +311,35 @@ export const getSharedWithMeFolders = async (userId: string) => {
               avatarUrl: true
             }
           },
-          _count: {
-            select: { documents: true } // Menghitung jumlah file di dalamnya
+          // AMBIL SEMUA DOKUMEN DI DALAM FOLDER INI
+          documents: {
+            where: { 
+              isArchived: false,
+              OR: [
+                { privacy: 'PUBLIC' }, // Lolos jika publik
+                { privacy: 'LINK_ONLY' }, // Lolos jika link only
+                {
+                  AND: [
+                    { privacy: 'SPECIFIC_USER' },
+                    { 
+                      sharedWith: { 
+                        some: { userId: userId } // Lolos HANYA jika user terdaftar di file ini
+                      } 
+                    }
+                  ]
+                }
+              ]
+            },
+            include: {
+              owner: {
+                select: {
+                  id: true,
+                  username: true,
+                  avatarUrl: true
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
           }
         }
       }
@@ -382,14 +347,14 @@ export const getSharedWithMeFolders = async (userId: string) => {
     orderBy: { createdAt: 'desc' }
   });
 
-  // Kita mapping agar struktur datanya lebih enak dibaca oleh Frontend
   return sharedAccess.map(item => ({
     accessId: item.id,
     role: item.role,
     sharedAt: item.createdAt,
-    folder: item.folder
+    folder: item.folder // Sekarang di dalam folder ini sudah ada array 'documents'
   }));
 };
+
 
 export const getFolderContents = async (folderId: string, userId?: string, shareToken?: string) => {
   const folder = await prisma.folder.findUnique({
@@ -434,22 +399,45 @@ const getFiles = async (folderId: string) => {
 /**
  * Mengubah Privacy Level & Generate Share Token
  */
-export const updateFolderPrivacy = async (folderId: string, ownerId: string, privacy: PrivacyLevel) => {
-  const folder = await prisma.folder.findUnique({ where: { id: folderId } });
+export const updateFoldersPrivacy = async (
+  ownerId: string,
+  updates: { folderId: string; newPrivacy: PrivacyLevel }[]
+) => {
+  return await prisma.$transaction(async (tx) => {
+    const results = [];
 
-  if (!folder || folder.ownerId !== ownerId) throw new Error('Unauthorized');
+    for (const item of updates) {
+      // 1. Update Foldernya
+      const folderUpdate = await tx.folder.updateMany({
+        where: { id: item.folderId, ownerId: ownerId },
+        data: { privacy: item.newPrivacy }
+      });
 
-  // Generate token baru jika pindah ke LINK_ONLY dan belum punya token
-  let shareToken = folder.shareToken;
-  if (privacy === 'LINK_ONLY' && !shareToken) {
-    shareToken = crypto.randomBytes(16).toString('hex');
-  } else if (privacy === 'PRIVATE') {
-    shareToken = null; // Reset token jika kembali ke private agar link lama mati
-  }
+      // 2. Sinkronisasi Dokumen di dalamnya
+      await tx.document.updateMany({
+        where: { folderId: item.folderId, ownerId: ownerId },
+        data: { privacy: item.newPrivacy }
+      });
 
-  return await prisma.folder.update({
-    where: { id: folderId },
-    data: { privacy, shareToken }
+      // 3. LOGIKA CLEANUP TOTAL:
+      // Jika status baru BUKAN 'SPECIFIC_USER', hapus semua akses user agar tidak menumpuk.
+      let accessDeleted = 0;
+      if (item.newPrivacy !== 'SPECIFIC_USER') {
+        const deleted = await tx.folderAccess.deleteMany({
+          where: { folderId: item.folderId }
+        });
+        accessDeleted = deleted.count;
+      }
+
+      results.push({
+        folderId: item.folderId,
+        status: folderUpdate.count > 0 ? 'updated' : 'failed',
+        newPrivacy: item.newPrivacy,
+        accessRevoked: accessDeleted
+      });
+    }
+
+    return results;
   });
 };
 

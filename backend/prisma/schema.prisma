@@ -45,6 +45,7 @@ model User {
   folders         Folder[]
   sharedDocuments DocumentAccess[]
   sharedFolders   FolderAccess[]
+  activityLogs    ActivityLog[]
 
   @@map("users")
 }
@@ -107,6 +108,8 @@ model DocumentAccess {
   document   Document @relation(fields: [documentId], references: [id])
   user       User     @relation(fields: [userId], references: [id])
 
+  createdAt  DateTime @default(now())
+
   @@unique([documentId, userId]) // Mencegah duplikasi akses
   @@map("document_access")
 }
@@ -124,4 +127,25 @@ model FolderAccess {
 
   @@unique([folderId, userId]) // Mencegah duplikasi akses pada folder yang sama
   @@map("folder_access")
+}
+
+model ActivityLog {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  action        String   // Contoh: "UPLOAD", "MOVE", "DELETE", "RESTORE", "SHARE"
+  entityType    String   // "DOCUMENT" atau "FOLDER"
+  entityId      String   // ID Dokumen/Folder terkait
+  entityName    String   // Nama file/folder (Penting buat history kalau aslinya sudah dihapus)
+  
+  // Data Blockchain (Diisi jika aksi berkaitan dengan file, misal UPLOAD/DELETE)
+  fileHash      String?
+  ipfsHash      String?
+  blockchainTx  String?
+  
+  details       String?  // Info tambahan, misal: "Moved to folder Research"
+  createdAt     DateTime @default(now())
+
+  @@map("activity_logs")
 }

@@ -8,7 +8,7 @@ class BlockchainService {
   private contract: ethers.Contract;
 
   constructor() {
-    const rpcUrl = process.env.GANACHE_URL ?? config.blockchain.ganacheUrl;
+    const rpcUrl = process.env.RPC_URL ?? config.blockchain.ganacheUrl;
     const privateKey = process.env.DEPLOYER_PRIVATE_KEY ?? process.env.PRIVATE_KEY;
     const contractAddress = process.env.CONTRACT_ADDRESS ?? config.blockchain.contractAddress;
 

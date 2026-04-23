@@ -3252,3 +3252,1310 @@ ReferenceError: handleUpdatePrivacy is not defined
     }
   ]
 }
+2026-03-17 11:22:41 [[31merror[39m]: [31muncaughtException: handleGetRootDocuments is not defined[39m
+[31mReferenceError: handleGetRootDocuments is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts:32:43[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetRootDocuments is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts:32:43
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Tue Mar 17 2026 11:22:41 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 3016,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 129875968,
+      "heapTotal": 22338560,
+      "heapUsed": 8328722,
+      "external": 2965335,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      0.92,
+      1.02,
+      0.94
+    ],
+    "uptime": 4638
+  },
+  "trace": [
+    {
+      "column": 43,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts",
+      "function": null,
+      "line": 32,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-17 11:27:25 [[31merror[39m]: [31muncaughtException: handleMoveMultipleDocuments is not defined[39m
+[31mReferenceError: handleMoveMultipleDocuments is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:61:55[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleMoveMultipleDocuments is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:61:55
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Tue Mar 17 2026 11:27:25 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 33233,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 130617344,
+      "heapTotal": 22339584,
+      "heapUsed": 7308117,
+      "external": 2639290,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.13,
+      1.18,
+      1.03
+    ],
+    "uptime": 4922
+  },
+  "trace": [
+    {
+      "column": 55,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 61,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-17 11:52:55 [[31merror[39m]: [31muncaughtException: handleShareToUser is not defined[39m
+[31mReferenceError: handleShareToUser is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:46:44[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleShareToUser is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:46:44
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Tue Mar 17 2026 11:52:55 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 34054,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 131522560,
+      "heapTotal": 23479296,
+      "heapUsed": 210512,
+      "external": 33193,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.2,
+      0.99,
+      0.97
+    ],
+    "uptime": 6452
+  },
+  "trace": [
+    {
+      "column": 44,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 46,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-17 15:00:44 [[31merror[39m]: [31muncaughtException: handleRevokeFolderAccess is not defined[39m
+[31mReferenceError: handleRevokeFolderAccess is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts:35:50[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleRevokeFolderAccess is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts:35:50
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Tue Mar 17 2026 15:00:44 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 90628,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 128548864,
+      "heapTotal": 22177792,
+      "heapUsed": 8258551,
+      "external": 2935452,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.52,
+      1.31,
+      1.06
+    ],
+    "uptime": 17721
+  },
+  "trace": [
+    {
+      "column": 50,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts",
+      "function": null,
+      "line": 35,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-17 15:29:58 [[31merror[39m]: [31muncaughtException: handleGetSharedUsers is not defined[39m
+[31mReferenceError: handleGetSharedUsers is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts:46:47[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleGetSharedUsers is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts:46:47
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Tue Mar 17 2026 15:29:58 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 111724,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 131055616,
+      "heapTotal": 22391808,
+      "heapUsed": 8259280,
+      "external": 2938245,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.5,
+      0.95,
+      1.07
+    ],
+    "uptime": 19475
+  },
+  "trace": [
+    {
+      "column": 47,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/folder/folder.routes.ts",
+      "function": null,
+      "line": 46,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-17 16:01:50 [[31merror[39m]: [31muncaughtException: handleUpdateMultipleDocumentsPrivacy is not defined[39m
+[31mReferenceError: handleUpdateMultipleDocumentsPrivacy is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:39:62[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleUpdateMultipleDocumentsPrivacy is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:39:62
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Tue Mar 17 2026 16:01:50 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 123512,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 121303040,
+      "heapTotal": 22091776,
+      "heapUsed": 8231817,
+      "external": 2929438,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.88,
+      1.04,
+      1.02
+    ],
+    "uptime": 21388
+  },
+  "trace": [
+    {
+      "column": 62,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 39,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-18 11:35:17 [[31merror[39m]: [31muncaughtException: argument handler is required[39m
+[31mTypeError: argument handler is required[39m
+[31m    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/lib/route.js:221:17)[39m
+[31m    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:448:19)[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:48:8[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+TypeError: argument handler is required
+    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/lib/route.js:221:17)
+    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/router/index.js:448:19)
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:48:8
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Wed Mar 18 2026 11:35:17 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 7114,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 129650688,
+      "heapTotal": 22110208,
+      "heapUsed": 8255990,
+      "external": 2927307,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.94,
+      0.74,
+      0.34
+    ],
+    "uptime": 4699
+  },
+  "trace": [
+    {
+      "column": 17,
+      "file": "/home/dimas/project/decentrashare/backend/node_modules/router/lib/route.js",
+      "function": "<anonymous>",
+      "line": 221,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 19,
+      "file": "/home/dimas/project/decentrashare/backend/node_modules/router/index.js",
+      "function": "<anonymous>",
+      "line": 448,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 8,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 48,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-18 13:20:23 [[31merror[39m]: [31muncaughtException: handleArchiveMultipleDocuments is not defined[39m
+[31mReferenceError: handleArchiveMultipleDocuments is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:35:56[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleArchiveMultipleDocuments is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:35:56
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Wed Mar 18 2026 13:20:23 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 27058,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 126996480,
+      "heapTotal": 22092800,
+      "heapUsed": 8255011,
+      "external": 2934472,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      1.42,
+      0.51,
+      0.24
+    ],
+    "uptime": 11004
+  },
+  "trace": [
+    {
+      "column": 56,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 35,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-03-18 13:34:42 [[31merror[39m]: [31muncaughtException: handleRestoreDocuments is not defined[39m
+[31mReferenceError: handleRestoreDocuments is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:36:48[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: handleRestoreDocuments is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:36:48
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Wed Mar 18 2026 13:34:42 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 63845,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 129556480,
+      "heapTotal": 22145024,
+      "heapUsed": 8310439,
+      "external": 2909132,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      3.27,
+      1.96,
+      1.17
+    ],
+    "uptime": 11863
+  },
+  "trace": [
+    {
+      "column": 48,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 36,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-04-04 12:55:07 [[31merror[39m]: [31muncaughtException: authenticate is not defined[39m
+[31mReferenceError: authenticate is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:39:29[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: authenticate is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:39:29
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Sat Apr 04 2026 12:55:07 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 26157,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 126394368,
+      "heapTotal": 21978112,
+      "heapUsed": 8327755,
+      "external": 2922352,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.07,
+      1.33,
+      0.81
+    ],
+    "uptime": 10575
+  },
+  "trace": [
+    {
+      "column": 29,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 39,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-04-04 13:33:40 [[31merror[39m]: [31muncaughtException: authenticate is not defined[39m
+[31mReferenceError: authenticate is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:55:21[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: authenticate is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts:55:21
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Sat Apr 04 2026 13:33:40 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 73118,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 128401408,
+      "heapTotal": 22043648,
+      "heapUsed": 8339795,
+      "external": 2936872,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      0.9,
+      1.32,
+      1.38
+    ],
+    "uptime": 12887
+  },
+  "trace": [
+    {
+      "column": 21,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/document/document.routes.ts",
+      "function": null,
+      "line": 55,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}

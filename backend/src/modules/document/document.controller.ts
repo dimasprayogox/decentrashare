@@ -86,27 +86,33 @@ export const handleGetRootDocuments = async (req: AuthRequest, res: Response, ne
   } catch (error) { next(error); }
 };
 
-/**
- * PATCH /api/documents/bulk-move
- * Memindahkan banyak dokumen sekaligus
- */
-export const handleMoveMultipleDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleMoveDocuments = async (req: AuthRequest, res: Response) => {
   try {
-    const { documentIds, targetFolderId } = req.body; // documentIds: ["uuid1", "uuid2"]
+    const { documentIds, targetFolderId } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    
-    if (!Array.isArray(documentIds) || documentIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'documentIds must be a non-empty array' });
+    if (!documentIds || !Array.isArray(documentIds)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid document selection. Please provide an array of IDs." 
+      });
     }
 
-    const result = await documentService.moveMultipleDocuments(documentIds, userId, targetFolderId);
+    const result = await documentService.moveMultipleDocuments(documentIds, userId!, targetFolderId);
 
-    return res.status(200).json({
-      success: true,
-      message: `Successfully moved ${result.count} documents`,
-      data: result
+    // Kalo count 0, berarti ada yang gak beres (bukan owner atau ID typo)
+    if (result.count === 0) {
+      return res.status(403).json({
+        success: false,
+        message: "Failed to move documents.",
+        reason: "Documents not found or you are not the authorized owner."
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: `Successfully moved ${result.count} documents to ${result.location}.`,
+      details: `Privacy level synchronized to ${result.appliedPrivacy}.`
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
@@ -134,26 +140,23 @@ export const handleGetMyDocuments = async (req: AuthRequest, res: Response, next
   }
 };
 
-/**
- * PATCH /api/documents/bulk-archive
- * Mengarsipkan banyak dokumen sekaligus
- */
-export const handleArchiveMultipleDocuments = async (req: AuthRequest, res: Response) => {
+export const handleArchiveDocuments = async (req: AuthRequest, res: Response) => {
   try {
     const { documentIds } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    
     if (!Array.isArray(documentIds) || documentIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'documentIds must be a non-empty array' });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please provide an array of document IDs." 
+      });
     }
 
-    const result = await documentService.archiveMultipleDocuments(documentIds, userId);
+    const result = await documentService.archiveDocuments(documentIds, userId!);
 
     return res.status(200).json({
       success: true,
-      message: `Successfully archived ${result.count} documents`,
+      message: `${result.count} documents moved to Trash.`,
       data: result
     });
   } catch (error: any) {
@@ -161,23 +164,71 @@ export const handleArchiveMultipleDocuments = async (req: AuthRequest, res: Resp
   }
 };
 
-/**
- * PATCH /api/documents/bulk-restore
- * Mengembalikan banyak dokumen dari arsip
- */
-export const handleRestoreMultipleDocuments = async (req: AuthRequest, res: Response) => {
+// 1. Handle Get Archived Documents
+export const handleGetArchivedDocuments = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const archived = await documentService.getArchivedDocuments(userId!);
+
+    return res.status(200).json({
+      success: true,
+      message: "Archived documents retrieved successfully.",
+      data: archived
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const handleRestoreDocuments = async (req: AuthRequest, res: Response) => {
   try {
     const { documentIds } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Pilih setidaknya satu dokumen untuk dikembalikan." 
+      });
+    }
 
-    const result = await documentService.restoreMultipleDocuments(documentIds, userId);
+    const result = await documentService.restoreDocuments(documentIds, userId!);
 
     return res.status(200).json({
       success: true,
-      message: `Successfully restored ${result.count} documents`,
+      message: `${result.count} dokumen berhasil dikembalikan ke daftar utama.`,
       data: result
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const handlePermanentDelete = async (req: AuthRequest, res: Response) => {
+  try {
+    const { documentIds } = req.body;
+    const userId = req.user?.userId;
+
+    if (!documentIds || !Array.isArray(documentIds)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid input. 'documentIds' must be an array of strings." 
+      });
+    }
+
+    const result = await documentService.destroyMultipleDocuments(documentIds, userId!);
+
+    if (result.count === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No documents found in trash or you lack permission to delete them."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully purged ${result.count} documents from the system.`,
+      details: "Blockchain metadata has been moved to the audit logs for future verification."
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
@@ -209,19 +260,66 @@ export const handleRenameDocument = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const handleUpdateMultipleDocumentsPrivacy = async (req: AuthRequest, res: Response) => {
+
+export const handleUpdateDocumentPrivacy = async (req: AuthRequest, res: Response) => {
   try {
     const { updates } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    if (!Array.isArray(updates)) return res.status(400).json({ message: 'Format data harus array updates' });
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid format. 'updates' must be a non-empty array." 
+      });
+    }
 
-    const result = await documentService.updateMultipleDocumentsPrivacy(updates, userId);
+    const data = await documentService.updateDocumentsPrivacy(userId!, updates);
 
     return res.status(200).json({
       success: true,
-      message: `Berhasil memperbarui ${result.updatedCount} dokumen.`,
+      message: "Documents privacy levels updated and cleaned up.",
+      data
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const handleShareDocuments = async (req: AuthRequest, res: Response) => {
+  try {
+    const { shares } = req.body;
+    const userId = req.user?.userId;
+
+    if (!Array.isArray(shares)) {
+      return res.status(400).json({ success: false, message: 'Invalid format. Expected an array of shares.' });
+    }
+
+    const result = await documentService.shareDocumentsToUsers(userId!, shares);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Processing complete. Documents privacy updated to SPECIFIC_USER.',
+      data: result
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const handleRevokeAccess = async (req: AuthRequest, res: Response) => {
+  try {
+    const { revokes } = req.body;
+    const userId = req.user?.userId;
+
+    if (!Array.isArray(revokes)) {
+      return res.status(400).json({ success: false, message: 'Invalid format. Expected an array of revokes.' });
+    }
+
+    const result = await documentService.revokeDocumentsAccess(userId!, revokes);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Access revocation complete.',
       data: result
     });
   } catch (error: any) {
@@ -230,118 +328,26 @@ export const handleUpdateMultipleDocumentsPrivacy = async (req: AuthRequest, res
 };
 
 /**
- * POST /api/documents/:id/share
- * Bagikan dokumen ke user tertentu berdasarkan username
- */
-export const handleShareToUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { username } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
-
-    if (!username) {
-      return res.status(400).json({
-        success: false,
-        message: 'Target username is required.',
-      });
-    }
-
-    const access = await documentService.shareToUser(id, userId, username);
-
-    return res.status(201).json({
-      success: true,
-      data: access,
-      message: `Document shared with user "${username}" successfully`,
-    });
-  } catch (error: any) {
-    const status =
-      error.message.includes('Forbidden') ? 403 :
-      error.message.includes('not found') || error.message.includes('not found') ? 404 :
-      error.message.includes('already shared') ? 409 : 400;
-
-    if (status !== 400 || error.message.includes('yourself') || error.message.includes('already shared')) {
-      return res.status(status).json({
-        success: false,
-        message: error.message,
-      });
-    }
-    next(error);
-  }
-};
-
-/**
- * DELETE /api/documents/:id/share
- * Cabut akses dokumen dari user tertentu
- */
-export const handleRevokeAccess = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { username } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
-
-    if (!username) {
-      return res.status(400).json({
-        success: false,
-        message: 'Target username is required.',
-      });
-    }
-
-    const result = await documentService.revokeAccess(id, userId, username);
-
-    return res.status(200).json({
-      success: true,
-      data: result,
-      message: `Access revoked from user "${username}" successfully`,
-    });
-  } catch (error: any) {
-    const status =
-      error.message.includes('Forbidden') ? 403 :
-      error.message.includes('not found') ? 404 : 400;
-
-    return res.status(status).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-/**
  * GET /api/documents/:id/share
  * Lihat daftar user yang memiliki akses ke dokumen
  */
-export const handleGetSharedUsers = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleGetSharedUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { documentIds } = req.body; // Pastikan ini array dari Insomnia
     const userId = req.user?.userId;
 
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!Array.isArray(documentIds)) {
+      return res.status(400).json({ success: false, message: "documentIds must be an array." });
     }
 
-    const sharedUsers = await documentService.getSharedUsers(id, userId);
+    const data = await documentService.getDocumentsSharedUsers(documentIds, userId!);
 
     return res.status(200).json({
       success: true,
-      data: sharedUsers,
-      message: 'Shared users fetched successfully',
+      data
     });
   } catch (error: any) {
-    const status =
-      error.message.includes('Forbidden') ? 403 :
-      error.message.includes('not found') ? 404 : 500;
-
-    return res.status(status).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(404).json({ success: false, message: error.message });
   }
 };
 
@@ -362,3 +368,40 @@ export const handleGetSystemStatsAdmin = async (req: AuthRequest, res: Response,
     next(error)
   }
 }
+
+export const handleGetSharedWithMe = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    
+    // Memanggil service untuk mengambil dokumen yang dishare ke user ini
+    const data = await documentService.getSharedWithMeDocuments(userId!);
+
+    return res.status(200).json({
+      success: true,
+      message: "Successfully retrieved documents shared with you.",
+      data
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const handleGetActivityLogs = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const logs = await documentService.getActivityLogs(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Activity logs retrieved successfully.",
+      data: logs
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -113,134 +113,68 @@ export const handleRestoreFolders = async (req: AuthRequest, res: Response) => {
   }
 };
 
-/**
- * GET /api/documents/root
- * Mengambil file yang tidak berada dalam folder
- */
-export const handleGetRootDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
+
+ export const handleShareFolder = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-
-    const documents = await folderService.getRootDocuments(userId);
-    return res.status(200).json({ success: true, data: documents });
-  } catch (error) { next(error); }
-};
-
-/**
- * PATCH /api/documents/bulk-move
- * Memindahkan banyak dokumen sekaligus
- */
-export const handleMoveMultipleDocuments = async (req: AuthRequest, res: Response) => {
-  try {
-    const { documentIds, targetFolderId } = req.body;
-    
-    // Gunakan fallback jika salah satu nama field berbeda
-    const userId = req.user?.userId || req.user?.id; 
-
-    console.log("DEBUG CONTROLLER:", { userId, targetFolderId }); // Cek di terminal!
-
-    if (!userId) return res.status(401).json({ success: false, message: "User not authenticated" });
-
-    // PASTIKAN URUTANNYA: (documentIds, userId, targetFolderId)
-    const result = await folderService.moveMultipleDocuments(
-      documentIds, 
-      userId, 
-      targetFolderId
-    );
-
-    return res.status(200).json({ success: true, data: result });
-  } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
-
-
-export const handleShareFolder = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
     const { shares } = req.body;
     const userId = req.user?.userId;
 
-    const results = await folderService.shareFolderToMultipleUsers(id, userId!, shares);
-
-    // Cek apakah ada yang berhasil
-    const anySuccess = results.some(r => r.success);
-    
-    return res.status(anySuccess ? 201 : 400).json({ 
-      success: anySuccess, 
-      message: anySuccess ? 'Process completed' : 'No new access granted (users might already have access)', 
-      results 
-    });
-  } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
-
-export const handleUpdateMultipleFolderAccess = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params; // folderId
-    const { updates } = req.body; // Mengharapkan array: [{targetUserId: "...", newRole: "..."}]
-    const userId = req.user?.userId;
-
-    if (!Array.isArray(updates) || updates.length === 0) {
+    if (!Array.isArray(shares)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Updates must be a non-empty array of objects' 
+        message: 'Invalid format. Expected an array of folder shares.' 
       });
     }
 
-    const results = await folderService.updateMultipleFolderAccessRoles(id, userId!, updates);
+    const result = await folderService.shareFoldersFlexible(userId!, shares);
 
     return res.status(200).json({
       success: true,
-      message: 'Batch update completed',
-      results
+      message: 'Folder sharing processed. Privacy levels synchronized.',
+      data: result
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
   }
 };
 
-/**
- * GET /api/folders/:id/shared-users
- */
-export const handleGetSharedUsers = async (req: AuthRequest, res: Response, next: NextFunction) => {
+
+ export const handleGetFolderSharedUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params; // Ambil folderId dari URL
+    const { folderIds } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!folderIds || !Array.isArray(folderIds)) {
+      return res.status(400).json({ success: false, message: "folderIds must be an array." });
+    }
 
-    const sharedUsers = await folderService.getSharedUsers(id, userId);
+    const data = await folderService.getFoldersSharedUsers(folderIds, userId!);
 
     return res.status(200).json({
       success: true,
-      data: sharedUsers,
+      message: "Successfully retrieved shared users for multiple folders.",
+      data
     });
   } catch (error: any) {
     res.status(403).json({ success: false, message: error.message });
   }
 };
 
-export const handleRevokeMultipleFolderAccess = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleRevokeFolderAccess = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params; // folderId
-    const { targetUserIds } = req.body; // Array of IDs
+    const { revokes } = req.body;
     const userId = req.user?.userId;
 
-    if (!Array.isArray(targetUserIds) || targetUserIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'targetUserIds must be a non-empty array' 
-      });
+    if (!Array.isArray(revokes)) {
+      return res.status(400).json({ success: false, message: 'Invalid format.' });
     }
 
-    const result = await folderService.revokeMultipleFolderAccess(id, userId!, targetUserIds);
+    const result = await folderService.revokeFoldersAccess(userId!, revokes);
 
     return res.status(200).json({
       success: true,
-      ...result
+      message: 'Folder access revocation complete.',
+      data: result
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
@@ -285,19 +219,22 @@ export const handleGetSharedWithMe = async (req: AuthRequest, res: Response, nex
  */
 export const handleUpdatePrivacy = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
-    const { privacy } = req.body; // PRIVATE, PUBLIC, LINK_ONLY, SPECIFIC_USER
+    const { updates } = req.body;
     const userId = req.user?.userId;
 
-    const folder = await folderService.updateFolderPrivacy(id, userId!, privacy);
-    
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid format. 'updates' must be a non-empty array." 
+      });
+    }
+
+    const data = await folderService.updateFoldersPrivacy(userId!, updates);
+
     return res.status(200).json({
       success: true,
-      data: {
-        id: folder.id,
-        privacy: folder.privacy,
-        shareLink: folder.shareToken ? `/shared/folder/${folder.shareToken}` : null
-      }
+      message: "Privacy levels updated successfully.",
+      data
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
