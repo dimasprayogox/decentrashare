@@ -222,10 +222,11 @@ export const moveMultipleDocuments = async (
 /**
  * Mengambil semua dokumen milik user yang aktif (tidak diarsip)
  */
-export const getUserDocuments = async (userId: string) => {
+export const getUserDocuments = async (userId: string, folderId: string | null) => {
   return await prisma.document.findMany({
     where: {
       ownerId: userId,
+      folderId: folderId ? String(folderId) : null,
       isArchived: false,
     },
     include: {

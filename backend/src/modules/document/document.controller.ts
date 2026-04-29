@@ -126,9 +126,15 @@ export const handleMoveDocuments = async (req: AuthRequest, res: Response) => {
 export const handleGetMyDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
+    let { folderId } = req.query;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const documents = await documentService.getUserDocuments(userId);
+  
+    const cleanFolderId = (folderId === 'null' || folderId === 'undefined' || !folderId) 
+      ? null 
+      : String(folderId);
+
+    const documents = await documentService.getUserDocuments(userId, cleanFolderId);
 
     return res.status(200).json({
       success: true,

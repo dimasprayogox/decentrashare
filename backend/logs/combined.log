@@ -4316,3 +4316,8 @@
 {"level":"info","message":"🌍 Environment: Development","timestamp":"2026-04-29 16:54:46"}
 {"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-04-29 16:54:46"}
 {"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-04-29 16:54:46"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-04-29 17:25:04"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-04-29 17:25:04"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-04-29 17:25:04"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-04-29 17:25:04"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-04-29 17:25:04"}

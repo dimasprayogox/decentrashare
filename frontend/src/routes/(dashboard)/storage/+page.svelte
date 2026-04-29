@@ -21,14 +21,25 @@
       isLoading = true;
       const folderId = currentFolder?.id || null;
 
+      // Panggil semua data secara parallel
       const [folderRes, docRes, recentRes] = await Promise.all([
         storageService.getFolders().catch(() => ({ success: false, data: [] })),
         storageService.getDocuments(folderId).catch(() => ({ success: false, data: [] })),
         storageService.getRecentFiles().catch(() => ({ success: false, data: [] }))
       ]);
 
-      folders = folderRes.success ? folderRes.data : [];
+      // FILTER FOLDER: Jika di Root, tampilkan semua folder. 
+      // Jika di dalam folder, sembunyikan daftar folder (atau sesuaikan kebutuhan Bos)
+      if (!currentFolder) {
+        folders = folderRes.success ? folderRes.data : [];
+      } else {
+        folders = []; // Sembunyikan daftar folder lain saat sudah di dalam satu folder
+      }
+
+      // FILTER DOCUMENT: Pastikan service 'getDocuments' mengirimkan folderId ke API
+      // Backend harus memfilter: WHERE folderId = folderId
       items = docRes.success ? docRes.data : [];
+      
       quickAccess = recentRes.success ? recentRes.data : [];
     } catch (err) {
       console.error("Fatal Error:", err);
