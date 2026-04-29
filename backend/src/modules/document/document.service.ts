@@ -9,16 +9,8 @@ import blockchainService from '../blockchain/blockchain.service';
 
 
 const formatTitle = (originalName: string): string => {
-  // 1. Ambil nama tanpa ekstensi
-  const nameWithoutExt = path.parse(originalName).name;
-
-  return nameWithoutExt
-    .replace(/[_-]/g, ' ') // Ganti dash/underscore dengan spasi
-    .replace(/\s+/g, ' ')  // Bersihkan spasi ganda
-    .trim()
-    .split(' ')            // Pecah jadi array kata
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Kapitalisasi
-    .join(' ');            // Gabung kembali
+  // Hanya mengambil nama file asli tanpa .ekstensi
+  return path.parse(originalName).name;
 };
 /**
  * Validates document access based on ownership, folder inheritance, and direct sharing.
@@ -121,6 +113,7 @@ export const uploadMultipleFiles = async (
 
       // 5. METADATA PREPARATION
       const cleanTitle = formatTitle(file.originalname);
+      
 
       // 6. DATABASE TRANSACTION
       const newDocument = await prisma.$transaction(async (tx) => {

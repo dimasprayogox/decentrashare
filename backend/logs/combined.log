@@ -4285,3 +4285,34 @@
 {"level":"info","message":"🌍 Environment: Development","timestamp":"2026-04-29 16:29:08"}
 {"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-04-29 16:29:08"}
 {"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-04-29 16:29:08"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-04-29 16:33:22"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-04-29 16:33:22"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-04-29 16:33:22"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-04-29 16:33:22"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-04-29 16:33:22"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[74kjhzj1g] POST /api/auth/login","method":"POST","requestId":"74kjhzj1g","timestamp":"2026-04-29 16:35:13","url":"/api/auth/login","userAgent":"insomnia/12.3.1"}
+{"level":"error","message":"Unhandled error: Nonce expired. Please request a new nonce.","stack":"Error: Nonce expired. Please request a new nonce.\n    at <anonymous> (/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:53:15)\n    at async <anonymous> (/home/dimas/project/decentrashare/backend/src/modules/auth/auth.controller.ts:44:49)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-04-29 16:35:13"}
+{"duration":104,"level":"info","message":"[74kjhzj1g] 500 104ms","requestId":"74kjhzj1g","statusCode":500,"timestamp":"2026-04-29 16:35:13"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[x17ymomn8] GET /api/auth/nonce/0xc15764A9Cb248D9c91f169f47966FC7F94d1Ea1A","method":"GET","requestId":"x17ymomn8","timestamp":"2026-04-29 16:35:33","url":"/api/auth/nonce/0xc15764A9Cb248D9c91f169f47966FC7F94d1Ea1A","userAgent":"insomnia/12.3.1"}
+{"duration":80,"level":"info","message":"[x17ymomn8] 200 80ms","requestId":"x17ymomn8","statusCode":200,"timestamp":"2026-04-29 16:35:33"}
+{"ip":"::1","level":"info","message":"[j9glapqw2] GET /api/health","method":"GET","requestId":"j9glapqw2","timestamp":"2026-04-29 16:35:54","url":"/api/health","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"}
+{"duration":2,"level":"info","message":"[j9glapqw2] 200 2ms","requestId":"j9glapqw2","statusCode":200,"timestamp":"2026-04-29 16:35:54"}
+{"ip":"::1","level":"info","message":"[1wmb0h313] GET /favicon.ico","method":"GET","requestId":"1wmb0h313","timestamp":"2026-04-29 16:35:54","url":"/favicon.ico","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"}
+{"duration":8,"level":"info","message":"[1wmb0h313] 404 8ms","requestId":"1wmb0h313","statusCode":404,"timestamp":"2026-04-29 16:35:55"}
+{"ip":"::1","level":"info","message":"[9et6gvff8] GET /.well-known/appspecific/com.chrome.devtools.json","method":"GET","requestId":"9et6gvff8","timestamp":"2026-04-29 16:35:58","url":"/.well-known/appspecific/com.chrome.devtools.json","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"}
+{"duration":2,"level":"info","message":"[9et6gvff8] 404 2ms","requestId":"9et6gvff8","statusCode":404,"timestamp":"2026-04-29 16:35:58"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[o1dhq6hkx] POST /api/auth/login","method":"POST","requestId":"o1dhq6hkx","timestamp":"2026-04-29 16:36:49","url":"/api/auth/login","userAgent":"insomnia/12.3.1"}
+{"level":"info","message":"[AUTH] Login success for wallet: 0xc15764a9cb248d9c91f169f47966fc7f94d1ea1a","timestamp":"2026-04-29 16:36:49"}
+{"duration":178,"level":"info","message":"[o1dhq6hkx] 200 178ms","requestId":"o1dhq6hkx","statusCode":200,"timestamp":"2026-04-29 16:36:49"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[i1r4puwcm] POST /api/documents/upload","method":"POST","requestId":"i1r4puwcm","timestamp":"2026-04-29 16:37:43","url":"/api/documents/upload","userAgent":"insomnia/12.3.1"}
+{"duration":7874,"level":"info","message":"[i1r4puwcm] 201 7874ms","requestId":"i1r4puwcm","statusCode":201,"timestamp":"2026-04-29 16:37:50"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-04-29 16:52:44"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-04-29 16:52:44"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-04-29 16:52:44"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-04-29 16:52:44"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-04-29 16:52:44"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-04-29 16:54:46"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-04-29 16:54:46"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-04-29 16:54:46"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-04-29 16:54:46"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-04-29 16:54:46"}
