@@ -9,11 +9,16 @@ import blockchainService from '../blockchain/blockchain.service';
 
 
 const formatTitle = (originalName: string): string => {
+  // 1. Ambil nama tanpa ekstensi
   const nameWithoutExt = path.parse(originalName).name;
+
   return nameWithoutExt
-    .replace(/[_-]/g, ' ') // Replace underscores and dashes with spaces
-    .replace(/\s+/g, ' ')  // Collapse multiple spaces
-    .trim();
+    .replace(/[_-]/g, ' ') // Ganti dash/underscore dengan spasi
+    .replace(/\s+/g, ' ')  // Bersihkan spasi ganda
+    .trim()
+    .split(' ')            // Pecah jadi array kata
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Kapitalisasi
+    .join(' ');            // Gabung kembali
 };
 /**
  * Validates document access based on ownership, folder inheritance, and direct sharing.
