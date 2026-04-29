@@ -1,15 +1,18 @@
 <script lang="ts">
   import { fade, scale, slide } from 'svelte/transition';
-  let { isOpen, onClose } = $props();
+  import { storageService } from '$lib/services'; // Pastikan import service Bos
+  
+  // Ambil props dengan Svelte 5 style
+  // folderId sangat penting dikirim dari parent agar file masuk ke folder yang benar
+  let { isOpen, onClose, onUploaded, folderId = null } = $props();
 
   let isDragging = $state(false);
   let files = $state<File[]>([]);
+  let isUploading = $state(false); // State untuk loading button
 
-  // Fungsi tambah file
   function handleFiles(newFiles: FileList | null) {
     if (!newFiles) return;
     const array = Array.from(newFiles);
-    // Filter file > 100MB agar tidak jebol
     const validFiles = array.filter(f => f.size <= 100 * 1024 * 1024);
     files = [...files, ...validFiles];
   }
@@ -20,14 +23,50 @@
     handleFiles(e.dataTransfer?.files || null);
   }
 
-  // Fungsi hapus file dari antrean
   function removeFile(index: number) {
     files = files.filter((_, i) => i !== index);
   }
 
-  function startUpload() {
-    console.log("Mengunggah ke IPFS...", files);
-    // Logika Web3/IPFS Bos masuk sini
+  // --- FUNGSI UPLOAD YANG SUDAH DISESUAIKAN ---
+  async function startUpload() {
+    if (files.length === 0) return;
+    
+    try {
+      isUploading = true;
+      
+      // 1. Ambil data asli dari Proxy Svelte 5 menggunakan snapshot
+      const rawFiles = $state.snapshot(files);
+      
+      // 2. Bungkus ke FormData
+      const formData = new FormData();
+      rawFiles.forEach((file) => {
+        formData.append('files', file); // 'files' harus sama dengan di backend Multer
+      });
+
+      // 3. Tambahkan folderId jika user sedang di dalam folder
+      if (folderId) {
+        formData.append('folderId', folderId);
+      }
+
+      console.log("Mengunggah ke IPFS & Blockchain...", rawFiles);
+
+      // 4. Panggil service (Sesuaikan nama fungsi di storageService Bos)
+      const result = await storageService.uploadMultipleFiles(formData);
+
+      if (result.success) {
+        // Beri feedback atau refresh data di dashboard
+        files = []; // Kosongkan antrean
+        onUploaded(); // Trigger fungsi loadStorageData() di parent
+        onClose(); // Tutup modal
+      } else {
+        alert("Beberapa file gagal diunggah: " + result.message);
+      }
+    } catch (error: any) {
+      console.error("Upload Error:", error);
+      alert("Gagal mengunggah: " + (error.response?.data?.message || error.message));
+    } finally {
+      isUploading = false;
+    }
   }
 </script>
 
@@ -100,11 +139,16 @@
       {/if}
 
       <button 
-        disabled={files.length === 0}
+        disabled={files.length === 0 || isUploading}
         onclick={startUpload}
-        class="w-full mt-8 h-14 bg-blue-600 disabled:bg-white/5 disabled:text-gray-500 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-95 shadow-xl shadow-blue-600/20"
+        class="w-full mt-8 h-14 bg-blue-600 disabled:bg-white/5 disabled:text-gray-500 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-95 shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3"
       >
-        {files.length > 0 ? `Upload ${files.length} File` : 'Pilih File Terlebih Dahulu'}
+        {#if isUploading}
+          <div class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+          <span>Sedang Memproses Blockchain...</span>
+        {:else}
+          <span>{files.length > 0 ? `Upload ${files.length} File` : 'Pilih File Terlebih Dahulu'}</span>
+        {/if}
       </button>
     </div>
   </div>

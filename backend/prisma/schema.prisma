@@ -58,6 +58,10 @@ model Folder {
   documents Document[]
   sharedWith FolderAccess[]
 
+  parentId    String? 
+  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subFolders  Folder[] @relation("FolderHierarchy")
+
   privacy      PrivacyLevel   @default(PRIVATE)
   shareToken   String?        @unique
 

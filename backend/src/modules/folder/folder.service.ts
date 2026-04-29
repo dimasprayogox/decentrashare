@@ -136,10 +136,11 @@ export const restoreMultipleFolders = async (folderIds: string[], userId: string
   });
 };
 
-export const getUserFolders = async (userId: string) => {
+export const getUserFolders = async (userId: string, parentId: string | null = null) => {
   return await prisma.folder.findMany({
     where: { 
       ownerId: userId,
+      parentId: parentId,
       isArchived: false // Pastikan hanya ambil yang aktif
     },
     orderBy: { createdAt: 'desc' }

@@ -1,47 +1,40 @@
 import { apiClient } from '../axios';
 
 export const storageService = {
-    // Ambil semua data (file & folder)
+    // 1. Ambil folder (Root)
     getFolders: () => apiClient('/folders'),
 
+    // 2. Ambil dokumen (Root atau Filter by folderId)
+    getDocuments: (folderId: string | null = null) => {
+        const url = folderId ? `/documents?folderId=${folderId}` : '/documents';
+        return apiClient(url);
+    },
 
-    // Ambil file yang baru saja diakses (untuk Quick Access)
+    // 3. Ambil file terbaru
     getRecentFiles: () => apiClient('/documents/recent'),
 
-    async uploadDocument(file: File, folderId: string | null = null) {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        // Pastikan key-nya sesuai dengan yang diminta backend (misal: folderId)
-        if (folderId) {
-            formData.append('folderId', folderId);
-        }
-
-        // Panggil apiClient dengan method POST dan body FormData
+    /**
+     * FUNGSI UPLOAD UTAMA (MULTIPLE)
+     * Kita gunakan satu fungsi saja yang menerima FormData
+     */
+    uploadMultipleFiles: async (formData: FormData) => {
+        // Menggunakan apiClient agar seragam dengan fungsi lainnya
+        // Jangan set 'Content-Type' manual, biarkan browser yang menangani boundary-nya
         return await apiClient('/documents/upload', {
             method: 'POST',
-            // PENTING: Biarkan browser yang mengatur Content-Type untuk FormData
-            // Jangan tambahkan 'Content-Type': 'multipart/form-data' di sini
-            body: formData 
+            body: formData
         });
     },
 
-    // Buat folder baru
-    async createFolder(folderName: string) {
+    // 4. Buat folder baru
+    createFolder: async (folderName: string) => {
         return await apiClient('/folders', {
             method: 'POST',
             body: JSON.stringify({ name: folderName }) 
         });
     },
 
-    // Tambahkan parameter optional folderId
-    getDocuments: (folderId: string | null = null) => {
-        const url = folderId ? `/documents?folderId=${folderId}` : '/documents';
-        return apiClient(url);
-    },
-    // ...
-
-    // Hapus item berdasarkan ID
+    // 5. Hapus item (File/Folder)
     deleteItem: (id: string) => apiClient(`/storage/${id}`, {
         method: 'DELETE'
     })
