@@ -9,13 +9,13 @@ import * as folderService from './folder.service';
  */
 export const handleCreateFolder = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { name } = req.body;
+    const { name, parentId } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
     if (!name) return res.status(400).json({ success: false, message: 'Folder name is required' });
 
-    const folder = await folderService.createFolder(name, userId);
+    const folder = await folderService.createFolder(name, userId, parentId || null);
 
     return res.status(201).json({
       success: true,
@@ -34,9 +34,13 @@ export const handleCreateFolder = async (req: AuthRequest, res: Response, next: 
 export const handleGetMyFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
+    const { parentId } = req.query;
+
+    const cleanParentId = (parentId === 'null' || !parentId) ? null : String(parentId);
+
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const folders = await folderService.getUserFolders(userId);
+    const folders = await folderService.getUserFolders(userId, cleanParentId);
 
     return res.status(200).json({
       success: true,
