@@ -6,9 +6,9 @@ import { AccessRoleFolder } from '@prisma/client'; // Kuncinya di sini agar tida
 
 /** * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN (Sesuai kode kamu)
  */
-export const createFolder = async (name: string, userId: string) => {
+export const createFolder = async (name: string, userId: string, parentId: string | null = null) => {
   return await prisma.folder.create({
-    data: { name, ownerId: userId }
+    data: { name, ownerId: userId, parentId: parentId }
   });
 };
 
