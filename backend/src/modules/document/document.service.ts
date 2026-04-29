@@ -3,9 +3,18 @@ import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { PrivacyLevel } from '@prisma/client';
 import fs from 'fs';
+import path from 'path';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
 
+
+const formatTitle = (originalName: string): string => {
+  const nameWithoutExt = path.parse(originalName).name;
+  return nameWithoutExt
+    .replace(/[_-]/g, ' ') // Replace underscores and dashes with spaces
+    .replace(/\s+/g, ' ')  // Collapse multiple spaces
+    .trim();
+};
 /**
  * Validates document access based on ownership, folder inheritance, and direct sharing.
  * Implements a hybrid access control model.
@@ -72,15 +81,13 @@ export const uploadMultipleFiles = async (
 ) => {
   const results = [];
 
-  // 1. SECURITY CHECK: Pastikan folder tujuan milik si Bos
+  // 1. SECURITY CHECK: Verify folder ownership
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
   if (folderId) {
     const folder = await prisma.folder.findFirst({
       where: { id: folderId, ownerId: userId }
     });
     if (!folder) throw new Error("Target folder not found or access denied.");
-    
-    // File baru otomatis ikut privasi folder (Google Drive Style)
     targetPrivacy = folder.privacy;
   }
 
@@ -88,31 +95,34 @@ export const uploadMultipleFiles = async (
     try {
       const fileHash = await generateFileHash(file.path);
 
-      // 2. CEK DUPLIKAT (Berdasarkan Konten File)
+      // 2. DUPLICATE CHECK: Based on file content hash
       const existingFile = await prisma.document.findUnique({
         where: { fileHash }
       });
-      if (existingFile) throw new Error(`Duplicate detected. This file already exists.`);
+      if (existingFile) throw new Error(`Duplicate detected. This file content already exists.`);
 
-      // 3. UPLOAD KE IPFS (Pinata)
+      // 3. IPFS UPLOAD (Pinata)
       const fileBuffer = fs.readFileSync(file.path);
       const upload = await pinata.upload.file(
         new File([new Blob([fileBuffer])], file.originalname, { type: file.mimetype })
       );
 
-      // 4. RECORD KE BLOCKCHAIN (Kekuatan Utama Decentrashare!)
+      // 4. BLOCKCHAIN RECORDING
       const blockchainTx = await blockchainService.recordToBlockchain(
         upload.IpfsHash,
         file.originalname,
         fileHash
       );
 
-      // 5. SAVE KE DB & LOG AKTIVITAS (Pakai Transaction agar aman)
+      // 5. METADATA PREPARATION
+      const cleanTitle = formatTitle(file.originalname);
+
+      // 6. DATABASE TRANSACTION
       const newDocument = await prisma.$transaction(async (tx) => {
         const doc = await tx.document.create({
           data: {
-            title: file.originalname,
-            fileName: file.originalname,
+            title: cleanTitle,           // Example: "Final Report"
+            fileName: file.originalname, // Example: "final_report_v1.pdf"
             fileSize: file.size,
             mimeType: file.mimetype,
             ipfsHash: upload.IpfsHash,
@@ -121,11 +131,10 @@ export const uploadMultipleFiles = async (
             isOnChain: true,
             ownerId: userId,
             folderId: folderId || null,
-            privacy: targetPrivacy, // Sinkronisasi otomatis
+            privacy: targetPrivacy,
           },
         });
 
-        // CATAT KE ACTIVITY LOG
         await tx.activityLog.create({
           data: {
             userId: userId,
@@ -147,7 +156,7 @@ export const uploadMultipleFiles = async (
     } catch (error: any) {
       results.push({ success: false, fileName: file.originalname, error: error.message });
     } finally {
-      // Bersihkan file sementara di server
+      // Cleanup temporary multer files
       if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
     }
   }
