@@ -52,7 +52,7 @@ export const handleGetMyFolders = async (req: AuthRequest, res: Response, next: 
 };
 
 // folder.controller.ts
-export const handleGetFolderPath = async (req: AuthRequest, res: Response) => {
+export const handleFolderPath = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const path = await folderService.getFolderPath(id);

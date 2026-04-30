@@ -41,7 +41,7 @@ router.patch("/privacy", handleUpdatePrivacy);
 router.delete("/", handleDeleteMultipleFolders);
 router.patch("/restore", handleRestoreFolders);
 
-router.patch("/path/:id", handleFolderPath);
+router.get("/path/:id", handleFolderPath);
 
 router.patch("/:id", handleRenameFolder);
 router.get("/:id", handleGetFolderDetail);
