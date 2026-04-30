@@ -3,6 +3,7 @@ import {
   handleGetMyFolders,
   handleCreateFolder,
   handleGetFolderDetail,
+  handleFolderPath,
   handleRenameFolder,
   handleDeleteMultipleFolders,
   handleRestoreFolders,
@@ -39,6 +40,9 @@ router.patch("/privacy", handleUpdatePrivacy);
 // Detail, Rename, dan Delete ditaruh di sini
 router.delete("/", handleDeleteMultipleFolders);
 router.patch("/restore", handleRestoreFolders);
+
+router.patch("/path/:id", handleFolderPath);
+
 router.patch("/:id", handleRenameFolder);
 router.get("/:id", handleGetFolderDetail);
 

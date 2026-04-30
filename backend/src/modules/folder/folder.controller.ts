@@ -51,6 +51,17 @@ export const handleGetMyFolders = async (req: AuthRequest, res: Response, next: 
   }
 };
 
+// folder.controller.ts
+export const handleGetFolderPath = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const path = await folderService.getFolderPath(id);
+    return res.json({ success: true, data: path });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const handleRenameFolder = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

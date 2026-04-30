@@ -36,6 +36,9 @@ export const getFolderDetail = async (folderId: string, userId: string) => {
     where: { id: folderId },
     include: {
       owner: { select: { username: true, walletAddress: true } },
+      parent: {
+        select: { id: true, name: true, parentId: true }
+      },
       _count: { select: { documents: true } }
     }
   });
@@ -52,6 +55,29 @@ export const getFolderDetail = async (folderId: string, userId: string) => {
   }
 
   return folder;
+};
+
+// folder.service.ts
+export const getFolderPath = async (folderId: string) => {
+  const path = [];
+  let currentId = folderId;
+
+  // Lakukan perulangan sampai tidak ada parentId lagi (sampai Root)
+  while (currentId) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: currentId },
+      select: { id: true, name: true, parentId: true }
+    });
+
+    if (folder) {
+      path.unshift({ id: folder.id, name: folder.name }); // Masukkan ke awal array
+      currentId = folder.parentId; // Naik ke level atas
+    } else {
+      break;
+    }
+  }
+
+  return path;
 };
 
 /**
