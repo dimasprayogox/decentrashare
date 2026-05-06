@@ -1,0 +1,9 @@
+node_modules
+bun.lockb
+.env
+.git
+*.md
+.DS_Store
+coverage
+dist
+prisma/migrations

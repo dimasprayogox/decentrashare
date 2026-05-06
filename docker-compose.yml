@@ -1,0 +1,51 @@
+# /var/www/decentrashare/docker-compose.yml
+version: '3.8'
+
+services:
+  backend:
+    image: dimasprayogox/decentrashare-backend:latest
+    container_name: decentrashare-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.6'
+          memory: 300M
+    networks:
+      - app-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: decentrashare-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: decentrashare_db
+      POSTGRES_USER: murkoboy
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 200M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U murkoboy -d decentrashare_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-net
+
+volumes:
+  pg_data:
+
+networks:
+  app-net:
+    driver: bridge
