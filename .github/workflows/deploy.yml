@@ -28,10 +28,10 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: ${{ secrets.VPS_USER }}   # Pastikan ini sesuai user VPS (misal: root atau murkoboy)
           key: ${{ secrets.VPS_SSH_KEY }}
-          # Opsional: nonaktifkan strict host key checking untuk pertama kali
-          disable_strict_host_key_checking: true
+          script_stop: true
+          debug: true                         # Akan muncul log detail jika masih error
           script: |
             cd /var/www/decentrashare
             docker compose pull
