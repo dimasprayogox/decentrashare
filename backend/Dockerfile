@@ -3,7 +3,7 @@ FROM oven/bun:1-alpine
 WORKDIR /app
 
 # Copy dependency files dulu agar cache optimal
-COPY package.json bun.lock* ./
+COPY package.json bun.lock ./
 
 # Install production dependencies
 RUN bun install --production
