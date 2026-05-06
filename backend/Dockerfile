@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 
 # Install production dependencies
-RUN bun install --production --no-frozen-lockfile
+RUN bun install
 
 # Copy source code
 COPY . .
