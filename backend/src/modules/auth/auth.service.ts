@@ -1,178 +1,249 @@
+// src/modules/auth/auth.controller.ts
+import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/db';
-import { verifyMetamaskSignature } from '../../utils/web3';
-import jwt from 'jsonwebtoken';
-import { env } from '../../config/env'; // pastikan path ini sesuai struktur kamu
-import crypto from 'crypto';
-import { logger } from '../../utils/logger.js';
+import { getNonce, loginWithWallet, registerUser, refreshAccessToken, logout } from './auth.service';
+import { AuthRequest } from '../../middlewares/auth.middleware';
 
-const JWT_SECRET = env.JWT_SECRET;
-const JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
-const JWT_ACCESS_EXPIRES_IN = env.JWT_ACCESS_EXPIRES_IN ?? '7d';
-const JWT_REFRESH_EXPIRES_IN = env.JWT_REFRESH_EXPIRES_IN ?? '7d';
+const isEthAddress = (address: string) => /^0x[a-fA-F0-9]{40}$/.test(address);
 
-/**
- * Step 1: Generate atau update nonce untuk wallet address tertentu
- */
-export const getNonce = async (walletAddress: string) => {
-  const address = walletAddress.toLowerCase();
-  const nonce = crypto.randomBytes(16).toString('hex');
-  const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
+// ─────────────────────────────────────────────────────────────
+// GET NONCE
+// ─────────────────────────────────────────────────────────────
+export const handleGetNonce = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { walletAddress } = req.params;
 
-  const user = await prisma.user.upsert({
-    where: { walletAddress: address },
-    update: { nonce, nonceExpiresAt },
-    create: {
-      walletAddress: address,
-      nonce,
-      nonceExpiresAt,
-      isRegistered: false,
-    },
-  });
+    if (!walletAddress) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'walletAddress is required' 
+      });
+    }
 
-  return {
-    nonce: user.nonce,
-    loginMessage: `Sign this message to authenticate.\nNonce: ${user.nonce}`,
-    registerMessage: `Sign this message to register.\nNonce: ${user.nonce}`,
-  };
+    if (!isEthAddress(walletAddress)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid Ethereum address format' 
+      });
+    }
+
+    const result = await getNonce(walletAddress);
+    return res.status(200).json({ success: true,  result });
+
+  } catch (error: any) {
+    // Handle expected errors explicitly
+    if (error.message?.includes('database') || error.message?.includes('prisma')) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection error. Please try again later.'
+      });
+    }
+    
+    // Unexpected errors → pass to global error middleware
+    next(error);
+  }
 };
 
-/**
- * Step 2: Verifikasi signature dan berikan access + refresh token
- */
-export const loginWithWallet = async (walletAddress: string, signature: string) => {
-  const address = walletAddress.toLowerCase();
+// ─────────────────────────────────────────────────────────────
+// LOGIN WITH WALLET
+// ─────────────────────────────────────────────────────────────
+export const handleLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { walletAddress, signature, nonce } = req.body;
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: address },
-  });
+    if (!walletAddress || !signature) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'walletAddress and signature are required' 
+      });
+    }
 
-  if (!user) throw new Error('User not found. Please request nonce first.');
-  if (!user.isRegistered) throw new Error('User not registered. Please register first.');
-  
-  if (user.nonceExpiresAt && user.nonceExpiresAt < new Date()) {
-    throw new Error('Nonce expired. Please request a new nonce.');
+    if (!isEthAddress(walletAddress)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid Ethereum address format' 
+      });
+    }
+
+    const result = await loginWithWallet(walletAddress, signature, nonce);
+    return res.status(200).json({
+      success: true,
+       { user: result.user, token: result.token, refreshToken: result.refreshToken },
+      message: 'Authentication successful'
+    });
+
+  } catch (error: any) {
+    // ── Handle EXPECTED errors (return proper JSON + status) ──
+    
+    // User not found / not registered
+    if (error.message?.includes('not found') || error.message?.includes('not registered')) {
+      return res.status(404).json({
+        success: false,
+        message: 'Wallet not registered. Please register first.'
+      });
+    }
+    
+    // Nonce expired
+    if (error.message?.includes('Nonce expired')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication nonce expired. Please restart the login process.'
+      });
+    }
+    
+    // Invalid signature
+    if (error.message?.toLowerCase().includes('signature') || 
+        error.message?.toLowerCase().includes('invalid')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid signature. Please try signing again.'
+      });
+    }
+
+    // ── Unexpected errors → let global middleware handle ──
+    next(error);
   }
-
-  const message = `Sign this message to authenticate.\nNonce: ${user.nonce}`;
-  const isValid = verifyMetamaskSignature(address, signature, message);
-  
-  if (!isValid) {
-    logger.warn(`[AUTH] Failed login attempt: Invalid signature for wallet ${address}`);
-    throw new Error('Invalid signature');
-  }
-
-  // loginWithWallet -> access token
-  const accessToken = jwt.sign(
-    { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'access' },
-    JWT_SECRET,
-    { expiresIn: JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
-  );
-
-  // loginWithWallet -> refresh token
-  const refreshToken = jwt.sign(
-    { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'refresh' },
-    JWT_REFRESH_SECRET,
-    { expiresIn: JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
-  );
-
-  // Update Database: Rotasi Nonce dan simpan Refresh Token sekaligus
-  const updatedUser = await prisma.user.update({
-    where: { walletAddress: address },
-    data: {
-      nonce: crypto.randomBytes(16).toString('hex'),
-      nonceExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      refreshToken,
-    },
-  });
-
-  logger.info(`[AUTH] Login success for wallet: ${address}`);
-  return { user: updatedUser, token: accessToken, refreshToken };
 };
 
-/**
- * Registrasi user baru setelah verifikasi signature
- */
-export const registerUser = async (
-  walletAddress: string,
-  signature: string,
-  data: { username?: string; email?: string; avatarUrl?: string }
-) => {
-  const address = walletAddress.toLowerCase();
-  const user = await prisma.user.findUnique({ where: { walletAddress: address } });
+// ─────────────────────────────────────────────────────────────
+// REGISTER USER
+// ─────────────────────────────────────────────────────────────
+export const handleRegister = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { walletAddress, signature, username, email, avatarUrl } = req.body;
 
-  if (!user) throw new Error('User not found. Please request nonce first.');
-  if (user.isRegistered) throw new Error('User already registered.');
-  
-  if (user.nonceExpiresAt && user.nonceExpiresAt < new Date()) {
-    throw new Error('Nonce expired.');
+    if (!walletAddress || !signature) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'walletAddress and signature are required' 
+      });
+    }
+
+    if (!isEthAddress(walletAddress)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid Ethereum address format' 
+      });
+    }
+
+    const result = await registerUser(walletAddress, signature, { username, email, avatarUrl });
+    return res.status(201).json({
+      success: true,
+       { user: result.user, token: result.token },
+      message: 'Registration successful'
+    });
+
+  } catch (error: any) {
+    // Handle expected errors
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({
+        success: false,
+        message: 'Wallet not found. Please request nonce first.'
+      });
+    }
+    
+    if (error.message?.includes('already registered')) {
+      return res.status(409).json({
+        success: false,
+        message: 'This wallet is already registered. Please login instead.'
+      });
+    }
+    
+    if (error.message?.includes('Nonce expired')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication nonce expired. Please try again.'
+      });
+    }
+    
+    if (error.message?.toLowerCase().includes('signature')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid signature. Please try signing again.'
+      });
+    }
+    
+    if (error.message?.includes('Username') || error.message?.includes('taken')) {
+      return res.status(409).json({
+        success: false,
+        message: 'Username is already taken. Please choose another one.'
+      });
+    }
+
+    // Unexpected errors
+    next(error);
   }
-
-  const message = `Sign this message to register.\nNonce: ${user.nonce}`;
-  const isValid = verifyMetamaskSignature(address, signature, message);
-  
-  if (!isValid) {
-    logger.warn(`[AUTH] Failed registration attempt: Invalid signature for wallet ${address}`);
-    throw new Error('Invalid signature');
-  }
-
-  // Validasi unik untuk username/email
-  if (data.username) {
-    const existing = await prisma.user.findUnique({ where: { username: data.username } });
-    if (existing) throw new Error('Username taken.');
-  }
-
-  const updatedUser = await prisma.user.update({
-    where: { walletAddress: address },
-    data: {
-      ...data,
-      nonce: crypto.randomBytes(16).toString('hex'),
-      isRegistered: true,
-      nonceExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    },
-  });
-
-  // registerUser -> access token
-  const token = jwt.sign(
-    { userId: updatedUser.id, walletAddress: updatedUser.walletAddress, role: updatedUser.role, type: 'access' },
-    JWT_SECRET,
-    { expiresIn: JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
-  );
-
-  logger.info(`[AUTH] New user registered: ${address}`);
-  return { user: updatedUser, token };
 };
 
-/**
- * Menghasilkan access token baru menggunakan refresh token yang valid
- */
-export const refreshAccessToken = async (refreshToken: string) => {
-  // Verifikasi menggunakan Refresh Secret
-  const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as any;
-  
-  const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+// ─────────────────────────────────────────────────────────────
+// REFRESH TOKEN
+// ─────────────────────────────────────────────────────────────
+export const handleRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { refreshToken } = req.body;
 
-  // Validasi: harus ada di DB, harus cocok, dan tipenya harus 'refresh'
-  if (!user || user.refreshToken !== refreshToken || decoded.type !== 'refresh') {
-    logger.warn(`[AUTH] Unauthorized refresh attempt for userId: ${decoded?.userId}`);
-    throw new Error('Invalid refresh token');
+    if (!refreshToken) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Refresh token is required' 
+      });
+    }
+
+    const result = await refreshAccessToken(refreshToken);
+    return res.status(200).json({
+      success: true,
+       result,
+      message: 'Token refreshed successfully'
+    });
+
+  } catch (error: any) {
+    if (error.message?.includes('Invalid') || error.message?.includes('expired')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token. Please login again.'
+      });
+    }
+    next(error);
   }
-
-  const accessToken = jwt.sign(
-    { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'access' },
-    JWT_SECRET,
-    { expiresIn: JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
-  );
-
-  return { accessToken };
 };
 
-/**
- * Menghapus refresh token di database untuk logout
- */
-export const logout = async (userId: string) => {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { refreshToken: null },
-  });
-  logger.info(`[AUTH] User logged out: ${userId}`);
+// ─────────────────────────────────────────────────────────────
+// LOGOUT & GET ME (unchanged, just ensure error handling)
+// ─────────────────────────────────────────────────────────────
+export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, walletAddress: true, username: true, email: true,
+        avatarUrl: true, isRegistered: true, createdAt: true, updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.status(200).json({ success: true,  user });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const handleLogout = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    await logout(userId);
+    return res.status(200).json({ success: true, message: 'Logged out successfully' });
+  } catch (error: any) {
+    next(error);
+  }
 };
