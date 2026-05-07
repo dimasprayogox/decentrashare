@@ -22,7 +22,9 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: dimasprayogox/decentrashare-backend:latest  # ← Username plain, bukan secret
+          tags: |
+          dimasprayogox/decentrashare-backend:latest
+          dimasprayogox/decentrashare-backend:${{ github.run_number }}
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
