@@ -4,27 +4,13 @@ import { prisma } from '../../config/db';
 import { getNonce, loginWithWallet, registerUser, refreshAccessToken, logout } from './auth.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
-const isEthAddress = (address: string) => /^0x[a-fA-F0-9]{40}$/.test(address);
-
-// Step 1: Get Nonce
+// Step 1: Client minta nonce
 export const handleGetNonce = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { walletAddress } = req.params;
 
     if (!walletAddress) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'walletAddress is required',
-        errorCode: 'MISSING_WALLET_ADDRESS'
-      });
-    }
-
-    if (!isEthAddress(walletAddress)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid Ethereum address format',
-        errorCode: 'INVALID_ADDRESS_FORMAT'
-      });
+      return res.status(400).json({ success: false, message: 'walletAddress is required' });
     }
 
     const result = await getNonce(walletAddress);
@@ -34,107 +20,71 @@ export const handleGetNonce = async (req: Request, res: Response, next: NextFunc
       data: result,
     });
   } catch (error: any) {
-    console.error('[handleGetNonce] Error:', error.message);
-    
-    // Handle specific errors before passing to global handler
+    // Handle expected errors before passing to global middleware
     if (error.message?.includes('database') || error.message?.includes('prisma')) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection error. Please try again later.',
-        errorCode: 'DATABASE_ERROR'
-      });
+      return res.status(503).json({ success: false, message: 'Database connection error. Please try again later.' });
     }
-    
-    next(error); // Pass to global errorHandler
+    next(error);
   }
 };
 
-// Step 2: Login with Signature
+const isEthAddress = (address: string) => /^0x[a-fA-F0-9]{40}$/.test(address);
+
+// Step 2: Client kirim signature (Login)
 export const handleLogin = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { walletAddress, signature, nonce } = req.body;
+    const { walletAddress, signature } = req.body;
 
     if (!walletAddress || !signature) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'walletAddress and signature are required',
-        errorCode: 'MISSING_PARAMETERS'
-      });
+      return res.status(400).json({ success: false, message: 'walletAddress and signature are required' });
     }
 
     if (!isEthAddress(walletAddress)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid Ethereum address format',
-        errorCode: 'INVALID_ADDRESS_FORMAT'
+        message: 'Invalid Ethereum address format. Address must start with 0x and be 42 characters long.' 
       });
     }
 
-    const result = await loginWithWallet(walletAddress, signature, nonce);
+    const { user, token, refreshToken } = await loginWithWallet(walletAddress, signature);
 
     return res.status(200).json({
       success: true,
-      data: { 
-        user: result.user, 
-        token: result.token, 
-        refreshToken: result.refreshToken 
-      },
+      data: { user, token, refreshToken },
       message: 'Authentication successful',
     });
   } catch (error: any) {
-    console.error('[handleLogin] Error:', error.message);
-    
-    // Handle "User not registered" explicitly
+    // ── Handle EXPECTED errors with proper JSON response ──
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ success: false, message: 'Wallet not found. Please request nonce first.' });
+    }
     if (error.message?.includes('not registered')) {
-      return res.status(404).json({
-        success: false,
-        message: 'Wallet not registered. Please register first.',
-        errorCode: 'WALLET_NOT_REGISTERED'
-      });
+      return res.status(404).json({ success: false, message: 'Wallet not registered. Please register first.' });
     }
-    
-    // Handle signature verification failure
-    if (error.message?.toLowerCase().includes('signature') || 
-        error.message?.toLowerCase().includes('verify')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid signature. Please try signing again.',
-        errorCode: 'SIGNATURE_INVALID'
-      });
+    if (error.message?.includes('Nonce expired')) {
+      return res.status(401).json({ success: false, message: 'Authentication nonce expired. Please request a new nonce.' });
     }
-    
-    // Handle nonce mismatch/expired
-    if (error.message?.toLowerCase().includes('nonce') || 
-        error.message?.toLowerCase().includes('expired')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication nonce expired. Please restart the login process.',
-        errorCode: 'NONCE_EXPIRED'
-      });
+    if (error.message?.toLowerCase().includes('signature') || error.message?.toLowerCase().includes('invalid')) {
+      return res.status(401).json({ success: false, message: 'Invalid signature. Please try signing again.' });
     }
-    
-    next(error); // Pass unknown errors to global handler
+    // Unexpected errors → global middleware
+    next(error);
   }
 };
 
-// Register New User
+// Registrasi User Baru
 export const handleRegister = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { walletAddress, signature, username, email, avatarUrl } = req.body;
 
     if (!walletAddress || !signature) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'walletAddress and signature are required',
-        errorCode: 'MISSING_PARAMETERS'
-      });
+      return res.status(400).json({ success: false, message: 'walletAddress and signature are required.' });
     }
 
     if (!isEthAddress(walletAddress)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid Ethereum address format',
-        errorCode: 'INVALID_ADDRESS_FORMAT'
+        message: 'Invalid Ethereum address format.' 
       });
     }
 
@@ -147,35 +97,36 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
     return res.status(201).json({
       success: true,
       data: { user: result.user, token: result.token },
-      message: 'Registration successful',
+      message: 'Registration successful.',
     });
   } catch (error: any) {
-    console.error('[handleRegister] Error:', error.message);
-    
-    // Handle "already registered" case
-    if (error.message?.includes('already registered') || error.message?.includes('exists')) {
-      return res.status(409).json({
-        success: false,
-        message: 'This wallet is already registered. Please login instead.',
-        errorCode: 'WALLET_ALREADY_REGISTERED'
-      });
+    // Handle expected errors
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ success: false, message: 'Wallet not found. Please request nonce first.' });
     }
-    
+    if (error.message?.includes('already registered')) {
+      return res.status(409).json({ success: false, message: 'This wallet is already registered. Please login instead.' });
+    }
+    if (error.message?.includes('Nonce expired')) {
+      return res.status(401).json({ success: false, message: 'Authentication nonce expired. Please request a new nonce.' });
+    }
+    if (error.message?.toLowerCase().includes('signature')) {
+      return res.status(401).json({ success: false, message: 'Invalid signature. Please try signing again.' });
+    }
+    if (error.message?.includes('Username') || error.message?.includes('taken')) {
+      return res.status(409).json({ success: false, message: 'Username is already taken. Please choose another one.' });
+    }
     next(error);
   }
 };
 
-// Get Current User Profile
+// Ambil Profil Sendiri (Wajib Pakai Token)
 export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Unauthorized',
-        errorCode: 'UNAUTHORIZED'
-      });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     const user = await prisma.user.findUnique({
@@ -193,31 +144,22 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
     });
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found',
-        errorCode: 'USER_NOT_FOUND'
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     return res.status(200).json({ success: true, data: user });
-  } catch (error: any) {
-    console.error('[handleGetMe] Error:', error.message);
+  } catch (error) {
     next(error);
   }
 };
 
-// Refresh Access Token
+// Perbarui Access Token menggunakan Refresh Token
 export const handleRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Refresh token is required',
-        errorCode: 'MISSING_REFRESH_TOKEN'
-      });
+      return res.status(400).json({ success: false, message: 'Refresh token is required' });
     }
 
     const result = await refreshAccessToken(refreshToken);
@@ -228,31 +170,20 @@ export const handleRefreshToken = async (req: Request, res: Response, next: Next
       message: 'Token refreshed successfully',
     });
   } catch (error: any) {
-    console.error('[handleRefreshToken] Error:', error.message);
-    
-    if (error.message?.includes('expired') || error.message?.includes('invalid')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired refresh token. Please login again.',
-        errorCode: 'INVALID_REFRESH_TOKEN'
-      });
+    if (error.message?.includes('Invalid') || error.message?.includes('expired')) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired refresh token. Please login again.' });
     }
-    
     next(error);
   }
 };
 
-// Logout
+// Logout (Hapus Refresh Token di DB)
 export const handleLogout = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Unauthorized',
-        errorCode: 'UNAUTHORIZED'
-      });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
     await logout(userId);
@@ -261,8 +192,7 @@ export const handleLogout = async (req: AuthRequest, res: Response, next: NextFu
       success: true,
       message: 'Logged out successfully',
     });
-  } catch (error: any) {
-    console.error('[handleLogout] Error:', error.message);
+  } catch (error) {
     next(error);
   }
 };
