@@ -6,4 +6,3 @@ bun.lockb
 .DS_Store
 coverage
 dist
-prisma/migrations
