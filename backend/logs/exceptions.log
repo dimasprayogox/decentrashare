@@ -4559,3 +4559,237 @@ ReferenceError: authenticate is not defined
     }
   ]
 }
+2026-05-07 20:01:48 [[31merror[39m]: [31muncaughtException: authenticate is not defined[39m
+[31mReferenceError: authenticate is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/user/user.routes.ts:8:24[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: authenticate is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/user/user.routes.ts:8:24
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu May 07 2026 20:01:48 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 39378,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 131837952,
+      "heapTotal": 23658496,
+      "heapUsed": 210512,
+      "external": 33193,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      3.51,
+      1.94,
+      1.66
+    ],
+    "uptime": 5517
+  },
+  "trace": [
+    {
+      "column": 24,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/user/user.routes.ts",
+      "function": null,
+      "line": 8,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}
+2026-05-07 20:01:51 [[31merror[39m]: [31muncaughtException: authenticate is not defined[39m
+[31mReferenceError: authenticate is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/modules/user/user.routes.ts:8:24[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: authenticate is not defined
+    at /home/dimas/project/decentrashare/backend/src/modules/user/user.routes.ts:8:24
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Thu May 07 2026 20:01:51 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 40494,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 127426560,
+      "heapTotal": 22240256,
+      "heapUsed": 8284940,
+      "external": 2943281,
+      "arrayBuffers": 5433
+    }
+  },
+  "os": {
+    "loadavg": [
+      3.51,
+      1.94,
+      1.66
+    ],
+    "uptime": 5520
+  },
+  "trace": [
+    {
+      "column": 24,
+      "file": "/home/dimas/project/decentrashare/backend/src/modules/user/user.routes.ts",
+      "function": null,
+      "line": 8,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}

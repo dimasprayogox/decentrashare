@@ -30,14 +30,19 @@ enum AccessRoleFolder {
 model User {
   id              String    @id @default(uuid())
   walletAddress   String    @unique
-  username        String?   @unique
-  email           String?   @unique
+  username        String    @unique
+  email           String    @unique
   avatarUrl       String?
+  bio             String?
+  website         String? 
   role            Role      @default(USER)
   isRegistered    Boolean   @default(false)
   nonce           String?
   nonceExpiresAt  DateTime?
   refreshToken    String?
+  lastActive      DateTime? @default(now())
+  preferences     Json?     @default("{}") 
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

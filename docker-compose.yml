@@ -2,7 +2,6 @@ version: '3.8'
 
 services:
   backend:
-    # ✅ PULL dari Docker Hub, JANGAN build dari source
     image: dimasprayogox/decentrashare-backend:latest
     container_name: decentrashare-backend
     restart: unless-stopped
@@ -42,10 +41,6 @@ services:
       retries: 5
     networks:
       - app-net
-
-# ⚠️ FRONTEND TIDAK MASUK DI SINI!
-# Frontend (Vite/React) seharusnya di-deploy terpisah sebagai static files
-# via Nginx, Vercel, Netlify, atau Cloudflare Pages
 
 volumes:
   pg_

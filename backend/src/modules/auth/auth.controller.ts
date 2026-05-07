@@ -75,7 +75,7 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
 // Registrasi User Baru
 export const handleRegister = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { walletAddress, signature, username, email, avatarUrl } = req.body;
+    const { walletAddress, signature, username, email } = req.body;
 
     if (!walletAddress || !signature) {
       return res.status(400).json({ success: false, message: 'walletAddress and signature are required.' });
@@ -91,7 +91,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
     const result = await registerUser(walletAddress, signature, {
       username,
       email,
-      avatarUrl,
     });
 
     return res.status(201).json({
@@ -101,6 +100,30 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
     });
   } catch (error: any) {
     // Handle expected errors
+    if (error.message === 'Username is required') {
+      return res.status(400).json({ success: false, message: 'Username is required' });
+    }
+    // Username format invalid
+    if (error.message?.includes('Username must be')) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    // Username taken
+    if (error.message?.includes('already taken')) {
+      return res.status(409).json({ success: false, message: 'Username is already taken. Please choose another one.' });
+    }
+    
+    // Email required
+    if (error.message === 'Email is required') {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+    // Email format invalid
+    if (error.message?.includes('valid email')) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid email address' });
+    }
+    // Email already registered
+    if (error.message?.includes('already registered') && error.message?.includes('email')) {
+      return res.status(409).json({ success: false, message: 'Email is already registered. Please use another email.' });
+    }
     if (error.message?.includes('not found')) {
       return res.status(404).json({ success: false, message: 'Wallet not found. Please request nonce first.' });
     }
@@ -112,9 +135,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
     }
     if (error.message?.toLowerCase().includes('signature')) {
       return res.status(401).json({ success: false, message: 'Invalid signature. Please try signing again.' });
-    }
-    if (error.message?.includes('Username') || error.message?.includes('taken')) {
-      return res.status(409).json({ success: false, message: 'Username is already taken. Please choose another one.' });
     }
     next(error);
   }

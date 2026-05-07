@@ -4346,3 +4346,18 @@
 {"level":"info","message":"HTTP server closed","timestamp":"2026-05-07 13:40:27"}
 {"level":"info","message":"HTTP server closed","timestamp":"2026-05-07 13:40:27"}
 {"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-05-07 13:40:27"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-05-07 18:40:21"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-05-07 18:40:21"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-05-07 18:40:21"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-05-07 18:40:21"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-05-07 18:40:21"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-05-07 18:51:12"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-05-07 18:51:12"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-05-07 18:51:12"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-05-07 18:51:12"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-05-07 18:51:12"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-05-07 20:02:07"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-05-07 20:02:07"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-05-07 20:02:07"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-05-07 20:02:07"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-05-07 20:02:07"}

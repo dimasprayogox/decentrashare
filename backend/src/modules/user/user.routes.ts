@@ -1,10 +1,13 @@
-import { Router } from "express";
-import * as userController from "./user.controller";
-import { authMiddleware } from "../../middlewares/auth.middleware";
+import { Router } from 'express';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { handleGetMe, handleUpdateProfile } from './user.controller';
 
 const router = Router();
 
-// Tempatkan di sini, Bos
-router.get("/search", authMiddleware, userController.handleSearchUsers);
+// All routes require authentication
+router.use(authMiddleware);
+
+router.get('/me', handleGetMe);
+router.put('/me', handleUpdateProfile);
 
 export default router;

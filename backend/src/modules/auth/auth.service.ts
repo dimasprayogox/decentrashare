@@ -94,12 +94,28 @@ export const loginWithWallet = async (walletAddress: string, signature: string) 
 export const registerUser = async (
   walletAddress: string,
   signature: string,
-  data: { username?: string; email?: string; avatarUrl?: string }
+  data: { username: string; email: string;}
 ) => {
   const address = walletAddress.toLowerCase();
+
+if (!data.username?.trim()) {
+    throw new Error('Username is required');
+  }
+  const username = data.username.trim();
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    throw new Error('Username must be 3-20 characters (letters, numbers, underscore only)');
+  }
+
+  if (!data.email?.trim()) {
+    throw new Error('Email is required');
+  }
+  const email = data.email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Please enter a valid email address');
+  }
+
   const user = await prisma.user.findUnique({ where: { walletAddress: address } });
 
-  // ✅ Updated English messages
   if (!user) throw new Error('Wallet not found. Please request nonce first.');
   if (user.isRegistered) throw new Error('This wallet is already registered. Please login instead.');
   
@@ -112,22 +128,27 @@ export const registerUser = async (
   
   if (!isValid) {
     logger.warn(`[AUTH] Failed registration attempt: Invalid signature for wallet ${address}`);
-    throw new Error('Invalid signature. Please try signing again.'); // ✅ Updated
+    throw new Error('Invalid signature. Please try signing again.'); 
   }
 
-  // Validasi unik untuk username/email
   if (data.username) {
     const existing = await prisma.user.findUnique({ where: { username: data.username } });
-    if (existing) throw new Error('Username is already taken. Please choose another one.'); // ✅ Updated
+    if (existing) throw new Error('Username is already taken. Please choose another one.'); 
   }
 
   const updatedUser = await prisma.user.update({
     where: { walletAddress: address },
     data: {
-      ...data,
+      username,
+      email,
+      avatarUrl: null,
+      bio: null,
+      website: null,
       nonce: crypto.randomBytes(16).toString('hex'),
       isRegistered: true,
       nonceExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      lastActive: new Date(),
+      preferences: { theme: 'system', emailNotifications: true },
     },
   });
 
