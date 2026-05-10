@@ -19,4 +19,4 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # Jalankan server (Bun bisa run .ts langsung)
-CMD ["bun", "run", "src/server.ts"]
+CMD ["sh", "-c", "bunx prisma migrate deploy && bun run src/server.ts"]

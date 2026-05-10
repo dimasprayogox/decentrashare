@@ -28,7 +28,7 @@ services:
       POSTGRES_USER: murkoboy
       POSTGRES_PASSWORD: password
     volumes:
-      - pg_/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
@@ -43,7 +43,7 @@ services:
       - app-net
 
 volumes:
-  pg_
+  pg_data:
 
 networks:
   app-net:
