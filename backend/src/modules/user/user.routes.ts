@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middlewares/auth.middleware';
-import { handleGetMe, handleUpdateProfile } from './user.controller';
+import { handleGetMe, handleUpdateProfile, handleUpdateAvatar } from './user.controller';
+import { uploadMiddleware } from '../../middlewares/upload.middleware';
 
 const router = Router();
 
@@ -9,5 +10,6 @@ router.use(authMiddleware);
 
 router.get('/me', handleGetMe);
 router.put('/me', handleUpdateProfile);
+router.patch('/me/avatar', uploadMiddleware.single('avatar'), handleUpdateAvatar);
 
 export default router;
