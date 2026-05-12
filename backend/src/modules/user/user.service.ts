@@ -25,25 +25,46 @@ export const userService = {
     try {
       const fileBuffer = fs.readFileSync(file.path);
       
-      // PERBAIKAN: Ubah Buffer menjadi Uint8Array, lalu bungkus pakai File dari formdata-node
-      const fileForPinata = new File([new Uint8Array(fileBuffer)], file.originalname, { 
-        type: file.mimetype 
+      // 1. Buat Native FormData dan Blob murni bawaan Bun
+      const formData = new FormData();
+      const blob = new Blob([fileBuffer], { type: file.mimetype });
+      
+      // 2. Append file (format ini sudah 100% dipahami oleh API Pinata)
+      formData.append('file', blob, file.originalname);
+
+      // 3. Tambahkan metadata Pinata
+      const pinataMetadata = JSON.stringify({
+        name: `AVATAR_${userId}_${Date.now()}`,
+        keyvalues: {
+          folder: 'profile-pictures',
+          userId: userId,
+          appContext: 'user-profile'
+        }
+      });
+      formData.append('pinataMetadata', pinataMetadata);
+
+      // 4. Tembak langsung API Pinata pakai native Fetch Bun
+      const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.PINATA_JWT}`
+          // PENTING: Jangan tambahkan Content-Type, Bun akan mengurusnya otomatis
+        },
+        body: formData
       });
 
-      const upload = await pinata.upload
-        .file(fileForPinata)
-        .addMetadata({
-          name: `AVATAR_${userId}_${Date.now()}`, 
-          keyvalues: {
-            folder: 'profile-pictures',
-            userId: userId,
-            appContext: 'user-profile'
-          }
-        });
+      if (!pinataRes.ok) {
+        const errorData = await pinataRes.text();
+        throw new Error(`Pinata Direct API Error: ${errorData}`);
+      }
 
+      const uploadData = await pinataRes.json();
+
+      // 5. Susun URL menggunakan Gateway Bos
       const gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
-      const avatarUrl = `https://${gateway}/ipfs/${upload.IpfsHash}`;
-      // 2. UPDATE DATABASE
+      const avatarUrl = `https://${gateway}/ipfs/${uploadData.IpfsHash}`;
+
+      // 6. UPDATE DATABASE
       const updated = await prisma.user.update({
         where: { id: userId },
         data: { 
@@ -58,17 +79,20 @@ export const userService = {
         },
       });
 
-      logger.info(`[User] Avatar updated to IPFS: ${upload.IpfsHash} for userId: ${userId}`);
+      logger.info(`[User] Avatar updated to IPFS: ${uploadData.IpfsHash} for userId: ${userId}`);
       return updated;
+
     } catch (error: any) {
       logger.error(`[User] Avatar upload failed: ${error.message}`);
       throw error;
+      
     } finally {
-      // 3. CLEANUP: Hapus file temp multer agar server gak penuh
-      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      // 7. CLEANUP: Hapus file temp multer
+      if (file && file.path && fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
     }
   },
-
   // ✅ UPDATE PROFIL (TEXT DATA)
   async updateProfile(
     userId: string,
