@@ -18,43 +18,45 @@ export const userService = {
 
     if (!user) throw new Error('User not found');
     return user;
-  },
+  }, 
 
-  // ✅ KHUSUS UPLOAD AVATAR KE IPFS
-async updateAvatar(userId: string, file: Express.Multer.File) {
+  async updateAvatar(userId: string, file: Express.Multer.File) {
     try {
       const formData = new FormData();
-      
-      // 1. KUNCI UTAMA: Gunakan Bun.file()
-      // Bun.file() akan langsung membaca file dari disk dan otomatis 
-      // menjadikannya object Blob/File yang 100% sah di mata Bun.
       const bunFile = Bun.file(file.path);
       
-      // 2. Append ke FormData (Pasti lolos dari error "Expected argument to be a Blob")
-      formData.append('file', bunFile);
+      // 1. KUNCI UTAMA: Wajib sertakan file.originalname!
+      // Inilah yang mencegah Pinata membungkus gambar menjadi folder
+      formData.append('file', bunFile, file.originalname);
 
-      // 3. Tambahkan metadata Pinata
+      // 2. Tambahkan metadata Pinata
       const pinataMetadata = JSON.stringify({
-        name: `AVATAR_${userId}_${Date.now()}`, // Nama file tetap rapi
+        name: `AVATAR_${userId}_${Date.now()}`,
         keyvalues: {
           appContext: 'user-profile'
         }
       });
       formData.append('pinataMetadata', pinataMetadata);
 
-      // 4. KUNCI FOLDER: Masukkan Group ID di pinataOptions
-      formData.append('pinataOptions', JSON.stringify({ 
+      // 3. KUNCI FOLDER: Siapkan options dengan aman
+      const pinataOptions: any = { 
         cidVersion: 1,
-        wrapWithDirectory: false,
-        groupId: process.env.PINATA_PROFILE_PICTURE_FOLDER 
-      }));
+        wrapWithDirectory: false
+      };
+
+      // Pastikan nama variabel .env ini sama persis dengan yang Bos tulis di server
+      const groupId = process.env.PINATA_PROFILE_PICTURE_FOLDER;
+      if (groupId) {
+        pinataOptions.groupId = groupId;
+      }
+
+      formData.append('pinataOptions', JSON.stringify(pinataOptions));
 
       // 4. Tembak langsung API Pinata
       const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.PINATA_JWT}`
-          // Biarkan Bun yang mengurus Content-Type dan Boundary-nya
         },
         body: formData
       });
@@ -66,12 +68,9 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
 
       const uploadData = await pinataRes.json();
 
-      // 5. Susun URL menggunakan Gateway Bos
+      // 5. Susun URL menggunakan Gateway
       let gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
-      
-      // Bersihkan jika gateway di .env terlanjur ada https:// atau /ipfs/
       gateway = gateway.replace(/^https?:\/\//, '').replace(/\/ipfs\/?$/, '').replace(/\/$/, '');
-      
       const avatarUrl = `https://${gateway}/ipfs/${uploadData.IpfsHash}`;
 
       // 6. UPDATE DATABASE
@@ -103,6 +102,7 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
       }
     }
   },
+
   // ✅ UPDATE PROFIL (TEXT DATA)
   async updateProfile(
     userId: string,
