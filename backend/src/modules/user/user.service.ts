@@ -1,7 +1,7 @@
 // src/modules/user/user.service.ts
 import { prisma } from '../../config/db';
 import { logger } from '../../utils/logger';
-import { pinata } from '../../config/pinata'; // Pastikan import pinata config Bos
+import { pinata } from '../../config/pinata';
 import fs from 'fs';
 import { File, Blob } from 'formdata-node'; // Sesuai dengan cara upload multiple sebelumnya
 
@@ -25,16 +25,21 @@ export const userService = {
     try {
       const fileBuffer = fs.readFileSync(file.path);
       
-      const upload = await pinata.upload.file(
-        new File([new Blob([fileBuffer])], file.originalname, { type: file.mimetype })
-      ).addMetadata({
-        name: `AVATAR_${userId}_${Date.now()}`, 
-        keyvalues: {
-          folder: 'profile-pictures', // Agar terorganisir di dashboard Pinata
-          userId: userId,
-          appContext: 'user-profile'
-        }
+      // PERBAIKAN: Ubah Buffer menjadi Uint8Array, lalu bungkus pakai File dari formdata-node
+      const fileForPinata = new File([new Uint8Array(fileBuffer)], file.originalname, { 
+        type: file.mimetype 
       });
+
+      const upload = await pinata.upload
+        .file(fileForPinata)
+        .addMetadata({
+          name: `AVATAR_${userId}_${Date.now()}`, 
+          keyvalues: {
+            folder: 'profile-pictures',
+            userId: userId,
+            appContext: 'user-profile'
+          }
+        });
 
       const gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
       const avatarUrl = `https://${gateway}/ipfs/${upload.IpfsHash}`;
