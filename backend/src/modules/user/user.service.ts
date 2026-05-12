@@ -94,7 +94,7 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
         fs.unlinkSync(file.path);
       }
     }
-  }
+  },
   // ✅ UPDATE PROFIL (TEXT DATA)
   async updateProfile(
     userId: string,
