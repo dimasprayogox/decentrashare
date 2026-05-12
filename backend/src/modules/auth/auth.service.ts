@@ -130,11 +130,27 @@ if (!data.username?.trim()) {
     logger.warn(`[AUTH] Failed registration attempt: Invalid signature for wallet ${address}`);
     throw new Error('Invalid signature. Please try signing again.'); 
   }
+// ── Cek uniqueness username (case-insensitive) ──
+if (username) {
+  const existingUsername = await prisma.user.findFirst({
+    where: { 
+      username: { equals: username, mode: 'insensitive' },
+      id: { not: user.id } // Exclude current user
+    }
+  });
+  if (existingUsername) throw new Error('Username is already taken. Please choose another one.');
+}
 
-  if (data.username) {
-    const existing = await prisma.user.findUnique({ where: { username: data.username } });
-    if (existing) throw new Error('Username is already taken. Please choose another one.'); 
-  }
+// ── Cek uniqueness email (case-insensitive) ──
+if (email) {
+  const existingEmail = await prisma.user.findFirst({
+    where: { 
+      email: { equals: email, mode: 'insensitive' },
+      id: { not: user.id }
+    }
+  });
+  if (existingEmail) throw new Error('Email is already registered. Please use another email.');
+}
 
   const updatedUser = await prisma.user.update({
     where: { walletAddress: address },
