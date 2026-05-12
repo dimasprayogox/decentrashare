@@ -63,8 +63,16 @@ export const userService = {
       where: { id: userId },
        updateData,  // ← ✅ Ini kuncinya: "data:" sebelum object
       select: {
-        id: true, username: true, email: true, avatarUrl: true,
-        bio: true, website: true,
+        id: true,
+        walletAddress: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        bio: true,
+        website: true,
+        role: true,
+        isRegistered: true,
+        createdAt: true,
         updatedAt: true,
       },
     });

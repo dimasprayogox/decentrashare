@@ -4,6 +4,7 @@ import { userService } from './user.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
 // GET /api/user/me
+// GET /api/user/me
 export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
@@ -12,7 +13,10 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     const user = await userService.getUserById(userId);
+    
+    // ✅ GANTI:  user  →  user
     return res.status(200).json({ success: true,  user });
+    
   } catch (error: any) {
     if (error.message?.includes('not found')) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -39,6 +43,7 @@ export const handleUpdateProfile = async (req: AuthRequest, res: Response, next:
       website,
     });
 
+    // ✅ GANTI:  updated  →  updated
     return res.status(200).json({
       success: true,
        updated,
