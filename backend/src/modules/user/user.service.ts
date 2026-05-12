@@ -21,16 +21,17 @@ export const userService = {
   },
 
   // ✅ KHUSUS UPLOAD AVATAR KE IPFS
-  async updateAvatar(userId: string, file: Express.Multer.File) {
+async updateAvatar(userId: string, file: Express.Multer.File) {
     try {
-      const fileBuffer = fs.readFileSync(file.path);
-      
-      // 1. Buat Native FormData dan Blob murni bawaan Bun
       const formData = new FormData();
-      const blob = new Blob([fileBuffer], { type: file.mimetype });
       
-      // 2. Append file (format ini sudah 100% dipahami oleh API Pinata)
-      formData.append('file', blob, file.originalname);
+      // 1. KUNCI UTAMA: Gunakan Bun.file()
+      // Bun.file() akan langsung membaca file dari disk dan otomatis 
+      // menjadikannya object Blob/File yang 100% sah di mata Bun.
+      const bunFile = Bun.file(file.path);
+      
+      // 2. Append ke FormData (Pasti lolos dari error "Expected argument to be a Blob")
+      formData.append('file', bunFile);
 
       // 3. Tambahkan metadata Pinata
       const pinataMetadata = JSON.stringify({
@@ -42,20 +43,21 @@ export const userService = {
         }
       });
       formData.append('pinataMetadata', pinataMetadata);
+      formData.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
 
-      // 4. Tembak langsung API Pinata pakai native Fetch Bun
+      // 4. Tembak langsung API Pinata
       const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.PINATA_JWT}`
-          // PENTING: Jangan tambahkan Content-Type, Bun akan mengurusnya otomatis
+          // Biarkan Bun yang mengurus Content-Type dan Boundary-nya
         },
         body: formData
       });
 
       if (!pinataRes.ok) {
         const errorData = await pinataRes.text();
-        throw new Error(`Pinata Direct API Error: ${errorData}`);
+        throw new Error(`Pinata API Error: ${errorData}`);
       }
 
       const uploadData = await pinataRes.json();
@@ -92,7 +94,7 @@ export const userService = {
         fs.unlinkSync(file.path);
       }
     }
-  },
+  }
   // ✅ UPDATE PROFIL (TEXT DATA)
   async updateProfile(
     userId: string,
