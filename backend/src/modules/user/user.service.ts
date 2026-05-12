@@ -63,7 +63,11 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
       const uploadData = await pinataRes.json();
 
       // 5. Susun URL menggunakan Gateway Bos
-      const gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
+      let gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
+      
+      // Bersihkan jika gateway di .env terlanjur ada https:// atau /ipfs/
+      gateway = gateway.replace(/^https?:\/\//, '').replace(/\/ipfs\/?$/, '').replace(/\/$/, '');
+      
       const avatarUrl = `https://${gateway}/ipfs/${uploadData.IpfsHash}`;
 
       // 6. UPDATE DATABASE
