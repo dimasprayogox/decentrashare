@@ -14,8 +14,7 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
 
     const user = await userService.getUserById(userId);
     
-    // ✅ GANTI:  user  →  user
-    return res.status(200).json({ success: true,  user });
+    return res.status(200).json({ success: true, data: user });
     
   } catch (error: any) {
     if (error.message?.includes('not found')) {
@@ -43,10 +42,9 @@ export const handleUpdateProfile = async (req: AuthRequest, res: Response, next:
       website,
     });
 
-    // ✅ GANTI:  updated  →  updated
-    return res.status(200).json({
+     return res.status(200).json({
       success: true,
-       updated,
+      data: updated,
       message: 'Profile updated successfully',
     });
   } catch (error: any) {
