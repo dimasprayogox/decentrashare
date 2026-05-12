@@ -35,15 +35,19 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
 
       // 3. Tambahkan metadata Pinata
       const pinataMetadata = JSON.stringify({
-        name: `AVATAR_${userId}_${Date.now()}`,
+        name: `AVATAR_${userId}_${Date.now()}`, // Nama file tetap rapi
         keyvalues: {
-          folder: 'profile-pictures',
-          userId: userId,
           appContext: 'user-profile'
         }
       });
       formData.append('pinataMetadata', pinataMetadata);
-      formData.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
+
+      // 4. KUNCI FOLDER: Masukkan Group ID di pinataOptions
+      formData.append('pinataOptions', JSON.stringify({ 
+        cidVersion: 1,
+        wrapWithDirectory: false,
+        groupId: process.env.PINATA_PROFILE_PICTURE_FOLDER 
+      }));
 
       // 4. Tembak langsung API Pinata
       const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
