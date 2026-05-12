@@ -36,8 +36,8 @@ export const userService = {
         }
       });
 
-      const avatarUrl = `https://ipfs.io/ipfs/${upload.IpfsHash}`;
-
+      const gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
+      const avatarUrl = `https://${gateway}/ipfs/${upload.IpfsHash}`;
       // 2. UPDATE DATABASE
       const updated = await prisma.user.update({
         where: { id: userId },
