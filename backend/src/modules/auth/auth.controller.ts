@@ -367,16 +367,23 @@ export const handleRefreshToken = async (req: Request, res: Response, next: Next
   }
 };
 
-// Logout (Hapus Refresh Token di DB)
 export const handleLogout = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-
+    
+    // Hapus refreshToken
     await logout(userId);
+
+    // Hapus cookie
+    res.clearCookie('session_token', {
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'strict'
+    });
 
     return res.status(200).json({
       success: true,
