@@ -6,25 +6,80 @@ import { AccessRoleFolder } from '@prisma/client'; // Kuncinya di sini agar tida
 
 /** * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN (Sesuai kode kamu)
  */
-export const createFolder = async (name: string, userId: string, parentId: string | null = null) => {
+// src/lib/server/services/folder.service.ts
+
+/**
+ * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN
+ */
+export const createFolder = async (
+  name: string, 
+  userId: string, 
+  parentId: string | null = null
+) => {
+  const folderName = name.trim();
+
+  const existingFolder = await prisma.folder.findFirst({
+    where: {
+      name: { 
+        equals: folderName, 
+        mode: 'insensitive' 
+      },
+      ownerId: userId,
+      parentId: parentId || null, 
+      isArchived: false,
+      deletedAt: null    
+    }
+  });
+
+  if (existingFolder) {
+    throw new Error(`Folder "${folderName}" already exists in this location`);
+  }
+
   return await prisma.folder.create({
-    data: { name, ownerId: userId, parentId: parentId }
+    data: { 
+      name: folderName, 
+      ownerId: userId, 
+      parentId: parentId || null 
+    }
   });
 };
 
-/**
- * Mengubah nama folder
- */
-export const renameFolder = async (folderId: string, userId: string, newName: string) => {
-  const folder = await prisma.folder.findUnique({ where: { id: folderId } });
+export const renameFolder = async (
+  folderId: string, 
+  userId: string, 
+  newName: string
+) => {
+  const folderName = newName.trim();
+
+  const folder = await prisma.folder.findUnique({ 
+    where: { id: folderId } 
+  });
 
   if (!folder || folder.ownerId !== userId) {
     throw new Error("Folder not found or unauthorized.");
   }
 
+  const existingFolder = await prisma.folder.findFirst({
+    where: {
+      name: { 
+        equals: folderName, 
+        mode: 'insensitive' 
+      },
+      ownerId: userId,
+      parentId: folder.parentId, 
+      id: { not: folderId },    
+      isArchived: false,         
+      deletedAt: null
+    }
+  });
+
+  if (existingFolder) {
+    throw new Error(`Folder "${folderName}" already exists in this location`);
+  }
+
   return await prisma.folder.update({
     where: { id: folderId },
-    data: { name: newName }
+    data: { name: folderName }
   });
 };
 

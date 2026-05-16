@@ -3,17 +3,17 @@ import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as folderService from './folder.service';
 
-/**
- * POST /api/documents/folders
- * Membuat folder baru
- */
 export const handleCreateFolder = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { name, parentId } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    if (!name) return res.status(400).json({ success: false, message: 'Folder name is required' });
+    if (!name?.trim()) return res.status(400).json({ 
+      success: false, 
+      message: 'Folder name is required',
+      errorCode: 'MISSING_NAME'
+    });
 
     const folder = await folderService.createFolder(name, userId, parentId || null);
 
@@ -22,7 +22,16 @@ export const handleCreateFolder = async (req: AuthRequest, res: Response, next: 
       data: folder,
       message: 'Folder created successfully',
     });
-  } catch (error) {
+    
+  } catch (error: any) {
+    if (error.message?.toLowerCase().includes('already exists')) {
+      return res.status(409).json({ 
+        success: false,
+        message: error.message,
+        errorCode: 'FOLDER_EXISTS' 
+      });
+    }
+    
     next(error);
   }
 };
@@ -66,10 +75,46 @@ export const handleRenameFolder = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
-    const folder = await folderService.renameFolder(id, req.user!.userId, name);
-    return res.status(200).json({ success: true, data: folder });
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    if (!name?.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'New folder name is required',
+        errorCode: 'MISSING_NAME'
+      });
+    }
+
+    const folder = await folderService.renameFolder(id, userId, name);
+    
+    return res.status(200).json({ 
+      success: true, 
+      data: folder,
+      message: 'Folder renamed successfully'
+    });
+    
   } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+    if (error.message?.toLowerCase().includes('already exists')) {
+      return res.status(409).json({ 
+        success: false,
+        message: error.message,
+        errorCode: 'FOLDER_EXISTS' 
+      });
+    }
+    
+    if (error.message?.includes('not found') || error.message?.includes('unauthorized')) {
+      return res.status(404).json({ 
+        success: false, 
+        message: error.message,
+        errorCode: 'FOLDER_NOT_FOUND'
+      });
+    }
+    
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
