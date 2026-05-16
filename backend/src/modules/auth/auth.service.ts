@@ -1,4 +1,3 @@
-// src/modules/auth/auth.service.ts
 import { prisma } from '../../config/db';
 import { verifyMetamaskSignature } from '../../utils/web3';
 import jwt from 'jsonwebtoken';
@@ -8,16 +7,14 @@ import { logger } from '../../utils/logger.js';
 
 const JWT_SECRET = env.JWT_SECRET;
 const JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
-const JWT_ACCESS_EXPIRES_IN = env.JWT_ACCESS_EXPIRES_IN ?? '7d';
+
+const JWT_ACCESS_EXPIRES_IN = env.JWT_ACCESS_EXPIRES_IN ?? '15m'; 
 const JWT_REFRESH_EXPIRES_IN = env.JWT_REFRESH_EXPIRES_IN ?? '7d';
 
-/**
- * Step 1: Generate atau update nonce untuk wallet address tertentu
- */
 export const getNonce = async (walletAddress: string) => {
   const address = walletAddress.toLowerCase();
   const nonce = crypto.randomBytes(16).toString('hex');
-  const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   const user = await prisma.user.upsert({
     where: { walletAddress: address },
@@ -37,9 +34,6 @@ export const getNonce = async (walletAddress: string) => {
   };
 };
 
-/**
- * Step 2: Verifikasi signature dan berikan access + refresh token
- */
 export const loginWithWallet = async (walletAddress: string, signature: string) => {
   const address = walletAddress.toLowerCase();
 
@@ -47,7 +41,6 @@ export const loginWithWallet = async (walletAddress: string, signature: string) 
     where: { walletAddress: address },
   });
 
-  // ✅ Updated English messages
   if (!user) throw new Error('Wallet not found. Please request nonce first.');
   if (!user.isRegistered) throw new Error('Wallet not registered. Please register first.');
   
@@ -60,7 +53,7 @@ export const loginWithWallet = async (walletAddress: string, signature: string) 
   
   if (!isValid) {
     logger.warn(`[AUTH] Failed login attempt: Invalid signature for wallet ${address}`);
-    throw new Error('Invalid signature. Please try signing again.'); // ✅ Updated
+    throw new Error('Invalid signature. Please try signing again.');
   }
 
   const accessToken = jwt.sign(
@@ -88,9 +81,6 @@ export const loginWithWallet = async (walletAddress: string, signature: string) 
   return { user: updatedUser, token: accessToken, refreshToken };
 };
 
-/**
- * Registrasi user baru setelah verifikasi signature
- */
 export const registerUser = async (
   walletAddress: string,
   signature: string,
@@ -98,7 +88,7 @@ export const registerUser = async (
 ) => {
   const address = walletAddress.toLowerCase();
 
-if (!data.username?.trim()) {
+  if (!data.username?.trim()) {
     throw new Error('Username is required');
   }
   const username = data.username.trim();
@@ -130,19 +120,15 @@ if (!data.username?.trim()) {
     logger.warn(`[AUTH] Failed registration attempt: Invalid signature for wallet ${address}`);
     throw new Error('Invalid signature. Please try signing again.'); 
   }
-// ── Cek uniqueness username (case-insensitive) ──
-if (username) {
+
   const existingUsername = await prisma.user.findFirst({
     where: { 
       username: { equals: username, mode: 'insensitive' },
-      id: { not: user.id } // Exclude current user
+      id: { not: user.id }
     }
   });
   if (existingUsername) throw new Error('Username is already taken. Please choose another one.');
-}
 
-// ── Cek uniqueness email (case-insensitive) ──
-if (email) {
   const existingEmail = await prisma.user.findFirst({
     where: { 
       email: { equals: email, mode: 'insensitive' },
@@ -150,7 +136,18 @@ if (email) {
     }
   });
   if (existingEmail) throw new Error('Email is already registered. Please use another email.');
-}
+
+  const accessToken = jwt.sign(
+    { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'access' },
+    JWT_SECRET,
+    { expiresIn: JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+  );
+
+  const refreshToken = jwt.sign(
+    { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'refresh' },
+    JWT_REFRESH_SECRET,
+    { expiresIn: JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+  );
 
   const updatedUser = await prisma.user.update({
     where: { walletAddress: address },
@@ -164,45 +161,45 @@ if (email) {
       isRegistered: true,
       nonceExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
       lastActive: new Date(),
+      refreshToken,
       preferences: { theme: 'system', emailNotifications: true },
     },
   });
 
-  const token = jwt.sign(
-    { userId: updatedUser.id, walletAddress: updatedUser.walletAddress, role: updatedUser.role, type: 'access' },
-    JWT_SECRET,
-    { expiresIn: JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
-  );
-
   logger.info(`[AUTH] New user registered: ${address}`);
-  return { user: updatedUser, token };
+  return { user: updatedUser, token: accessToken, refreshToken };
 };
 
-/**
- * Menghasilkan access token baru menggunakan refresh token yang valid
- */
-export const refreshAccessToken = async (refreshToken: string) => {
-  const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as any;
+export const refreshAccessToken = async (oldRefreshToken: string) => {
+  const decoded = jwt.verify(oldRefreshToken, JWT_REFRESH_SECRET) as any;
   
   const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
 
-  if (!user || user.refreshToken !== refreshToken || decoded.type !== 'refresh') {
-    logger.warn(`[AUTH] Unauthorized refresh attempt for userId: ${decoded?.userId}`);
-    throw new Error('Invalid or expired refresh token. Please login again.'); // ✅ Updated
+  if (!user || user.refreshToken !== oldRefreshToken || decoded.type !== 'refresh') {
+    logger.warn(`[AUTH] Unauthorized / Reuse refresh attempt for userId: ${decoded?.userId}`);
+    throw new Error('Invalid or expired refresh token. Please login again.');
   }
 
-  const accessToken = jwt.sign(
+  const newAccessToken = jwt.sign(
     { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'access' },
     JWT_SECRET,
     { expiresIn: JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
   );
 
-  return { accessToken };
+  const newRefreshToken = jwt.sign(
+    { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'refresh' },
+    JWT_REFRESH_SECRET,
+    { expiresIn: JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+  );
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: newRefreshToken }
+  });
+
+  return { token: newAccessToken, refreshToken: newRefreshToken, user };
 };
 
-/**
- * Menghapus refresh token di database untuk logout
- */
 export const logout = async (userId: string) => {
   await prisma.user.update({
     where: { id: userId },

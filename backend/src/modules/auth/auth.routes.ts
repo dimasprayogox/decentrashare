@@ -6,13 +6,13 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 const router = Router();
 
 const nonceLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 menit
+  windowMs: 1 * 60 * 1000, 
   max: 10,
   message: { success: false, message: 'Too many requests, try again later.' },
 });
 
 const authLimiter = rateLimit({
-  windowMs: 100 * 60 * 1000, // 15 menit
+  windowMs: 100 * 60 * 1000, 
   max: 20,
 });
 

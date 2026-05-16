@@ -101,8 +101,25 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
 
     const { user, token, refreshToken } = await loginWithWallet(walletAddress, signature);
 
-    // ✅ Tambahkan flag isProfileComplete untuk frontend redirect
     const isProfileComplete = !!(user?.bio || user?.website || user?.avatarUrl);
+
+    res.cookie('session_token', token, {
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000 
+    });
+
+    if (refreshToken) {
+      res.cookie('refresh_token', refreshToken, {
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -110,7 +127,7 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
         user, 
         token, 
         refreshToken,
-        isProfileComplete  // ✅ Frontend bisa langsung decide redirect
+        isProfileComplete
       },
       message: 'Authentication successful',
     });
@@ -121,9 +138,6 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
 
-    // ── Urutan: Spesifik → Umum ──
-    
-    // Wallet tidak ditemukan di DB
     if (error.message?.includes('not found') && !error.message?.includes('registered')) {
       return res.status(404).json({ 
         success: false, 
@@ -132,7 +146,6 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
       });
     }
     
-    // Wallet belum register (sudah ada tapi isRegistered=false)
     if (error.message?.includes('not registered')) {
       return res.status(404).json({ 
         success: false, 
@@ -141,7 +154,6 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
       });
     }
     
-    // Nonce expired
     if (error.message?.includes('Nonce expired')) {
       return res.status(401).json({ 
         success: false, 
@@ -149,8 +161,7 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
         errorCode: 'NONCE_EXPIRED'
       });
     }
-    
-    // Signature invalid (cek case-insensitive)
+
     if (error.message?.toLowerCase().includes('signature') || 
         error.message?.toLowerCase().includes('invalid')) {
       return res.status(401).json({ 
@@ -160,7 +171,6 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
       });
     }
     
-    // Unexpected errors → global middleware
     next(error);
   }
 };
@@ -199,15 +209,34 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       email,
     });
 
-    // ✅ Tambahkan flag isProfileComplete untuk frontend redirect
     const isProfileComplete = !!(result.user?.bio || result.user?.website || result.user?.avatarUrl);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('session_token', result.token, {
+      path: '/',
+      secure: isProduction,
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000
+    });
+
+    if (result.refreshToken) {
+      res.cookie('refresh_token', result.refreshToken, {
+        path: '/',
+        secure: isProduction,
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+    }
 
     return res.status(201).json({
       success: true,
       data: { 
         user: result.user, 
         token: result.token,
-        isProfileComplete  // ✅ Frontend bisa langsung decide redirect
+        refreshToken: result.refreshToken,
+        isProfileComplete
       },
       message: 'Registration successful.',
     });
@@ -220,9 +249,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
 
-    // ── Urutan: Spesifik → Umum ──
-    
-    // Username validation errors
     if (error.message === 'Username is required') {
       return res.status(400).json({ 
         success: false, 
@@ -245,7 +271,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       });
     }
     
-    // Email validation errors
     if (error.message === 'Email is required') {
       return res.status(400).json({ 
         success: false, 
@@ -260,7 +285,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
         errorCode: 'EMAIL_INVALID_FORMAT'
       });
     }
-    // Email already registered (spesifik)
     if (error.message?.includes('already registered') && error.message?.includes('email')) {
       return res.status(409).json({ 
         success: false, 
@@ -269,7 +293,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       });
     }
     
-    // Wallet errors
     if (error.message?.includes('not found') && !error.message?.includes('registered')) {
       return res.status(404).json({ 
         success: false, 
@@ -277,7 +300,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
         errorCode: 'WALLET_NOT_FOUND'
       });
     }
-    // Wallet already registered (umum)
     if (error.message?.includes('already registered')) {
       return res.status(409).json({ 
         success: false, 
@@ -286,7 +308,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       });
     }
     
-    // Nonce expired
     if (error.message?.includes('Nonce expired')) {
       return res.status(401).json({ 
         success: false, 
@@ -295,7 +316,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       });
     }
     
-    // Signature invalid
     if (error.message?.toLowerCase().includes('signature') || 
         error.message?.toLowerCase().includes('invalid')) {
       return res.status(401).json({ 
@@ -305,7 +325,6 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       });
     }
     
-    // Unexpected errors → global middleware
     next(error);
   }
 };
@@ -343,25 +362,61 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
-// Perbarui Access Token menggunakan Refresh Token
+
 export const handleRefreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { refreshToken } = req.body;
+
+    const refreshToken = req.cookies?.refresh_token;
 
     if (!refreshToken) {
-      return res.status(400).json({ success: false, message: 'Refresh token is required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Refresh token is missing from cookies',
+        errorCode: 'REFRESH_TOKEN_REQUIRED'
+      });
     }
 
     const result = await refreshAccessToken(refreshToken);
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('session_token', result.token, {
+      path: '/',
+      secure: isProduction,
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000 
+    });
+
+    if (result.refreshToken) {
+      res.cookie('refresh_token', result.refreshToken, {
+        path: '/',
+        secure: isProduction,
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      data: result,
+      data: {
+        user: result.user
+      },
       message: 'Token refreshed successfully',
     });
   } catch (error: any) {
+    logger.error(`[AUTH] Refresh token error: ${error.message}`, {
+      ip: req.ip,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+
     if (error.message?.includes('Invalid') || error.message?.includes('expired')) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired refresh token. Please login again.' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid or expired refresh token. Please login again.',
+        errorCode: 'INVALID_REFRESH_TOKEN'
+      });
     }
     next(error);
   }
@@ -374,16 +429,17 @@ export const handleLogout = async (req: AuthRequest, res: Response, next: NextFu
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     
-    // Hapus refreshToken
     await logout(userId);
 
-    // Hapus cookie
-    res.clearCookie('session_token', {
+    const cookieOptions = {
       path: '/',
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: 'strict'
-    });
+      sameSite: 'strict' as const 
+    };
+
+    res.clearCookie('session_token', cookieOptions);
+    res.clearCookie('refresh_token', cookieOptions);
 
     return res.status(200).json({
       success: true,
