@@ -22,12 +22,10 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
-// ✅ HANDLER BARU: PATCH /api/user/me/avatar
-// Gunakan PATCH karena kita hanya mengupdate satu field (avatar)
 export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;
-    const file = req.file; // Didapat dari middleware multer
+    const file = req.file;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -37,7 +35,6 @@ export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: 
       return res.status(400).json({ success: false, message: 'No image file uploaded' });
     }
 
-    // Panggil service khusus upload ke IPFS Pinata
     const updated = await userService.updateAvatar(userId, file);
 
     return res.status(200).json({
@@ -45,7 +42,41 @@ export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: 
       message: 'Avatar updated successfully to IPFS',
       data: updated,
     });
+
   } catch (error: any) {
+    // ✅ Handle multer-specific errors with user-friendly messages
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Max 2MB for avatars.',
+        errorCode: 'FILE_TOO_LARGE'
+      });
+    }
+    
+    if (error.code === 'LIMIT_UNEXPECTED_FILE' || error.message?.includes('unexpected field')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid upload. Please use field name "avatar".',
+        errorCode: 'INVALID_FIELD_NAME'
+      });
+    }
+
+    // ✅ Handle Pinata/API errors
+    if (error.message?.includes('Pinata API Error')) {
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to upload to IPFS. Please try again.',
+        errorCode: 'PINATA_UPLOAD_FAILED'
+      });
+    }
+
+    // ✅ Log & pass to global handler for other errors
+    logger.error(`[AVATAR] Update failed: ${error.message}`, {
+      userId: req.user?.userId,
+      fileName: req.file?.originalname,
+      error: error.stack
+    });
+    
     next(error);
   }
 };

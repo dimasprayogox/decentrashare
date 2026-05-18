@@ -20,88 +20,172 @@ export const userService = {
     return user;
   }, 
 
-  async updateAvatar(userId: string, file: Express.Multer.File) {
-    try {
-      const formData = new FormData();
-      const bunFile = Bun.file(file.path);
-      
-      // 1. KUNCI UTAMA: Wajib sertakan file.originalname!
-      // Inilah yang mencegah Pinata membungkus gambar menjadi folder
-      formData.append('file', bunFile, file.originalname);
+  // backend/src/modules/user/user.service.ts
 
-      // 2. Tambahkan metadata Pinata
-      const pinataMetadata = JSON.stringify({
-        name: `AVATAR_${userId}_${Date.now()}`,
-        keyvalues: {
-          appContext: 'user-profile'
-        }
-      });
-      formData.append('pinataMetadata', pinataMetadata);
+// backend/src/modules/user/user.service.ts
 
-      // 3. KUNCI FOLDER: Siapkan options dengan aman
-      const pinataOptions: any = { 
-        cidVersion: 1,
-        wrapWithDirectory: false
-      };
-
-      // Pastikan nama variabel .env ini sama persis dengan yang Bos tulis di server
-      const groupId = process.env.PINATA_PROFILE_PICTURE_FOLDER;
-      if (groupId) {
-        pinataOptions.groupId = groupId;
+async updateAvatar(userId: string, file: Express.Multer.File) {
+  let oldAvatarHash: string | null = null; // Track old hash for cleanup
+  
+  try {
+    // ✅ 0. Fetch user + their Pinata group ID + old avatar
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { 
+        pinataGroupId: true,
+        username: true,
+        avatarUrl: true  // ← Fetch old avatar URL for cleanup later
       }
-
-      formData.append('pinataOptions', JSON.stringify(pinataOptions));
-
-      // 4. Tembak langsung API Pinata
-      const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.PINATA_JWT}`
-        },
-        body: formData
-      });
-
-      if (!pinataRes.ok) {
-        const errorData = await pinataRes.text();
-        throw new Error(`Pinata API Error: ${errorData}`);
-      }
-
-      const uploadData = await pinataRes.json();
-
-      // 5. Susun URL menggunakan Gateway
-      let gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
-      gateway = gateway.replace(/^https?:\/\//, '').replace(/\/ipfs\/?$/, '').replace(/\/$/, '');
-      const avatarUrl = `https://${gateway}/ipfs/${uploadData.IpfsHash}`;
-
-      // 6. UPDATE DATABASE
-      const updated = await prisma.user.update({
-        where: { id: userId },
-        data: { 
-          avatarUrl,
-          updatedAt: new Date() 
-        },
-        select: {
-          id: true,
-          username: true,
-          avatarUrl: true,
-          updatedAt: true,
-        },
-      });
-
-      logger.info(`[User] Avatar updated to IPFS: ${uploadData.IpfsHash} for userId: ${userId}`);
-      return updated;
-
-    } catch (error: any) {
-      logger.error(`[User] Avatar upload failed: ${error.message}`);
-      throw error;
-      
-    } finally {
-      // 7. CLEANUP: Hapus file temp multer
-      if (file && file.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+    });
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Extract old IPFS hash for cleanup (if exists)
+    if (user.avatarUrl) {
+      const match = user.avatarUrl.match(/\/ipfs\/([a-zA-Z0-9]+)/);
+      if (match?.[1]) {
+        oldAvatarHash = match[1];
+        logger.debug(`[Pinata] Will cleanup old avatar after update`, { 
+          userId, 
+          oldHash: oldAvatarHash 
+        });
       }
     }
-  },
+    
+    const formData = new FormData();
+    const bunFile = Bun.file(file.path);
+    
+    // 1. Append file (prevent Pinata wrapping)
+    formData.append('file', bunFile, file.originalname);
+
+    // 2. Metadata dengan kategorisasi jelas
+    const pinataMetadata = JSON.stringify({
+      name: `AVATAR_${userId}_${Date.now()}`,
+      keyvalues: {
+        userId,
+        contentType: 'avatar',
+        folderPath: 'profile/avatars',
+        originalName: file.originalname,
+        uploadedAt: new Date().toISOString(),
+      }
+    });
+    formData.append('pinataMetadata', pinataMetadata);
+
+    // 3. Options: Gunakan group personal user
+    const pinataOptions: any = { 
+      cidVersion: 1,
+      wrapWithDirectory: false
+    };
+
+    if (user.pinataGroupId) {
+      pinataOptions.groupId = user.pinataGroupId;
+      logger.debug(`[Pinata] Using user's personal group for avatar`, { 
+        userId, 
+        groupId: user.pinataGroupId 
+      });
+    }
+
+    formData.append('pinataOptions', JSON.stringify(pinataOptions));
+
+    // 4. Upload NEW avatar ke Pinata API
+    const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.PINATA_JWT}`
+      },
+      body: formData
+    });
+
+    if (!pinataRes.ok) {
+      const errorData = await pinataRes.text();
+      throw new Error(`Pinata API Error: ${errorData}`);
+    }
+
+    const uploadData = await pinataRes.json();
+    const newIpfsHash = uploadData.IpfsHash;
+
+    // 5. Build gateway URL
+    let gateway = process.env.PINATA_GATEWAY_URL || 'gateway.pinata.cloud';
+    gateway = gateway.replace(/^https?:\/\//, '').replace(/\/ipfs\/?$/, '').replace(/\/$/, '');
+    const avatarUrl = `https://${gateway}/ipfs/${newIpfsHash}`;
+
+    // 6. ✅ Update database dengan new avatarUrl
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        avatarUrl,
+        updatedAt: new Date() 
+      },
+      select: {
+        id: true,
+        username: true,
+        avatarUrl: true,
+        updatedAt: true,
+      },
+    });
+
+    logger.info(`[User] Avatar updated to IPFS`, {
+      userId,
+      oldHash: oldAvatarHash,
+      newHash: newIpfsHash,
+      pinataGroupId: user.pinataGroupId || 'ungrouped',
+      contentType: 'avatar'
+    });
+    
+    // ✅ 7. Return success (cleanup old avatar happens AFTER return, non-blocking)
+    return updated;
+
+  } catch (error: any) {
+    logger.error(`[User] Avatar upload failed: ${error.message}`, { 
+      userId, 
+      fileName: file?.originalname,
+      error: error.stack 
+    });
+    throw error;
+    
+  } finally {
+    // ✅ 8. Cleanup: (A) Temp file + (B) Old avatar from Pinata (non-blocking)
+    
+    // (A) Cleanup temp multer file
+    if (file?.path && fs.existsSync(file.path)) {
+      try { fs.unlinkSync(file.path); } 
+      catch (cleanupErr: any) {
+        logger.warn(`[User] Failed to cleanup temp avatar file`, { path: file.path });
+      }
+    }
+  
+    if (oldAvatarHash) {
+      // Non-blocking cleanup: don't await, don't throw
+      setTimeout(async () => {
+        try {
+          // Verify user still has different avatarUrl (in case of race condition)
+          const currentUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { avatarUrl: true }
+          });
+          
+          // Only unpin if current avatar is different from old one
+          if (currentUser?.avatarUrl && !currentUser.avatarUrl.includes(oldAvatarHash)) {
+            await pinata.unpin(oldAvatarHash);
+            logger.info(`[Pinata] Cleaned up old avatar`, { 
+              userId, 
+              oldHash: oldAvatarHash 
+            });
+          }
+        } catch (unpinError: any) {
+          // Non-critical: just log, don't throw
+          logger.warn(`[Pinata] Failed to unpin old avatar (non-critical)`, {
+            userId,
+            oldHash: oldAvatarHash,
+            error: unpinError.message
+          });
+        }
+      }, 1000); // Small delay to ensure DB consistency
+    }
+  }
+}
 
   // ✅ UPDATE PROFIL (TEXT DATA)
   async updateProfile(

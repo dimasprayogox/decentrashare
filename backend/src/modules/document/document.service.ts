@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
+import { createUserPinGroup } from '../pinata/pinata.service';
 
 
 const formatTitle = (originalName: string): string => {
@@ -76,9 +77,33 @@ export const uploadMultipleFiles = async (
   userId: string,
   folderId?: string
 ) => {
-  const results = [];
+  const results: Array<{
+    success: boolean;
+    fileName: string;
+    data?: any;
+    error?: string;
+    pinataInfo?: { groupId: string | null; ipfsHash: string };
+  }> = [];
 
-  // 1. SECURITY CHECK: Verify folder ownership
+  // ── 0. PRE-FETCH: Get user's Pinata group ID (optimization) ─────────
+  // Fetch once before loop instead of per-file query
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { pinataGroupId: true, username: true }
+  });
+  
+  const userGroupId = user?.pinataGroupId || null;
+  
+  if (userGroupId) {
+    logger.debug(`[Pinata] Using user's personal group for document uploads`, {
+      userId,
+      groupId: userGroupId
+    });
+  } else {
+    logger.debug(`[Pinata] No personal group found for user, uploads will be ungrouped`, { userId });
+  }
+
+  // ── 1. SECURITY CHECK: Verify folder ownership ──────────────────────
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
   if (folderId) {
     const folder = await prisma.folder.findFirst({
@@ -88,42 +113,71 @@ export const uploadMultipleFiles = async (
     targetPrivacy = folder.privacy;
   }
 
+  // ── Main upload loop ───────────────────────────────────────────────
   for (const file of files) {
     try {
       const fileHash = await generateFileHash(file.path);
 
-      // 2. DUPLICATE CHECK: Based on file content hash
+      // ── 2. DUPLICATE CHECK: Based on file content hash ─────────────
       const existingFile = await prisma.document.findUnique({
         where: { fileHash }
       });
       if (existingFile) throw new Error(`Duplicate detected. This file content already exists.`);
 
-      // 3. IPFS UPLOAD (Pinata)
+      // ── 3. IPFS UPLOAD (Pinata) - ✅ UPDATED with user group ───────
       const fileBuffer = fs.readFileSync(file.path);
+      
+      // Prepare metadata for filtering/searching
+      const pinataMetadata = {
+        name: file.originalname,
+        keyvalues: {
+          userId,                                    // ← Primary filter: which user
+          contentType: 'document',                   // ← Type categorization
+          folderPath: folderId ? `folders/${folderId}` : 'root', // ← Logical path
+          originalName: file.originalname,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          uploadedAt: new Date().toISOString(),
+        }
+      };
+      
+      // Prepare upload options
+      const uploadOptions: any = {
+        metadata: pinataMetadata,
+        cidVersion: 1,
+        wrapWithDirectory: false  // ← Prevent Pinata wrapping file in directory
+      };
+      
+      // ✅ Assign to user's personal group if available
+      if (userGroupId) {
+        uploadOptions.groupId = userGroupId;
+      }
+      
+      // Upload to Pinata using web3 SDK
       const upload = await pinata.upload.file(
-        new File([new Blob([fileBuffer])], file.originalname, { type: file.mimetype })
+        new File([new Blob([fileBuffer])], file.originalname, { type: file.mimetype }),
+        uploadOptions
       );
 
-      // 4. BLOCKCHAIN RECORDING
+      // ── 4. BLOCKCHAIN RECORDING ───────────────────────────────────
       const blockchainTx = await blockchainService.recordToBlockchain(
         upload.IpfsHash,
         file.originalname,
         fileHash
       );
 
-      // 5. METADATA PREPARATION
+      // ── 5. METADATA PREPARATION ───────────────────────────────────
       const cleanTitle = formatTitle(file.originalname);
       
-
-      // 6. DATABASE TRANSACTION
+      // ── 6. DATABASE TRANSACTION ───────────────────────────────────
       const newDocument = await prisma.$transaction(async (tx) => {
         const doc = await tx.document.create({
           data: {
-            title: cleanTitle,           // Example: "Final Report"
-            fileName: file.originalname, // Example: "final_report_v1.pdf"
+            title: cleanTitle,
+            fileName: file.originalname,
             fileSize: file.size,
             mimeType: file.mimetype,
-            ipfsHash: upload.IpfsHash,
+            ipfsHash: upload.IpfsHash,  // ✅ From organized upload
             fileHash,
             blockchainTx,
             isOnChain: true,
@@ -143,21 +197,59 @@ export const uploadMultipleFiles = async (
             fileHash: doc.fileHash,
             ipfsHash: doc.ipfsHash,
             blockchainTx: doc.blockchainTx,
-            details: `Successfully uploaded to ${folderId ? 'Folder' : 'Root'}.`
+            details: `Uploaded to Pinata group ${userGroupId || 'ungrouped'}. Path: ${folderId ? `folders/${folderId}` : 'root'}`
           }
         });
 
         return doc;
       });
 
-      results.push({ success: true, fileName: file.originalname, data: newDocument });
+      results.push({ 
+        success: true, 
+        fileName: file.originalname, 
+        data: newDocument,
+        // Optional: return Pinata info for debugging/frontend
+        pinataInfo: {
+          groupId: userGroupId,
+          ipfsHash: upload.IpfsHash
+        }
+      });
+      
     } catch (error: any) {
-      results.push({ success: false, fileName: file.originalname, error: error.message });
+      logger.error('❌ Upload failed for file:', { 
+        fileName: file.originalname, 
+        userId,
+        folderId,
+        error: error.message,
+        stack: error.stack 
+      });
+      
+      results.push({ 
+        success: false, 
+        fileName: file.originalname, 
+        error: error.message 
+      });
     } finally {
-      // Cleanup temporary multer files
-      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      // ── 7. CLEANUP: Temporary multer files ───────────────────────
+      if (fs.existsSync(file.path)) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (cleanupError: any) {
+          logger.warn('⚠️ Failed to cleanup temp file:', { path: file.path, error: cleanupError.message });
+        }
+      }
     }
   }
+  
+  // ── Log summary ───────────────────────────────────────────────────
+  const successCount = results.filter(r => r.success).length;
+  const failCount = results.length - successCount;
+  logger.info(`📦 Document upload batch complete: ${successCount} succeeded, ${failCount} failed`, { 
+    userId, 
+    folderId,
+    pinataGroupId: userGroupId 
+  });
+  
   return results;
 };
 
