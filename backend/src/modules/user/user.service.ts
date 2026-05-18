@@ -185,7 +185,7 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
       }, 1000); // Small delay to ensure DB consistency
     }
   }
-}
+},
 
   // ✅ UPDATE PROFIL (TEXT DATA)
   async updateProfile(
