@@ -46,11 +46,15 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  pinataGroupId?: String?  
+  ipfsRootCid?: String?  
+  
   documents       Document[]
   folders         Folder[]
   sharedDocuments DocumentAccess[]
   sharedFolders   FolderAccess[]
   activityLogs    ActivityLog[]
+
 
   @@map("users")
 }
