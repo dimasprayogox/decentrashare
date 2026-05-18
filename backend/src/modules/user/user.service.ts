@@ -62,7 +62,7 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
 
     // 2. Metadata dengan kategorisasi jelas
     const pinataMetadata = JSON.stringify({
-      name: `AVATAR_${userId}_${Date.now()}`,
+      name: `AVATAR`,
       keyvalues: {
         userId,
         contentType: 'avatar',
