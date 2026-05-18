@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import crypto from 'crypto';
 import { logger } from '../../utils/logger.js';
+import { createUserPinGroup } from '../pinata/pinata.service';
 
 const JWT_SECRET = env.JWT_SECRET;
 const JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
