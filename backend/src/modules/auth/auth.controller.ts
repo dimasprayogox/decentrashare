@@ -178,10 +178,12 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
 // ─────────────────────────────────────────────────────────────
 // POST /api/auth/register
 // ─────────────────────────────────────────────────────────────
+
 export const handleRegister = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { walletAddress, signature, username, email } = req.body;
 
+    // ── Basic Validation ─────────────────────────────────────
     if (!walletAddress || !signature) {
       return res.status(400).json({ 
         success: false, 
@@ -204,6 +206,7 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       ip: req.ip
     });
 
+    // ── Call Service ─────────────────────────────────────────
     const result = await registerUser(walletAddress, signature, {
       username,
       email,
@@ -212,12 +215,13 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
     const isProfileComplete = !!(result.user?.bio || result.user?.website || result.user?.avatarUrl);
     const isProduction = process.env.NODE_ENV === 'production';
 
+    // ── Set Secure Cookies ───────────────────────────────────
     res.cookie('session_token', result.token, {
       path: '/',
       secure: isProduction,
       httpOnly: true,
       sameSite: 'strict',
-      maxAge: 15 * 60 * 1000
+      maxAge: 15 * 60 * 1000 // 15 minutes
     });
 
     if (result.refreshToken) {
@@ -226,21 +230,26 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
         secure: isProduction,
         httpOnly: true,
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
       });
     }
 
+    // ── Return Success Response ──────────────────────────────
     return res.status(201).json({
       success: true,
       data: { 
         user: result.user, 
         token: result.token,
         refreshToken: result.refreshToken,
-        isProfileComplete
+        isProfileComplete,
+        // ✅ Include Pinata setup status (optional, for frontend awareness)
+        pinataSetup: result.pinataSetup
       },
-      message: 'Registration successful.',
+      message: 'Registration successful. Welcome to DecentraShare!',
     });
+
   } catch (error: any) {
+    // ── Structured Error Logging ─────────────────────────────
     logger.error(`[AUTH] Register error: ${error.message}`, {
       walletAddress: req.body?.walletAddress?.slice(0, 8) + '...',
       username: req.body?.username?.slice(0, 20),
@@ -249,6 +258,7 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
 
+    // ── Structured Error Responses ───────────────────────────
     if (error.message === 'Username is required') {
       return res.status(400).json({ 
         success: false, 
@@ -325,6 +335,7 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
       });
     }
     
+    // ── Fallback: Pass to global error handler ───────────────
     next(error);
   }
 };

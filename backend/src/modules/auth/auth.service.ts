@@ -84,10 +84,16 @@ export const loginWithWallet = async (walletAddress: string, signature: string) 
 export const registerUser = async (
   walletAddress: string,
   signature: string,
-  data: { username: string; email: string;}
-) => {
+  data: { username: string; email: string; }
+): Promise<{
+  user: Omit<User, 'password'>;
+  token: string;
+  refreshToken: string;
+  pinataSetup?: 'in_progress';
+}> => {
   const address = walletAddress.toLowerCase();
 
+  // ── Validation ──────────────────────────────────────────────
   if (!data.username?.trim()) {
     throw new Error('Username is required');
   }
@@ -104,6 +110,7 @@ export const registerUser = async (
     throw new Error('Please enter a valid email address');
   }
 
+  // ── Wallet Lookup & Nonce Check ────────────────────────────
   const user = await prisma.user.findUnique({ where: { walletAddress: address } });
 
   if (!user) throw new Error('Wallet not found. Please request nonce first.');
@@ -113,6 +120,7 @@ export const registerUser = async (
     throw new Error('Authentication nonce expired. Please request a new nonce.');
   }
 
+  // ── Signature Verification ─────────────────────────────────
   const message = `Sign this message to register.\nNonce: ${user.nonce}`;
   const isValid = verifyMetamaskSignature(address, signature, message);
   
@@ -121,6 +129,7 @@ export const registerUser = async (
     throw new Error('Invalid signature. Please try signing again.'); 
   }
 
+  // ── Username/Email Uniqueness Check ────────────────────────
   const existingUsername = await prisma.user.findFirst({
     where: { 
       username: { equals: username, mode: 'insensitive' },
@@ -137,18 +146,20 @@ export const registerUser = async (
   });
   if (existingEmail) throw new Error('Email is already registered. Please use another email.');
 
+  // ── Generate JWT Tokens ────────────────────────────────────
   const accessToken = jwt.sign(
     { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'access' },
     JWT_SECRET,
-    { expiresIn: JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+    { expiresIn: JWT_ACCESS_EXPIRES_IN }
   );
 
   const refreshToken = jwt.sign(
     { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'refresh' },
     JWT_REFRESH_SECRET,
-    { expiresIn: JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+    { expiresIn: JWT_REFRESH_EXPIRES_IN }
   );
 
+  // ── Update User in Database ────────────────────────────────
   const updatedUser = await prisma.user.update({
     where: { walletAddress: address },
     data: {
@@ -167,7 +178,32 @@ export const registerUser = async (
   });
 
   logger.info(`[AUTH] New user registered: ${address}`);
-  return { user: updatedUser, token: accessToken, refreshToken };
+
+  // ── ✅ ASYNC: Create Pinata Group (NON-BLOCKING) ───────────
+  // Fire-and-forget: Don't await, don't block registration response
+  createUserPinGroup(updatedUser.id, updatedUser.username)
+    .then(groupId => {
+      if (groupId) {
+        logger.info(`✅ Pinata group ready for user ${updatedUser.id}: ${groupId}`);
+      }
+    })
+    .catch(err => {
+      // Log but don't throw - registration already succeeded
+      logger.error(`❌ Background Pinata group creation failed for user ${updatedUser.id}`, {
+        error: err.message,
+        username: updatedUser.username
+      });
+      // Optional: Add to retry queue here if you have BullMQ/Redis setup
+    });
+
+  // ── Return Response (without waiting for Pinata) ───────────
+  return { 
+    user: updatedUser, 
+    token: accessToken, 
+    refreshToken,
+    // ✅ Optional: Inform frontend that Pinata setup is in progress
+    pinataSetup: 'in_progress'
+  };
 };
 
 export const refreshAccessToken = async (oldRefreshToken: string) => {
