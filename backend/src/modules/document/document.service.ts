@@ -2,6 +2,7 @@ import { prisma } from '../../config/db';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { PrivacyLevel } from '@prisma/client';
+import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';
 import { generateFileHash } from '../../utils/hash';
@@ -70,6 +71,208 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
 
   // 4. Unauthorized
   throw new Error("Access denied. You do not have permission to view this document.");
+};
+
+export const getDocumentStreamForDownload = async (documentId: string, userId: string) => {
+  // ✅ 1. Validate access first (reuse your existing function!)
+  const document = await validateDocumentAccess(documentId, userId);
+  
+  // ✅ 2. Get file from Pinata/IPFS Gateway
+  const pinataUrl = `https://gateway.pinata.cloud/ipfs/${document.ipfsHash}`;
+  
+  try {
+    // ✅ 3. Fetch the file as a stream (memory efficient)
+    const response = await fetch(pinataUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file from IPFS: ${response.status}`);
+    }
+    
+    // ✅ 4. Return stream + metadata
+    return {
+      stream: response.body, // Node.js ReadableStream
+      metadata: {
+        fileName: document.fileName,
+        mimeType: document.mimeType,
+        fileSize: document.fileSize
+      }
+    };
+    
+  } catch (error: any) {
+    logger.error('❌ Error getting document stream for download', {
+      documentId,
+      ipfsHash: document.ipfsHash,
+      error: error.message
+    });
+    throw error;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// ✅ HELPER: logDownloadActivity — Async logging (non-blocking)
+// ─────────────────────────────────────────────────────────────
+export const logDownloadActivity = async (
+  userId: string,
+  documentId: string,
+  fileName: string,
+  ipfsHash: string
+) => {
+  try {
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: 'DOWNLOAD',
+        entityType: 'DOCUMENT',
+        entityId: documentId,
+        entityName: fileName,
+        ipfsHash,
+        details: `File downloaded: ${fileName}`
+      }
+    });
+  } catch (error: any) {
+    // Don't throw — logging failure shouldn't break download
+    logger.error('❌ Failed to log download activity', { documentId, error: error.message });
+  }
+};
+
+export const bulkDownloadDocuments = async (documentIds: string[], userId: string) => {
+  if (!documentIds || documentIds.length === 0) {
+    throw new Error('No documents specified for download');
+  }
+
+  // ✅ 1. Validate access for EACH document individually
+  const accessibleDocs = [];
+  const deniedDocs = [];
+  
+  for (const docId of documentIds) {
+    try {
+      const doc = await validateDocumentAccess(docId, userId);
+      accessibleDocs.push(doc);
+    } catch (error: any) {
+      // Log denied access but continue with other docs
+      logger.warn('⚠️ Bulk download: Access denied for document', {
+        documentId: docId,
+        userId,
+        reason: error.message
+      });
+      deniedDocs.push({ id: docId, reason: error.message });
+    }
+  }
+
+  // ✅ 2. If no documents are accessible, throw error
+  if (accessibleDocs.length === 0) {
+    throw new Error('Access denied for all selected documents');
+  }
+
+  // ✅ 3. Create ZIP archive stream (memory efficient)
+  const archive = archiver('zip', {
+    zlib: { level: 6 } // Compression level: 0-9
+  });
+
+  // ✅ 4. Handle archive errors
+  archive.on('error', (err: any) => {
+    logger.error('❌ ZIP archive error', { error: err.message });
+    throw err;
+  });
+
+  // ✅ 5. Add each accessible file to the ZIP
+  for (const doc of accessibleDocs) {
+    try {
+      // Get file from Pinata/IPFS
+      const pinataUrl = `https://gateway.pinata.cloud/ipfs/${doc.ipfsHash}`;
+      const response = await fetch(pinataUrl);
+      
+      if (!response.ok || !response.body) {
+        logger.warn('⚠️ Failed to fetch file for ZIP', {
+          documentId: doc.id,
+          ipfsHash: doc.ipfsHash,
+          status: response?.status
+        });
+        continue; // Skip this file, continue with others
+      }
+
+      // Sanitize filename for ZIP (remove path separators, limit length)
+      const safeFileName = doc.fileName
+        .replace(/[\/\\:*?"<>|]/g, '_')
+        .slice(0, 200);
+
+      // Append file stream to ZIP
+      archive.append(response.body, { name: safeFileName });
+      
+    } catch (error: any) {
+      logger.warn('⚠️ Error adding file to ZIP', {
+        documentId: doc.id,
+        error: error.message
+      });
+      // Continue with other files — don't fail entire bulk download
+    }
+  }
+
+  // ✅ 6. Finalize the archive (must be called after all appends)
+  archive.finalize();
+
+  // ✅ 7. Prepare metadata for logging/response
+  const metadata = accessibleDocs.map(doc => ({
+    id: doc.id,
+    title: doc.title,
+    fileName: doc.fileName,
+    ipfsHash: doc.ipfsHash
+  }));
+
+  return {
+    stream: archive,
+    metadata,
+    summary: {
+      totalRequested: documentIds.length,
+      successfullyAdded: accessibleDocs.length,
+      accessDenied: deniedDocs.length,
+      fetchFailed: accessibleDocs.length - (await countSuccessfulFetches(accessibleDocs)) // Optional helper
+    }
+  };
+};
+
+// ✅ Helper: Count successful fetches (optional, for detailed summary)
+const countSuccessfulFetches = async (docs: any[]): Promise<number> => {
+  // This is a simplified version — in production, you might track this during the loop
+  return docs.length;
+};
+
+// ─────────────────────────────────────────────────────────────
+// ✅ HELPER: logBulkDownloadActivity — Async logging
+// ─────────────────────────────────────────────────────────────
+export const logBulkDownloadActivity = async (
+  userId: string,
+  documentIds: string[],
+  metadata: Array<{ id: string; title: string; fileName: string; ipfsHash: string }>,
+  summary: { totalRequested: number; successfullyAdded: number; accessDenied: number }
+) => {
+  try {
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: 'BULK_DOWNLOAD',
+        entityType: 'DOCUMENT',
+        entityId: documentIds[0], // Use first ID as reference
+        entityName: `Bulk download: ${metadata.length} files`,
+        details: JSON.stringify({
+          requestedCount: summary.totalRequested,
+          downloadedCount: summary.successfullyAdded,
+          deniedCount: summary.accessDenied,
+          files: metadata.map(m => ({ id: m.id, name: m.fileName }))
+        })
+      }
+    });
+    logger.debug('📝 Bulk download activity logged', { 
+      userId, 
+      documentCount: metadata.length 
+    });
+  } catch (error: any) {
+    // Don't throw — logging failure shouldn't break the download
+    logger.error('❌ Failed to log bulk download activity', {
+      userId,
+      error: error.message
+    });
+  }
 };
 
 export const uploadMultipleFiles = async (

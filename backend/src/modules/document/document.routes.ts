@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   handleUpload,
   handleGetMyDocuments,
+  handleDownloadDocument,
+  handleBulkDownloadDocuments,
   handleGetDocumentDetail,
   handleRenameDocument,
   handleArchiveDocuments,
@@ -60,10 +62,12 @@ router.get('/logs', handleGetActivityLogs);
 router.get("/:id", handleGetDocumentDetail);
 router.patch("/:id/rename", handleRenameDocument);
 
+router.get('/documents/:id/download', authMiddleware, handleDownloadDocument);
 
-
-
-
+router.post('/documents/bulk-download', 
+  authMiddleware, 
+  handleBulkDownloadDocuments
+);
 
 // Ambil file di root saja
 router.get("/root", handleGetRootDocuments);

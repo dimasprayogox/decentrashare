@@ -1,3 +1,4 @@
+import archiver from 'archiver';
 import { Response, NextFunction } from 'express';
 import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -34,6 +35,156 @@ export const handleGetDocumentDetail = async (req: AuthRequest, res: Response) =
       success: false, 
       message: error.message 
     });
+  }
+};
+
+// ✅ GET /api/documents/:id/download — Return binary file stream
+export const handleDownloadDocument = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id: documentId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // ✅ 1. Get file stream from service (validates access + fetches from IPFS)
+    const { stream, metadata } = await documentService.getDocumentStreamForDownload(documentId, userId);
+    
+    if (!stream) {
+      throw new Error('Failed to get file stream');
+    }
+
+    // ✅ 2. Set headers for file download
+    res.setHeader('Content-Type', metadata.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(metadata.fileName)}"`);
+    res.setHeader('Content-Length', metadata.fileSize);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    // ✅ 3. Log download activity (async, non-blocking)
+    documentService.logDownloadActivity(userId, documentId, metadata.fileName, '');
+
+    // ✅ 4. Pipe the stream directly to response (memory efficient)
+    stream.pipe(res);
+    
+    // ✅ 5. Handle stream errors
+    stream.on('error', (err: any) => {
+      logger.error('❌ Stream error during download', { documentId, error: err.message });
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: 'Failed to stream file' });
+      } else {
+        res.end();
+      }
+    });
+
+  } catch (error: any) {
+    // ✅ Handle known errors with appropriate HTTP status
+    if (error.message === 'Document not found.') {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+    if (error.message === 'Document is in trash.') {
+      return res.status(410).json({ success: false, message: 'Document has been archived' });
+    }
+    if (error.message.includes('Access denied') || error.message.includes('permission')) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    if (error.message.includes('Failed to fetch file from IPFS')) {
+      return res.status(502).json({ success: false, message: 'Failed to fetch file from storage' });
+    }
+    
+    // ✅ Log and pass unknown errors
+    logger.error('❌ Download error:', { 
+      documentId: req.params.id, 
+      userId: req.user?.userId,
+      error: error.message 
+    });
+    
+    // If headers already sent, can't send JSON error
+    if (res.headersSent) {
+      return next(error);
+    }
+    
+    res.status(500).json({ success: false, message: 'Failed to download file' });
+  }
+};
+
+export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { documentIds } = req.body;
+    const userId = req.user?.userId;
+
+    // ✅ Validate input
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'documentIds array is required' });
+    }
+    if (documentIds.length > 50) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Maximum 50 documents per bulk download' 
+      });
+    }
+
+    // ✅ 1. Get ZIP stream from service
+    const { stream, metadata, summary } = await documentService.bulkDownloadDocuments(documentIds, userId);
+
+    // ✅ 2. Set headers for ZIP download
+    const zipFileName = `decentrashare-export-${new Date().toISOString().slice(0, 10)}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(zipFileName)}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache');
+
+    // ✅ 3. Log bulk download activity (async, non-blocking)
+    documentService.logBulkDownloadActivity(userId, documentIds, metadata, summary);
+
+    // ✅ 4. Pipe ZIP stream to response
+    stream.pipe(res);
+
+    // ✅ 5. Handle stream completion
+    stream.on('end', () => {
+      logger.info('✅ Bulk download completed', {
+        userId,
+        documentCount: metadata.length,
+        summary
+      });
+    });
+
+    // ✅ 6. Handle stream errors
+    stream.on('error', (err: any) => {
+      logger.error('❌ ZIP stream error during bulk download', {
+        userId,
+        error: err.message
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: 'Failed to create download archive' });
+      }
+    });
+
+  } catch (error: any) {
+    // ✅ Handle known errors
+    if (error.message === 'No documents specified for download') {
+      return res.status(400).json({ success: false, message: 'No documents specified' });
+    }
+    if (error.message === 'Access denied for all selected documents') {
+      return res.status(403).json({ success: false, message: 'Access denied for all selected documents' });
+    }
+    
+    // ✅ Log and handle unknown errors
+    logger.error('❌ Bulk download error:', {
+      userId: req.user?.userId,
+      documentIds: req.body?.documentIds,
+      error: error.message,
+      stack: error.stack
+    });
+
+    if (res.headersSent) {
+      return next(error);
+    }
+    
+    res.status(500).json({ success: false, message: 'Failed to prepare bulk download' });
   }
 };
 
