@@ -1,4 +1,5 @@
-require("@nomicfoundation/hardhat-ethers"); // Kita panggil ethers-nya saja
+// HANYA PANGGIL VERIFY, JANGAN PANGGIL TOOLBOX YANG BIKIN ERROR
+require("@nomicfoundation/hardhat-verify"); 
 require("dotenv").config();
 
 module.exports = {
@@ -9,4 +10,7 @@ module.exports = {
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY
+  }
 };

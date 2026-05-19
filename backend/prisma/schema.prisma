@@ -47,7 +47,6 @@ model User {
   updatedAt       DateTime  @updatedAt
 
   pinataGroupId   String?  
-  ipfsRootCid     String?  
   
   documents       Document[]
   folders         Folder[]
