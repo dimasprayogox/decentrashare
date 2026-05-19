@@ -257,8 +257,19 @@ export const getRootDocuments = async (userId: string) => {
   return await prisma.document.findMany({
     where: {
       ownerId: userId,
-      folderId: null, // Kuncinya di sini
+      folderId: null, 
       isArchived: false,
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      }
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -321,8 +332,17 @@ export const getUserDocuments = async (userId: string, folderId: string | null) 
       folderId: folderId ? String(folderId) : null,
       isArchived: false,
     },
-    include: {
-      folder: true, 
+     include: {
+      folder: true,
+      owner: { 
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      }
     },
     orderBy: {
       createdAt: 'desc',

@@ -224,6 +224,17 @@ export const getUserFolders = async (userId: string, parentId: string | null = n
       parentId: parentId,
       isArchived: false // Pastikan hanya ambil yang aktif
     },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      }
+    },
     orderBy: { createdAt: 'desc' }
   });
 };
