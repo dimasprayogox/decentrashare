@@ -145,46 +145,84 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
     });
     throw error;
     
-  } finally {
-    // ✅ 8. Cleanup: (A) Temp file + (B) Old avatar from Pinata (non-blocking)
-    
-    // (A) Cleanup temp multer file
-    if (file?.path && fs.existsSync(file.path)) {
-      try { fs.unlinkSync(file.path); } 
-      catch (cleanupErr: any) {
-        logger.warn(`[User] Failed to cleanup temp avatar file`, { path: file.path });
-      }
-    }
-  
-    if (oldAvatarHash) {
-      // Non-blocking cleanup: don't await, don't throw
-      setTimeout(async () => {
-        try {
-          // Verify user still has different avatarUrl (in case of race condition)
-          const currentUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { avatarUrl: true }
-          });
-          
-          // Only unpin if current avatar is different from old one
-          if (currentUser?.avatarUrl && !currentUser.avatarUrl.includes(oldAvatarHash)) {
-            await pinata.unpin(oldAvatarHash);
-            logger.info(`[Pinata] Cleaned up old avatar`, { 
-              userId, 
-              oldHash: oldAvatarHash 
-            });
-          }
-        } catch (unpinError: any) {
-          // Non-critical: just log, don't throw
-          logger.warn(`[Pinata] Failed to unpin old avatar (non-critical)`, {
-            userId,
-            oldHash: oldAvatarHash,
-            error: unpinError.message
-          });
-        }
-      }, 1000); // Small delay to ensure DB consistency
+  // ✅ Ganti entire finally block di updateAvatar() dengan ini:
+
+} finally {
+  // ── (A) Cleanup temp multer file ─────────────────────────
+  if (file?.path && fs.existsSync(file.path)) {
+    try { 
+      fs.unlinkSync(file.path); 
+    } catch (cleanupErr: any) {
+      logger.warn(`[User] Failed to cleanup temp avatar file`, { path: file.path });
     }
   }
+
+  // ── (B) ✅ Cleanup old avatar from Pinata (non-blocking) ──
+  if (oldAvatarHash) {
+    // ✅ Use IIFE for reliable async execution in Bun
+    (async () => {
+      try {
+        // Tiny delay to ensure DB transaction is committed
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verify user still has different avatarUrl (race condition safety)
+        const currentUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { avatarUrl: true }
+        });
+        
+        logger.debug(`[Pinata Cleanup] Checking if old avatar should be unpinned`, {
+          userId,
+          oldAvatarHash,
+          currentAvatarUrl: currentUser?.avatarUrl,
+          shouldUnpin: currentUser?.avatarUrl && !currentUser.avatarUrl.includes(oldAvatarHash)
+        });
+        
+        // Only unpin if current avatar is different from old one
+        if (currentUser?.avatarUrl && !currentUser.avatarUrl.includes(oldAvatarHash)) {
+          logger.info(`[Pinata Cleanup] Attempting to unpin old avatar: ${oldAvatarHash}`, { userId });
+          
+          // ✅ Use direct REST API (more reliable than SDK method)
+          const unpinRes = await fetch(`https://api.pinata.cloud/pinning/unpin/${oldAvatarHash}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${process.env.PINATA_JWT}`
+            }
+          });
+          
+          if (unpinRes.ok) {
+            logger.info(`[Pinata Cleanup] ✅ Successfully unpinned old avatar`, {
+              userId,
+              oldAvatarHash
+            });
+          } else {
+            const errorData = await unpinRes.text();
+            logger.warn(`[Pinata Cleanup] ⚠️ Unpin failed`, {
+              userId,
+              oldAvatarHash,
+              status: unpinRes.status,
+              error: errorData
+            });
+          }
+        } else {
+          logger.debug(`[Pinata Cleanup] ⏭️ Skipping unpin - avatar still in use or already changed`, {
+            userId,
+            oldAvatarHash,
+            currentAvatarUrl: currentUser?.avatarUrl
+          });
+        }
+        
+      } catch (unpinError: any) {
+        logger.warn(`[Pinata Cleanup] ❌ Error during unpin process`, {
+          userId,
+          oldAvatarHash,
+          error: unpinError.message,
+          stack: unpinError.stack
+        });
+      }
+    })(); // ← IIFE: immediately invoked, non-blocking
+  }
+}
 },
 
   // ✅ UPDATE PROFIL (TEXT DATA)

@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { userService } from './user.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
+import { logger } from '../../utils/logger.js';
 
 // GET /api/user/me
 export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -35,8 +36,19 @@ export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: 
       return res.status(400).json({ success: false, message: 'No image file uploaded' });
     }
 
+    // ✅ Call service
     const updated = await userService.updateAvatar(userId, file);
 
+    // ✅ 1. Log success BEFORE return (audit trail)
+    logger.info(`[AVATAR] Successfully updated`, {
+      userId,
+      fileName: file.originalname,
+      fileSize: file.size,
+      newAvatarUrl: updated.avatarUrl,
+      ip: req.ip
+    });
+
+    // ✅ 2. Return response AFTER logging
     return res.status(200).json({
       success: true,
       message: 'Avatar updated successfully to IPFS',
@@ -44,7 +56,7 @@ export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: 
     });
 
   } catch (error: any) {
-    // ✅ Handle multer-specific errors with user-friendly messages
+    // ✅ Multer error handling
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
@@ -61,7 +73,7 @@ export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: 
       });
     }
 
-    // ✅ Handle Pinata/API errors
+    // ✅ Pinata/API errors
     if (error.message?.includes('Pinata API Error')) {
       return res.status(502).json({
         success: false,
@@ -70,7 +82,7 @@ export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: 
       });
     }
 
-    // ✅ Log & pass to global handler for other errors
+    // ✅ Log & pass to global handler
     logger.error(`[AVATAR] Update failed: ${error.message}`, {
       userId: req.user?.userId,
       fileName: req.file?.originalname,
