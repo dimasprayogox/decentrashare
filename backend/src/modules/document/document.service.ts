@@ -2,12 +2,14 @@ import { prisma } from '../../config/db';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { PrivacyLevel } from '@prisma/client';
-import archiver from 'archiver';
 import fs from 'fs';
 import path from 'path';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
 import { createUserPinGroup } from '../pinata/pinata.service';
+import * as archiverModule from 'archiver';
+
+const archiver = (archiverModule as any).default || archiverModule;
 
 
 const formatTitle = (originalName: string): string => {

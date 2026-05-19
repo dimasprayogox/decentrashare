@@ -1,9 +1,10 @@
-import archiver from 'archiver';
 import { Response, NextFunction } from 'express';
 import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as documentService from './document.service';
 
+import * as archiverModule from 'archiver';
+const archiver = (archiverModule as any).default || archiverModule;
 
 /**
  * GET /api/documents/:id
