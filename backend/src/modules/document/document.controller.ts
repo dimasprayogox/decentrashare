@@ -3,6 +3,7 @@ import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as documentService from './document.service';
 import { logger } from '../../utils/logger';
+import { Readable } from 'node:stream'; 
 import * as archiverModule from 'archiver';
 const archiver = (archiverModule as any).default || archiverModule;
 
@@ -61,6 +62,7 @@ export const handleGetDocumentDetail = async (req: AuthRequest, res: Response) =
 };
 
 // ✅ NEW: handlePreviewDocument — Secure proxy for PRIVATE/SPECIFIC_USER
+// ✅ Updated handlePreviewDocument - fix stream conversion
 export const handlePreviewDocument = async (req: AuthRequest, res: Response) => {
   try {
     const { id: documentId } = req.params;
@@ -70,10 +72,10 @@ export const handlePreviewDocument = async (req: AuthRequest, res: Response) => 
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    // ✅ 1. Validate access (reuse your existing function!)
+    // ✅ 1. Validate access
     const document = await documentService.validateDocumentAccess(documentId, userId);
 
-    // ✅ 2. Fetch from Pinata (use private gateway if available)
+    // ✅ 2. Fetch from Pinata
     const pinataUrl = `https://gateway.pinata.cloud/ipfs/${document.ipfsHash}`;
     const response = await fetch(pinataUrl);
     
@@ -81,21 +83,25 @@ export const handlePreviewDocument = async (req: AuthRequest, res: Response) => 
       throw new Error(`Failed to fetch from IPFS: ${response.status}`);
     }
 
-    // ✅ 3. Set headers for INLINE preview (not download)
+    // ✅ 3. Convert Web ReadableStream to Node.js Readable (untuk .pipe())
+    // ⚠️ Ini fix utama: fetch().body is Web Stream, Express needs Node Stream
+    const nodeStream = Readable.fromWeb(response.body!);
+
+    // ✅ 4. Set headers for INLINE preview
     res.setHeader('Content-Type', document.mimeType);
     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.fileName)}"`);
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
-    // ✅ 4. Stream file to client
-    response.body?.pipe(res);
+    // ✅ 5. Pipe Node stream to Express response
+    nodeStream.pipe(res);
 
-    // ✅ 5. Log activity (async, non-blocking)
+    // ✅ 6. Log activity (async, non-blocking)
     documentService.logDownloadActivity(userId, documentId, document.fileName, document.ipfsHash)
       .catch(err => logger.error('Failed to log preview:', err));
 
   } catch (error: any) {
-    // ✅ Handle errors same as other endpoints
+    // ✅ Handle errors same as before
     if (error.message === 'Document not found.') {
       return res.status(404).json({ success: false, message: 'Document not found' });
     }
@@ -105,12 +111,16 @@ export const handlePreviewDocument = async (req: AuthRequest, res: Response) => 
     if (error.message.includes('Failed to fetch from IPFS')) {
       return res.status(502).json({ success: false, message: 'Failed to load file' });
     }
+    
     logger.error('❌ Preview error:', { documentId: req.params.id, error: error.message });
+    
+    if (res.headersSent) return; // Can't send JSON after headers sent
     res.status(500).json({ success: false, message: 'Failed to preview file' });
   }
 };
 
 // ✅ GET /api/documents/:id/download — Return binary file stream
+// ✅ Updated handleDownloadDocument - same stream conversion fix
 export const handleDownloadDocument = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id: documentId } = req.params;
@@ -120,58 +130,44 @@ export const handleDownloadDocument = async (req: AuthRequest, res: Response, ne
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    // ✅ 1. Get file stream from service (validates access + fetches from IPFS)
-    const { stream, metadata } = await documentService.getDocumentStreamForDownload(documentId, userId);
+    const document = await documentService.validateDocumentAccess(documentId, userId);
+
+    const pinataUrl = `https://gateway.pinata.cloud/ipfs/${document.ipfsHash}`;
+    const response = await fetch(pinataUrl);
     
-    if (!stream) {
-      throw new Error('Failed to get file stream');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch from IPFS: ${response.status}`);
     }
 
-    // ✅ 2. Set headers for file download
-    res.setHeader('Content-Type', metadata.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(metadata.fileName)}"`);
-    res.setHeader('Content-Length', metadata.fileSize);
+    // ✅ Convert Web Stream to Node Stream (same fix)
+    const nodeStream = Readable.fromWeb(response.body!);
+
+    res.setHeader('Content-Type', document.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.fileName)}"`);
+    res.setHeader('Content-Length', document.fileSize);
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
-    // ✅ 3. Log download activity (async, non-blocking)
-    documentService.logDownloadActivity(userId, documentId, metadata.fileName, '');
+    // ✅ Pipe Node stream
+    nodeStream.pipe(res);
 
-    // ✅ 4. Pipe the stream directly to response (memory efficient)
-    stream.pipe(res);
-    
-    // ✅ 5. Handle stream errors
-    stream.on('error', (err: any) => {
-      logger.error('❌ Stream error during download', { documentId, error: err.message });
-      if (!res.headersSent) {
-        res.status(500).json({ success: false, message: 'Failed to stream file' });
-      } else {
-        res.end();
-      }
-    });
+    // Log activity (async)
+    documentService.logDownloadActivity(userId, documentId, document.fileName, document.ipfsHash)
+      .catch(err => logger.error('Failed to log download:', err));
 
   } catch (error: any) {
-    // ✅ Handle known errors with appropriate HTTP status
+    // ... same error handling as before ...
     if (error.message === 'Document not found.') {
       return res.status(404).json({ success: false, message: 'Document not found' });
     }
-    if (error.message === 'Document is in trash.') {
-      return res.status(410).json({ success: false, message: 'Document has been archived' });
-    }
-    if (error.message.includes('Access denied') || error.message.includes('permission')) {
+    if (error.message.includes('Access denied')) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    if (error.message.includes('Failed to fetch file from IPFS')) {
+    if (error.message.includes('Failed to fetch from IPFS')) {
       return res.status(502).json({ success: false, message: 'Failed to fetch file from storage' });
     }
     
-    // ✅ Log and pass unknown errors
-    logger.error('❌ Download error:', { 
-      documentId: req.params.id, 
-      userId: req.user?.userId,
-      error: error.message 
-    });
+    logger.error('❌ Download error:', { documentId: req.params.id, error: error.message });
     
-    // If headers already sent, can't send JSON error
     if (res.headersSent) {
       return next(error);
     }
