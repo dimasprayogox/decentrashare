@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as documentService from './document.service';
-
+import { logger } from '../../utils/logger';
 import * as archiverModule from 'archiver';
 const archiver = (archiverModule as any).default || archiverModule;
 

@@ -64,11 +64,11 @@ router.get("/:id", handleGetDocumentDetail);
 router.patch("/:id/rename", handleRenameDocument);
 
 // routes/storage.ts
-router.get('/documents/:id/preview', authMiddleware, handlePreviewDocument);
+router.get('/:id/preview', authMiddleware, handlePreviewDocument);
 
-router.get('/documents/:id/download', authMiddleware, handleDownloadDocument);
+router.get('/:id/download', authMiddleware, handleDownloadDocument);
 
-router.post('/documents/bulk-download', 
+router.post('/bulk-download', 
   authMiddleware, 
   handleBulkDownloadDocuments
 );
