@@ -323,7 +323,8 @@ export const logBulkDownloadActivity = async (
 export const uploadMultipleFiles = async (
   files: Express.Multer.File[],
   userId: string,
-  folderId?: string
+  folderId?: string,
+  metadataMap?: Map<string, { title?: string; description?: string }>  // ← ✅ Parameter baru
 ) => {
   const results: Array<{
     success: boolean;
@@ -333,8 +334,7 @@ export const uploadMultipleFiles = async (
     pinataInfo?: { groupId: string | null; ipfsHash: string };
   }> = [];
 
-  // ── 0. PRE-FETCH: Get user's Pinata group ID (optimization) ─────────
-  // Fetch once before loop instead of per-file query
+  // ── 0. PRE-FETCH: Get user's Pinata group ID ─────────
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { pinataGroupId: true, username: true }
@@ -366,22 +366,21 @@ export const uploadMultipleFiles = async (
     try {
       const fileHash = await generateFileHash(file.path);
 
-      // ── 2. DUPLICATE CHECK: Based on file content hash ─────────────
+      // ── 2. DUPLICATE CHECK ─────────────
       const existingFile = await prisma.document.findUnique({
         where: { fileHash }
       });
       if (existingFile) throw new Error(`Duplicate detected. This file content already exists.`);
 
-      // ── 3. IPFS UPLOAD (Pinata) - ✅ UPDATED with user group ───────
+      // ── 3. IPFS UPLOAD (Pinata) ───────
       const fileBuffer = fs.readFileSync(file.path);
       
-      // Prepare metadata for filtering/searching
       const pinataMetadata = {
         name: file.originalname,
         keyvalues: {
-          userId,                                    // ← Primary filter: which user
-          contentType: 'document',                   // ← Type categorization
-          folderPath: folderId ? `folders/${folderId}` : 'root', // ← Logical path
+          userId,
+          contentType: 'document',
+          folderPath: folderId ? `folders/${folderId}` : 'root',
           originalName: file.originalname,
           fileSize: file.size,
           mimeType: file.mimetype,
@@ -389,19 +388,16 @@ export const uploadMultipleFiles = async (
         }
       };
       
-      // Prepare upload options
       const uploadOptions: any = {
         metadata: pinataMetadata,
         cidVersion: 1,
-        wrapWithDirectory: false  // ← Prevent Pinata wrapping file in directory
+        wrapWithDirectory: false
       };
       
-      // ✅ Assign to user's personal group if available
       if (userGroupId) {
         uploadOptions.groupId = userGroupId;
       }
       
-      // Upload to Pinata using web3 SDK
       const upload = await pinata.upload.file(
         new File([new Blob([fileBuffer])], file.originalname, { type: file.mimetype }),
         uploadOptions
@@ -415,17 +411,23 @@ export const uploadMultipleFiles = async (
       );
 
       // ── 5. METADATA PREPARATION ───────────────────────────────────
-      const cleanTitle = formatTitle(file.originalname);
+      const userMeta = metadataMap?.get(file.originalname) || {};
+      
+      // ✅ Title: auto-fill dari filename jika kosong
+      const finalTitle = userMeta.title?.trim() || formatTitle(file.originalname);
+      // ✅ Description: optional, null jika kosong
+      const finalDescription = userMeta.description?.trim() || null;
       
       // ── 6. DATABASE TRANSACTION ───────────────────────────────────
       const newDocument = await prisma.$transaction(async (tx) => {
         const doc = await tx.document.create({
           data: {
-            title: cleanTitle,
             fileName: file.originalname,
+            title: finalTitle,              // ✅ Selalu ada value
+            description: finalDescription,  // ✅ Bisa null
             fileSize: file.size,
             mimeType: file.mimetype,
-            ipfsHash: upload.IpfsHash,  // ✅ From organized upload
+            ipfsHash: upload.IpfsHash,
             fileHash,
             blockchainTx,
             isOnChain: true,
@@ -456,7 +458,6 @@ export const uploadMultipleFiles = async (
         success: true, 
         fileName: file.originalname, 
         data: newDocument,
-        // Optional: return Pinata info for debugging/frontend
         pinataInfo: {
           groupId: userGroupId,
           ipfsHash: upload.IpfsHash
@@ -478,7 +479,7 @@ export const uploadMultipleFiles = async (
         error: error.message 
       });
     } finally {
-      // ── 7. CLEANUP: Temporary multer files ───────────────────────
+      // ── 7. CLEANUP ───────────────────────
       if (fs.existsSync(file.path)) {
         try {
           fs.unlinkSync(file.path);

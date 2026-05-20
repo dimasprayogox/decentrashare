@@ -258,11 +258,32 @@ export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Respons
 
 export const handleUpload = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const files = req.files as Express.Multer.File[]; // Menggunakan req.files untuk multi-upload
+    const files = req.files as Express.Multer.File[];
     const { folderId } = req.body;
     const userId = req.user?.userId;
 
-    // 1) Validasi file wajib ada
+    // ✅ Parse metadata array dari client (untuk multi-file)
+    // Format: { metadata: [{ fileName: "x.jpg", title: "Judul", description: "Desk..." }, ...] }
+    const metadataMap = new Map<string, { title?: string; description?: string }>();
+    
+    if (req.body.metadata) {
+      try {
+        const metadataArray = JSON.parse(req.body.metadata);
+        if (Array.isArray(metadataArray)) {
+          metadataArray.forEach((meta: any) => {
+            if (meta.fileName) {
+              metadataMap.set(meta.fileName, {
+                title: meta.title?.trim(),
+                description: meta.description?.trim()
+              });
+            }
+          });
+        }
+      } catch (e) {
+        logger.warn('Failed to parse metadata from client', { error: e });
+      }
+    }
+
     if (!files || files.length === 0) {
       return res.status(400).json({
         success: false,
@@ -270,7 +291,6 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
       });
     }
 
-    // 2) Validasi user ID
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -278,13 +298,18 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
       });
     }
 
-    // 3) Panggil service untuk proses multi-upload (Hash -> IPFS -> Chain -> DB)
-    const results = await documentService.uploadMultipleFiles(files, userId, folderId);
+    // ✅ Pass metadataMap ke service
+    const results = await documentService.uploadMultipleFiles(
+      files, 
+      userId, 
+      folderId,
+      metadataMap  // ← Tambah parameter baru
+    );
 
     return res.status(201).json({
       success: true,
       message: 'File processing completed',
-      results, // Mengembalikan array status per file (sukses/gagal/duplikat)
+      results,
     });
   } catch (error) {
     next(error);
