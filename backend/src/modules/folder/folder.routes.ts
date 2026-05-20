@@ -5,7 +5,9 @@ import {
   handleGetFolderDetail,
   handleFolderPath,
   handleRenameFolder,
-  handleDeleteMultipleFolders,
+  handleDestroyFolders,
+  handleGetArchivedFolders,
+  handleArchiveFolders,
   handleRestoreFolders,
   handleGetFolderContents,
   handleShareFolder,
@@ -37,9 +39,11 @@ router.delete('/shared', handleRevokeFolderAccess);
 
 router.patch("/privacy", handleUpdatePrivacy);
 
-// Detail, Rename, dan Delete ditaruh di sini
-router.delete("/", handleDeleteMultipleFolders);
-router.patch("/restore", handleRestoreFolders);
+router.get("/archived", handleGetArchivedFolders);
+router.patch("/archive", handleArchiveFolders);    
+router.patch("/restore", handleRestoreFolders);      
+router.delete("/destroy", handleDestroyFolders);   
+
 
 router.get("/path/:id", handleFolderPath);
 

@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as folderService from './folder.service';
+import { logger } from '../../utils/logger';
 
 export const handleCreateFolder = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -128,13 +129,39 @@ export const handleGetFolderDetail = async (req: AuthRequest, res: Response) => 
   }
 };
 
-/**
- * DELETE /api/folders
- * Menangani penghapusan folder secara massal dengan logika auto-archive
- */
-export const handleDeleteMultipleFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleGetArchivedFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { folderIds } = req.body; // Mengharapkan array of strings: ["id1", "id2"]
+    const userId = req.user?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const folders = await folderService.getArchivedFolders(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Archived folders retrieved successfully',
+      data: folders,
+      meta: {
+        count: folders.length,
+        totalItems: folders.reduce((sum, f: any) => sum + (f._count?.documents || 0), 0)  // Total docs in trash
+      }
+    });
+    
+  } catch (error: any) {
+    logger.error('❌ Get archived folders failed:', error);
+    return res.status(400).json({ 
+      success: false, 
+      message: error.message || 'Failed to retrieve archived folders',
+      errorCode: 'GET_ARCHIVED_FAILED'
+    });
+  }
+};
+
+export const handleArchiveFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { folderIds } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -142,37 +169,112 @@ export const handleDeleteMultipleFolders = async (req: AuthRequest, res: Respons
     if (!Array.isArray(folderIds) || folderIds.length === 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'folderIds must be a non-empty array' 
+        message: 'folderIds must be a non-empty array',
+        errorCode: 'INVALID_INPUT'
       });
     }
 
-    const result = await folderService.deleteMultipleFolders(folderIds, userId);
+    // ✅ Call NEW service function with cascade logic
+    const result = await folderService.archiveFolders(folderIds, userId);
 
     return res.status(200).json({
       success: true,
-      message: 'Operation successful',
-      data: {
-        permanentlyDeleted: result.deletedCount,
-        archived: result.archivedCount
-      }
+      count: result.count,
+      message: result.count > 0 
+        ? `Successfully moved ${result.count} folder(s) to trash` 
+        : 'No folders archived',
+      data: { archivedCount: result.count }
     });
+    
   } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+    logger.error('❌ Archive folders failed:', error);
+    return res.status(400).json({ 
+      success: false, 
+      message: error.message || 'Failed to archive folders',
+      errorCode: 'ARCHIVE_FAILED'
+    });
   }
 };
 
-export const handleRestoreFolders = async (req: AuthRequest, res: Response) => {
+// ─────────────────────────────────────────────────────────────
+// ✅ NEW: RESTORE - Un-archive with Cascade
+// ─────────────────────────────────────────────────────────────
+export const handleRestoreFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { folderIds } = req.body;
     const userId = req.user?.userId;
 
-    const result = await folderService.restoreMultipleFolders(folderIds, userId!);
-    return res.status(200).json({ success: true, message: `${result.count} folders restored.` });
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    if (!Array.isArray(folderIds) || folderIds.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'folderIds must be a non-empty array',
+        errorCode: 'INVALID_INPUT'
+      });
+    }
+
+    // ✅ Call NEW service function with cascade logic (bukan restoreMultipleFolders legacy)
+    const result = await folderService.restoreFolders(folderIds, userId);
+
+    return res.status(200).json({
+      success: true,
+      count: result.count,
+      message: result.count > 0 
+        ? `Successfully restored ${result.count} folder(s) and all contents` 
+        : 'No folders restored',
+      data: { restoredCount: result.count }
+    });
+    
   } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+    logger.error('❌ Restore folders failed:', error);
+    return res.status(400).json({ 
+      success: false, 
+      message: error.message || 'Failed to restore folders',
+      errorCode: 'RESTORE_FAILED'
+    });
   }
 };
 
+// ─────────────────────────────────────────────────────────────
+// ✅ NEW: PERMANENT DELETE (Destroy) - From Trash Only with Cascade
+// ─────────────────────────────────────────────────────────────
+export const handleDestroyFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { folderIds } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    if (!Array.isArray(folderIds) || folderIds.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'folderIds must be a non-empty array',
+        errorCode: 'INVALID_INPUT'
+      });
+    }
+
+    // ✅ Call NEW service function with cascade + safety check (only archived items)
+    const result = await folderService.destroyFolders(folderIds, userId);
+
+    return res.status(200).json({
+      success: true,
+      count: result.count,
+      message: result.count > 0 
+        ? `Successfully permanently deleted ${result.count} folder(s) and all contents` 
+        : 'No folders destroyed',
+      data: { destroyedCount: result.count }
+    });
+    
+  } catch (error: any) {
+    logger.error('❌ Destroy folders failed:', error);
+    return res.status(400).json({ 
+      success: false, 
+      message: error.message || 'Failed to permanently delete folders',
+      errorCode: 'DESTROY_FAILED'
+    });
+  }
+};
 
  export const handleShareFolder = async (req: AuthRequest, res: Response) => {
   try {

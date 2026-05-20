@@ -136,84 +136,214 @@ export const getFolderPath = async (folderId: string) => {
 };
 
 /**
- * Menghapus/Mengarsipkan banyak folder sekaligus berdasarkan kondisi isi
+ * Helper: Get ALL descendant folder IDs recursively (BFS approach)
+ * Input: ['folder-a'] → Output: ['folder-a', 'folder-b', 'folder-c', ...]
  */
-export const deleteMultipleFolders = async (folderIds: string[], userId: string) => {
-  // 1. Ambil semua folder beserta info jumlah dokumen di dalamnya
-  const folders = await prisma.folder.findMany({
+async function getAllDescendantFolderIds(
+  tx: any, // Prisma.TransactionClient
+  rootFolderIds: string[]
+): Promise<string[]> {
+  const allIds = new Set<string>(rootFolderIds);
+  let currentLevelIds = [...rootFolderIds];
+  
+  // Breadth-First Search: traverse folder tree level by level
+  while (currentLevelIds.length > 0) {
+    const children = await tx.folder.findMany({
+      where: {
+        parentId: { in: currentLevelIds },
+        isArchived: false  // ← Only traverse active folders
+      },
+      select: { id: true }
+    });
+    
+    const childIds = children.map((c: any) => c.id);
+    const newIds = childIds.filter((id: string) => !allIds.has(id));
+    
+    if (newIds.length === 0) break; // No more descendants
+    
+    // Add new IDs to set and continue to next level
+    newIds.forEach((id: string) => allIds.add(id));
+    currentLevelIds = childIds;
+  }
+  
+  return Array.from(allIds);
+}
+
+export const getArchivedFolders = async (userId: string) => {
+  return await prisma.folder.findMany({
     where: {
-      id: { in: folderIds },
-      ownerId: userId
+      ownerId: userId,
+      isArchived: true,  // ← Hanya folder yang di-archive
+      deletedAt: { not: null }  // ← Safety: pastikan ada timestamp
     },
     include: {
-      _count: { select: { documents: true } }
-    }
-  });
-
-  if (folders.length === 0) throw new Error("Folders not found.");
-
-  // Pisahkan mana yang harus dihapus permanen (kosong) dan mana yang diarsip (ada isi)
-  const emptyFolderIds = folders.filter(f => f._count.documents === 0).map(f => f.id);
-  const foldersToArchive = folders.filter(f => f._count.documents > 0).map(f => f.id);
-
-  return await prisma.$transaction(async (tx) => {
-    // --- AKSI 1: HAPUS PERMANEN FOLDER KOSONG ---
-    if (emptyFolderIds.length > 0) {
-      await tx.folderAccess.deleteMany({ where: { folderId: { in: emptyFolderIds } } });
-      await tx.folder.deleteMany({
-        where: { id: { in: emptyFolderIds }, ownerId: userId }
-      });
-    }
-
-    // --- AKSI 2: ARSIPKAN FOLDER YANG ADA ISINYA ---
-    if (foldersToArchive.length > 0) {
-      // Arsipkan foldernya
-      await tx.folder.updateMany({
-        where: { id: { in: foldersToArchive }, ownerId: userId },
-        data: {
-          isArchived: true,
-          deletedAt: new Date()
+      // ✅ Include owner info (untuk konsistensi dengan documents)
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          walletAddress: true,
+          avatarUrl: true
         }
-      });
-
-      // Arsipkan semua dokumen di dalamnya
-      await tx.document.updateMany({
-        where: { folderId: { in: foldersToArchive }, ownerId: userId },
-        data: {
-          isArchived: true,
-          deletedAt: new Date()
+      },
+      // ✅ Include parent folder info (untuk breadcrumb/navigation)
+      parent: {
+        select: {
+          id: true,
+          name: true
         }
-      });
-      
-      // Catatan: folderId di dokumen TETAP dipertahankan agar saat di menu Arsip,
-      // dokumen tersebut masih terlihat berada di dalam foldernya.
+      },
+      // ✅ Include count of documents inside (untuk UI: "5 items in trash")
+      _count: {
+        select: { 
+          documents: { where: { isArchived: true } }  // Hanya hitung docs yang juga di-archive
+        }
+      }
+    },
+    orderBy: { 
+      deletedAt: 'desc'  // ← Most recently archived first
     }
-
-    return {
-      deletedCount: emptyFolderIds.length,
-      archivedCount: foldersToArchive.length
-    };
   });
 };
 
-/**
- * Mengembalikan folder dan semua dokumen di dalamnya dari arsip
- */
-export const restoreMultipleFolders = async (folderIds: string[], userId: string) => {
+// ✅ SOFT DELETE: Archive folders + ALL descendants (recursive cascade)
+export const archiveFolders = async (folderIds: string[], userId: string) => {
   return await prisma.$transaction(async (tx) => {
-    // 1. Kembalikan Foldernya
+    // 1. Validate ownership & filter active folders only
+    const folders = await tx.folder.findMany({
+      where: {
+        id: { in: folderIds },
+        ownerId: userId,
+        isArchived: false
+      },
+      select: { id: true }
+    });
+
+    if (folders.length === 0) {
+      return { count: 0, message: 'No valid folders to archive' };
+    }
+
+    const validRootFolderIds = folders.map((f: any) => f.id);
+    
+    // 2. 🔄 Get ALL descendant folder IDs (recursive)
+    const allFolderIdsToArchive = await getAllDescendantFolderIds(tx, validRootFolderIds);
+    
+    // 3. Archive ALL folders (parent + all descendants)
     await tx.folder.updateMany({
-      where: { id: { in: folderIds }, ownerId: userId },
-      data: { isArchived: false, deletedAt: null }
+      where: { id: { in: allFolderIdsToArchive } },
+      data: {
+        isArchived: true,
+        deletedAt: new Date()
+      }
     });
-
-    // 2. Kembalikan semua dokumen yang ada di dalam folder tersebut
+    
+    // 4. 🔄 Archive ALL documents in ALL those folders (cascade)
     await tx.document.updateMany({
-      where: { folderId: { in: folderIds }, ownerId: userId },
-      data: { isArchived: false, deletedAt: null }
+      where: { 
+        folderId: { in: allFolderIdsToArchive },
+        ownerId: userId,
+        isArchived: false  // ← Only archive active documents
+      },
+      data: {
+        isArchived: true,
+        deletedAt: new Date()
+      }
+    });
+    
+    // Return count of ROOT folders archived (not total descendants)
+    return { count: validRootFolderIds.length };
+  });
+};
+
+// ✅ RESTORE: Un-archive folders + ALL descendants (recursive cascade)
+export const restoreFolders = async (folderIds: string[], userId: string) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Validate ownership & filter archived folders only
+    const folders = await tx.folder.findMany({
+      where: {
+        id: { in: folderIds },
+        ownerId: userId,
+        isArchived: true  // ← Only restore archived folders
+      },
+      select: { id: true }
     });
 
-    return { count: folderIds.length };
+    if (folders.length === 0) {
+      return { count: 0, message: 'No valid folders to restore' };
+    }
+
+    const validRootFolderIds = folders.map((f: any) => f.id);
+    
+    // 2. 🔄 Get ALL descendant folder IDs (recursive)
+    const allFolderIdsToRestore = await getAllDescendantFolderIds(tx, validRootFolderIds);
+    
+    // 3. Restore ALL folders
+    await tx.folder.updateMany({
+      where: { id: { in: allFolderIdsToRestore } },
+      data: {
+        isArchived: false,
+        deletedAt: null
+      }
+    });
+    
+    // 4. 🔄 Restore ALL documents in ALL those folders
+    await tx.document.updateMany({
+      where: { 
+        folderId: { in: allFolderIdsToRestore },
+        ownerId: userId,
+        isArchived: true  // ← Only restore archived documents
+      },
+      data: {
+        isArchived: false,
+        deletedAt: null
+      }
+    });
+    
+    return { count: validRootFolderIds.length };
+  });
+};
+
+// ✅ PERMANENT DELETE: Destroy folders + ALL descendants (recursive cascade)
+export const destroyFolders = async (folderIds: string[], userId: string) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Validate: only destroy folders that are already archived (safety check)
+    const folders = await tx.folder.findMany({
+      where: {
+        id: { in: folderIds },
+        ownerId: userId,
+        isArchived: true  // ← Safety: only destroy archived items
+      },
+      select: { id: true }
+    });
+
+    if (folders.length === 0) {
+      return { count: 0, message: 'No valid folders to destroy' };
+    }
+
+    const validRootFolderIds = folders.map((f: any) => f.id);
+    
+    // 2. 🔄 Get ALL descendant folder IDs (recursive)
+    const allFolderIdsToDestroy = await getAllDescendantFolderIds(tx, validRootFolderIds);
+    
+    // 3. Delete all folderAccess relations first (foreign key constraint)
+    await tx.folderAccess.deleteMany({
+      where: { folderId: { in: allFolderIdsToDestroy } }
+    });
+    
+    // 4. 🔄 Delete ALL documents in ALL those folders (cascade hard delete)
+    await tx.document.deleteMany({
+      where: { 
+        folderId: { in: allFolderIdsToDestroy },
+        ownerId: userId 
+      }
+    });
+    
+    // 5. Delete ALL folders (cascade hard delete)
+    await tx.folder.deleteMany({
+      where: { id: { in: allFolderIdsToDestroy } }
+    });
+    
+    return { count: validRootFolderIds.length };
   });
 };
 
