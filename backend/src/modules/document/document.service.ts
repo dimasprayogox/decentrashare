@@ -46,7 +46,9 @@ export const sanitizeDocument = (doc: any, currentUserId?: string) => {
       id: doc.folder.id,
       name: doc.folder.name,
       privacy: doc.folder.privacy
-    } : undefined
+    } : undefined,
+    
+    description: doc.description ?? null,
   };
 };
 
