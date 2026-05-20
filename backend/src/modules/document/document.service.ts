@@ -574,13 +574,13 @@ export const moveMultipleDocuments = async (
  * Mengambil semua dokumen milik user yang aktif (tidak diarsip)
  */
 export const getUserDocuments = async (userId: string, folderId: string | null) => {
-  return await prisma.document.findMany({
+  const docs = await prisma.document.findMany({
     where: {
       ownerId: userId,
       folderId: folderId ? String(folderId) : null,
       isArchived: false,
     },
-     include: {
+    include: {
       folder: true,
       owner: { 
         select: {
@@ -592,10 +592,11 @@ export const getUserDocuments = async (userId: string, folderId: string | null) 
         }
       }
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: { createdAt: 'desc' },
   });
+  
+  // ✅ Pass userId sebagai currentUserId
+  return sanitizeDocuments(docs, userId);
 };
 
 /**
@@ -949,9 +950,7 @@ export const getSharedWithMeDocuments = async (userId: string) => {
   const sharedAccess = await prisma.documentAccess.findMany({
     where: { 
       userId: userId,
-      document: {
-        isArchived: false 
-      }
+      document: { isArchived: false }
     },
     include: {
       document: {
@@ -967,12 +966,12 @@ export const getSharedWithMeDocuments = async (userId: string) => {
         }
       }
     },
-    // Kita hapus orderBy createdAt-nya karena kolomnya tidak ada di schema
   });
 
+  // ✅ Pass userId sebagai currentUserId
   return sharedAccess.map(item => ({
     accessId: item.id,
-    document: item.document
+    document: sanitizeDocument(item.document, userId)  // ← Update di sini
   }));
 };
 

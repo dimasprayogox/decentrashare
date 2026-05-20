@@ -359,13 +359,10 @@ export const handleGetMyDocuments = async (req: AuthRequest, res: Response) => {
       : String(folderId);
 
     const documents = await documentService.getUserDocuments(userId, cleanFolderId);
-    
-    // ✅ SANITIZE before sending to client
-    const sanitized = documentService.sanitizeDocuments(documents);
 
     return res.status(200).json({
       success: true,
-      data: sanitized,  // ← ✅ Sanitized!
+      data: documents,  
       message: "User documents fetched successfully",
     });
   } catch (error) {
@@ -610,10 +607,10 @@ export const handleGetSharedWithMe = async (req: AuthRequest, res: Response) => 
     const userId = req.user?.userId;
     const data = await documentService.getSharedWithMeDocuments(userId!);
     
-    // ✅ SANITIZE nested documents
+    // ✅ Pass userId agar owner bisa lihat blockchainTx miliknya sendiri
     const sanitized = data.map(item => ({
       accessId: item.accessId,
-      document: documentService.sanitizeDocument(item.document)  // ← ✅ Sanitize nested!
+      document: documentService.sanitizeDocument(item.document, userId)  // ← ✅ Tambah userId!
     }));
 
     return res.status(200).json({
