@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   handleUpload,
   handleGetMyDocuments,
+  handlePreviewDocument,
   handleDownloadDocument,
   handleBulkDownloadDocuments,
   handleGetDocumentDetail,
@@ -61,6 +62,9 @@ router.get('/logs', handleGetActivityLogs);
 // GET /api/documents/:id
 router.get("/:id", handleGetDocumentDetail);
 router.patch("/:id/rename", handleRenameDocument);
+
+// routes/storage.ts
+router.get('/documents/:id/preview', authMiddleware, handlePreviewDocument);
 
 router.get('/documents/:id/download', authMiddleware, handleDownloadDocument);
 

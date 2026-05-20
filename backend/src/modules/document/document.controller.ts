@@ -10,32 +10,103 @@ const archiver = (archiverModule as any).default || archiverModule;
  * GET /api/documents/:id
  * Fetches document details with hybrid access validation
  */
+// ✅ Update handleGetDocumentDetail:
 export const handleGetDocumentDetail = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Unauthorized. Please provide a valid token.' 
-      });
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    // Execute the hybrid access validation service
     const document = await documentService.validateDocumentAccess(id, userId);
+
+    // ✅ SANITIZE: Jangan expose ipfsHash untuk private files
+    const isPrivate = document.privacy === 'PRIVATE' || document.privacy === 'SPECIFIC_USER';
+    
+    const sanitized = {
+      id: document.id,
+      title: document.title,
+      fileName: document.fileName,
+      fileSize: document.fileSize,
+      mimeType: document.mimeType,
+      createdAt: document.createdAt,
+      updatedAt: document.updatedAt,
+      privacy: document.privacy,  // ← Frontend butuh ini untuk conditional URL
+      ownerId: document.ownerId,
+      // ❌ JANGAN include ipfsHash untuk private files!
+      ipfsHash: isPrivate ? undefined : document.ipfsHash,  // ← ✅ Hide if private
+      // ❌ JANGAN include sensitive fields: fileHash, blockchainTx, description (if sensitive)
+    };
 
     return res.status(200).json({
       success: true,
       message: 'Document details retrieved successfully.',
-      data: document
+      data: sanitized  
     });
+
   } catch (error: any) {
-    // Use 403 Forbidden for access denials
-    return res.status(403).json({ 
-      success: false, 
-      message: error.message 
-    });
+    if (error.message === 'Document not found.') {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+    if (error.message === 'Document is in trash.') {
+      return res.status(410).json({ success: false, message: 'Document has been archived' });
+    }
+    if (error.message.includes('Access denied')) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ✅ NEW: handlePreviewDocument — Secure proxy for PRIVATE/SPECIFIC_USER
+export const handlePreviewDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: documentId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // ✅ 1. Validate access (reuse your existing function!)
+    const document = await documentService.validateDocumentAccess(documentId, userId);
+
+    // ✅ 2. Fetch from Pinata (use private gateway if available)
+    const pinataUrl = `https://gateway.pinata.cloud/ipfs/${document.ipfsHash}`;
+    const response = await fetch(pinataUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch from IPFS: ${response.status}`);
+    }
+
+    // ✅ 3. Set headers for INLINE preview (not download)
+    res.setHeader('Content-Type', document.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.fileName)}"`);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    // ✅ 4. Stream file to client
+    response.body?.pipe(res);
+
+    // ✅ 5. Log activity (async, non-blocking)
+    documentService.logDownloadActivity(userId, documentId, document.fileName, document.ipfsHash)
+      .catch(err => logger.error('Failed to log preview:', err));
+
+  } catch (error: any) {
+    // ✅ Handle errors same as other endpoints
+    if (error.message === 'Document not found.') {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+    if (error.message.includes('Access denied')) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    if (error.message.includes('Failed to fetch from IPFS')) {
+      return res.status(502).json({ success: false, message: 'Failed to load file' });
+    }
+    logger.error('❌ Preview error:', { documentId: req.params.id, error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to preview file' });
   }
 };
 
@@ -228,14 +299,20 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
  * GET /api/documents/root
  * Mengambil file yang tidak berada dalam folder
  */
-export const handleGetRootDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleGetRootDocuments = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     const documents = await documentService.getRootDocuments(userId);
-    return res.status(200).json({ success: true, data: documents });
-  } catch (error) { next(error); }
+    
+    // ✅ SANITIZE before sending to client
+    const sanitized = documentService.sanitizeDocuments(documents);
+    
+    return res.status(200).json({ success: true, data: sanitized });
+  } catch (error) { 
+    next(error); 
+  }
 };
 
 export const handleMoveDocuments = async (req: AuthRequest, res: Response) => {
@@ -275,22 +352,24 @@ export const handleMoveDocuments = async (req: AuthRequest, res: Response) => {
  * GET /api/documents/me
  * Mengambil daftar dokumen milik user (yang tidak diarsipkan secara default)
  */
-export const handleGetMyDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const handleGetMyDocuments = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     let { folderId } = req.query;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-  
     const cleanFolderId = (folderId === 'null' || folderId === 'undefined' || !folderId) 
       ? null 
       : String(folderId);
 
     const documents = await documentService.getUserDocuments(userId, cleanFolderId);
+    
+    // ✅ SANITIZE before sending to client
+    const sanitized = documentService.sanitizeDocuments(documents);
 
     return res.status(200).json({
       success: true,
-      data: documents,
+      data: sanitized,  // ← ✅ Sanitized!
       message: "User documents fetched successfully",
     });
   } catch (error) {
@@ -327,11 +406,14 @@ export const handleGetArchivedDocuments = async (req: AuthRequest, res: Response
   try {
     const userId = req.user?.userId;
     const archived = await documentService.getArchivedDocuments(userId!);
+    
+    // ✅ SANITIZE before sending to client
+    const sanitized = documentService.sanitizeDocuments(archived);
 
     return res.status(200).json({
       success: true,
       message: "Archived documents retrieved successfully.",
-      data: archived
+      data: sanitized  // ← ✅ Sanitized!
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
@@ -530,14 +612,18 @@ export const handleGetSystemStatsAdmin = async (req: AuthRequest, res: Response,
 export const handleGetSharedWithMe = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    
-    // Memanggil service untuk mengambil dokumen yang dishare ke user ini
     const data = await documentService.getSharedWithMeDocuments(userId!);
+    
+    // ✅ SANITIZE nested documents
+    const sanitized = data.map(item => ({
+      accessId: item.accessId,
+      document: documentService.sanitizeDocument(item.document)  // ← ✅ Sanitize nested!
+    }));
 
     return res.status(200).json({
       success: true,
       message: "Successfully retrieved documents shared with you.",
-      data
+      data: sanitized
     });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });

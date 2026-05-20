@@ -11,6 +11,45 @@ import * as archiverModule from 'archiver';
 
 const archiver = (archiverModule as any).default || archiverModule;
 
+/**
+ * Sanitize document object for API response
+ * Hides ipfsHash for PRIVATE/SPECIFIC_USER files
+ */
+export const sanitizeDocument = (doc: any) => {
+  const isPrivate = doc.privacy === 'PRIVATE' || doc.privacy === 'SPECIFIC_USER';
+  
+  return {
+    id: doc.id,
+    title: doc.title,
+    fileName: doc.fileName,
+    fileSize: doc.fileSize,
+    mimeType: doc.mimeType,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+    privacy: doc.privacy, 
+    ownerId: doc.ownerId,
+
+    ipfsHash: isPrivate ? undefined : doc.ipfsHash,  
+
+    owner: doc.owner ? {
+      id: doc.owner.id,
+      username: doc.owner.username,
+      walletAddress: doc.owner.walletAddress,
+      avatarUrl: doc.owner.avatarUrl
+    } : undefined,
+    
+    folder: doc.folder ? {
+      id: doc.folder.id,
+      name: doc.folder.name,
+      privacy: doc.folder.privacy  // ← Frontend might need this
+    } : undefined
+  };
+};
+
+export const sanitizeDocuments = (docs: any[]) => {
+  return docs.map(sanitizeDocument);
+};
+
 
 const formatTitle = (originalName: string): string => {
   // Hanya mengambil nama file asli tanpa .ekstensi
