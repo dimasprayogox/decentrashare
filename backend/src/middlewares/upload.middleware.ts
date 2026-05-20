@@ -14,21 +14,43 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, `avatar-${uniqueSuffix}${path.extname(file.originalname)}`);
+    cb(null, `doc-${uniqueSuffix}${path.extname(file.originalname)}`);
   },
 });
 
+// ✅ Allowed types sesuai frontend
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'video/mp4',
+  'video/webm',
+  'text/plain',
+  'text/csv',
+  'application/json'
+];
+
 export const uploadMiddleware = multer({ 
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB Limit
+  limits: { 
+    fileSize: 100 * 1024 * 1024,  // ✅ 100MB per file
+    files: 10                      // ✅ Max 10 files per request (masuk ke limits!)
+  },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
-    const isExtOk = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const isMimeOk = allowedTypes.test(file.mimetype);
+    // ✅ Cek MIME type + extension fallback
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isAllowed = ALLOWED_MIME_TYPES.includes(file.mimetype) ||
+                      (file.mimetype.startsWith('image/') && /\.(jpeg|jpg|png|gif|webp)$/.test(ext)) ||
+                      (file.mimetype.startsWith('video/') && /\.(mp4|webm)$/.test(ext));
 
-    if (isExtOk && isMimeOk) {
-      return cb(null, true);
+    if (isAllowed) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.originalname}`), false);
     }
-    cb(new Error("Only images (jpeg, jpg, png, webp) are allowed"));
   }
 });
