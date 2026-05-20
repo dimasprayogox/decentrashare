@@ -30,6 +30,7 @@ export const sanitizeDocument = (doc: any) => {
     ownerId: doc.ownerId,
 
     ipfsHash: isPrivate ? undefined : doc.ipfsHash,  
+    blockchainTx: isPrivate ? undefined : doc.blockchainTx, 
 
     owner: doc.owner ? {
       id: doc.owner.id,
