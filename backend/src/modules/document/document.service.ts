@@ -13,10 +13,12 @@ const archiver = (archiverModule as any).default || archiverModule;
 
 /**
  * Sanitize document object for API response
- * Hides ipfsHash for PRIVATE/SPECIFIC_USER files
+ * - ipfsHash: ALWAYS hidden (never exposed to client)
+ * - blockchainTx: visible to owner OR if file is PUBLIC/LINK_ONLY
  */
-export const sanitizeDocument = (doc: any) => {
+export const sanitizeDocument = (doc: any, currentUserId?: string) => {
   const isPrivate = doc.privacy === 'PRIVATE' || doc.privacy === 'SPECIFIC_USER';
+  const isOwner = currentUserId && doc.ownerId === currentUserId;
   
   return {
     id: doc.id,
@@ -29,8 +31,9 @@ export const sanitizeDocument = (doc: any) => {
     privacy: doc.privacy, 
     ownerId: doc.ownerId,
 
-    ipfsHash: isPrivate ? undefined : doc.ipfsHash,  
-    blockchainTx: isPrivate ? undefined : doc.blockchainTx, 
+    ipfsHash: undefined, 
+
+    blockchainTx: (isOwner || !isPrivate) ? doc.blockchainTx : undefined,
 
     owner: doc.owner ? {
       id: doc.owner.id,
@@ -42,13 +45,13 @@ export const sanitizeDocument = (doc: any) => {
     folder: doc.folder ? {
       id: doc.folder.id,
       name: doc.folder.name,
-      privacy: doc.folder.privacy  // ← Frontend might need this
+      privacy: doc.folder.privacy
     } : undefined
   };
 };
 
-export const sanitizeDocuments = (docs: any[]) => {
-  return docs.map(sanitizeDocument);
+export const sanitizeDocuments = (docs: any[], currentUserId?: string) => {
+  return docs.map(doc => sanitizeDocument(doc, currentUserId));
 };
 
 
