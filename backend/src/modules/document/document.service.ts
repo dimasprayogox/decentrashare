@@ -699,23 +699,47 @@ export const destroyMultipleDocuments = async (documentIds: string[], userId: st
   });
 };
 
-/**
- * Mengubah Judul Dokumen (Rename)
- */
-export const renameDocument = async (documentId: string, userId: string, newTitle: string) => {
-  const doc = await prisma.document.findFirst({ where: { id: documentId, ownerId: userId,
-      isArchived: false } });
+export const updateDocumentMetadata = async (
+  documentId: string, 
+  userId: string, 
+  updates: { title?: string; description?: string }
+) => {
+  // 1. Validate document exists and user is owner
+  const doc = await prisma.document.findFirst({ 
+    where: { 
+      id: documentId, 
+      ownerId: userId,
+      isArchived: false  // ← Cannot edit archived documents
+    } 
+  });
 
-  if (!doc || doc.ownerId !== userId) {
+  if (!doc) {
     throw new Error("Document not found or unauthorized.");
   }
 
+  // 2. Prepare update data (only include fields that are provided)
+  const updateData: any = {};
+  
+  if (updates.title !== undefined) {
+    updateData.title = updates.title.trim();
+  }
+  
+  if (updates.description !== undefined) {
+    // Allow null to clear description, or string to update
+    updateData.description = updates.description?.trim() || null;
+  }
+
+  // If no valid updates provided, return early
+  if (Object.keys(updateData).length === 0) {
+    return doc; // No changes needed
+  }
+
+  // 3. Update document (updatedAt will auto-update via @updatedAt)
   return await prisma.document.update({
     where: { id: documentId },
-    data: { title: newTitle }
+    data: updateData
   });
 };
-
 
   /**
  * Update Privacy Level Massal untuk Document & Auto-Cleanup (Flexible Bulk Patch)

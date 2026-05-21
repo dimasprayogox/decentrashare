@@ -77,8 +77,7 @@ model Folder {
   deletedAt    DateTime?      // Tambahkan ini untuk tracking kapan diarsip
 
   createdAt DateTime   @default(now())
-  
-  
+  updatedAt    DateTime @updatedAt 
 
   @@map("folders")
 }
@@ -109,6 +108,7 @@ model Document {
   sharedWith   DocumentAccess[]
 
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt 
 
   @@map("documents")
 }

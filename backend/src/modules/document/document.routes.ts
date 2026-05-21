@@ -6,7 +6,7 @@ import {
   handleDownloadDocument,
   handleBulkDownloadDocuments,
   handleGetDocumentDetail,
-  handleRenameDocument,
+  handleUpdateDocumentMetadata,
   handleArchiveDocuments,
   handleGetArchivedDocuments,
   handleRestoreDocuments,
@@ -51,7 +51,6 @@ router.patch("/privacy", handleUpdateDocumentPrivacy);
 router.post("/shared", handleShareDocuments);
 // DELETE /api/documents/:id/share → cabut akses
 router.delete("/shared", handleRevokeAccess);
-// GET /api/documents/:id/share → lihat siapa yang punya akses
 router.post("/shared-details", handleGetSharedUsers);
 
 router.get("/shared-with-me", handleGetSharedWithMe);
@@ -60,13 +59,13 @@ router.get('/logs', handleGetActivityLogs);
 
 // Rute dengan ID di bawah
 // GET /api/documents/:id
-router.get("/:id", handleGetDocumentDetail);
-router.patch("/:id/rename", handleRenameDocument);
+router.patch("/:id/edit", handleUpdateDocumentMetadata);
 
 // routes/storage.ts
 router.get('/:id/preview', authMiddleware, handlePreviewDocument);
 
 router.get('/:id/download', authMiddleware, handleDownloadDocument);
+router.get("/:id", handleGetDocumentDetail);
 
 router.post('/bulk-download', 
   authMiddleware, 

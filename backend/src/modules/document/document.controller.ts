@@ -493,28 +493,54 @@ export const handlePermanentDelete = async (req: AuthRequest, res: Response) => 
   }
 };
 
-/**
- * PATCH /api/documents/:id/rename
- * Mengubah judul dokumen
- */
-export const handleRenameDocument = async (req: AuthRequest, res: Response) => {
+export const handleUpdateDocumentMetadata = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { title } = req.body;
+    const { title, description } = req.body;
     const userId = req.user?.userId;
 
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    if (!title) return res.status(400).json({ success: false, message: 'New title is required' });
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
 
-    const document = await documentService.renameDocument(id, userId, title);
+    // Validate at least one field is provided
+    if (title === undefined && description === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Provide at least "title" or "description" to update',
+        errorCode: 'MISSING_UPDATE_FIELDS'
+      });
+    }
+
+    // Call service with only provided fields
+    const document = await documentService.updateDocumentMetadata(id, userId, {
+      title,
+      description
+    });
+
+    // Sanitize before sending to client
+    const sanitized = documentService.sanitizeDocument(document, userId);
 
     return res.status(200).json({
       success: true,
-      message: 'Document renamed successfully',
-      data: document
+      message: 'Document metadata updated successfully',
+      data: sanitized
     });
+    
   } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+    if (error.message?.includes('not found') || error.message?.includes('unauthorized')) {
+      return res.status(404).json({ 
+        success: false, 
+        message: error.message,
+        errorCode: 'DOCUMENT_NOT_FOUND'
+      });
+    }
+    
+    return res.status(400).json({ 
+      success: false, 
+      message: error.message || 'Failed to update document',
+      errorCode: 'UPDATE_FAILED'
+    });
   }
 };
 
