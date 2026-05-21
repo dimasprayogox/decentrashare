@@ -262,8 +262,7 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
     const { folderId } = req.body;
     const userId = req.user?.userId;
 
-    // ✅ Parse metadata array dari client (untuk multi-file)
-    // Format: { metadata: [{ fileName: "x.jpg", title: "Judul", description: "Desk..." }, ...] }
+    // ✅ Parse metadata array dari client
     const metadataMap = new Map<string, { title?: string; description?: string }>();
     
     if (req.body.metadata) {
@@ -298,24 +297,46 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
       });
     }
 
-    // ✅ Pass metadataMap ke service
     const results = await documentService.uploadMultipleFiles(
       files, 
       userId, 
       folderId,
-      metadataMap  // ← Tambah parameter baru
+      metadataMap
     );
+
+    // ✅ Optional: Check if any file failed due to duplicate title
+    const hasDuplicateTitle = results.some((r: any) => r.error?.errorCode === 'DOCUMENT_TITLE_EXISTS');
+    
+    if (hasDuplicateTitle) {
+      // Return partial success with specific error info
+      return res.status(409).json({
+        success: false,
+        message: 'Some files could not be uploaded due to duplicate titles',
+        errorCode: 'PARTIAL_UPLOAD_FAILED',
+        results  // ← Frontend bisa lihat detail per-file
+      });
+    }
 
     return res.status(201).json({
       success: true,
       message: 'File processing completed',
       results,
     });
-  } catch (error) {
+    
+  } catch (error: any) {
+    // ✅ Handle duplicate title error specifically
+    if (error.errorCode === 'DOCUMENT_TITLE_EXISTS') {
+      return res.status(409).json({
+        success: false,
+        message: error.message,
+        errorCode: 'DOCUMENT_TITLE_EXISTS'
+      });
+    }
+    
+    // Pass other errors to global handler
     next(error);
   }
 };
-
 /**
  * GET /api/documents/root
  * Mengambil file yang tidak berada dalam folder
@@ -503,7 +524,6 @@ export const handleUpdateDocumentMetadata = async (req: AuthRequest, res: Respon
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    // Validate at least one field is provided
     if (title === undefined && description === undefined) {
       return res.status(400).json({ 
         success: false, 
@@ -512,13 +532,11 @@ export const handleUpdateDocumentMetadata = async (req: AuthRequest, res: Respon
       });
     }
 
-    // Call service with only provided fields
     const document = await documentService.updateDocumentMetadata(id, userId, {
       title,
       description
     });
 
-    // Sanitize before sending to client
     const sanitized = documentService.sanitizeDocument(document, userId);
 
     return res.status(200).json({
@@ -528,6 +546,16 @@ export const handleUpdateDocumentMetadata = async (req: AuthRequest, res: Respon
     });
     
   } catch (error: any) {
+    // ✅ TAMBAHKAN: Handle duplicate title error (409 Conflict)
+    if (error.errorCode === 'DOCUMENT_TITLE_EXISTS') {
+      return res.status(409).json({ 
+        success: false, 
+        message: error.message,
+        errorCode: 'DOCUMENT_TITLE_EXISTS'  // ← Frontend bisa deteksi ini
+      });
+    }
+    
+    // Handle not found / unauthorized
     if (error.message?.includes('not found') || error.message?.includes('unauthorized')) {
       return res.status(404).json({ 
         success: false, 
@@ -536,6 +564,7 @@ export const handleUpdateDocumentMetadata = async (req: AuthRequest, res: Respon
       });
     }
     
+    // Generic error fallback
     return res.status(400).json({ 
       success: false, 
       message: error.message || 'Failed to update document',

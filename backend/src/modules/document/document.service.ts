@@ -414,11 +414,31 @@ export const uploadMultipleFiles = async (
 
       // ── 5. METADATA PREPARATION ───────────────────────────────────
       const userMeta = metadataMap?.get(file.originalname) || {};
-      
+
       // ✅ Title: auto-fill dari filename jika kosong
       const finalTitle = userMeta.title?.trim() || formatTitle(file.originalname);
       // ✅ Description: optional, null jika kosong
       const finalDescription = userMeta.description?.trim() || null;
+
+      // ✅ ✅ ✅ INLINE DUPLICATE TITLE CHECK (Pattern sama seperti createFolder)
+      const duplicateTitle = await prisma.document.findFirst({
+        where: {
+          title: {
+            equals: finalTitle,
+            mode: 'insensitive'  // ✅ Case-insensitive, sama seperti folder
+          },
+          ownerId: userId,
+          folderId: folderId || null,  // ✅ Null-safe: root = null
+          isArchived: false,  // ✅ Hanya cek document aktif
+        }
+      });
+
+      if (duplicateTitle) {
+        const error: any = new Error(`Document "${finalTitle}" already exists in this folder`);
+        error.errorCode = 'DOCUMENT_TITLE_EXISTS';
+        error.status = 409;
+        throw error;
+      }
       
       // ── 6. DATABASE TRANSACTION ───────────────────────────────────
       const newDocument = await prisma.$transaction(async (tx) => {
@@ -719,9 +739,32 @@ export const updateDocumentMetadata = async (
 
   // 2. Prepare update data (only include fields that are provided)
   const updateData: any = {};
-  
-  if (updates.title !== undefined) {
-    updateData.title = updates.title.trim();
+
+   if (updates.title !== undefined) {
+    const newTitle = updates.title.trim();
+    
+    // ✅ Cek duplicate: case-insensitive, exclude archived, exclude current doc
+    const duplicateTitle = await prisma.document.findFirst({
+      where: {
+        title: {
+          equals: newTitle,
+          mode: 'insensitive'  // ✅ Sama seperti folder
+        },
+        ownerId: userId,
+        folderId: doc.folderId,  // ✅ Gunakan folderId dari document yang ada
+        isArchived: false,
+        id: { not: documentId }  // ✅ Exclude document yang sedang di-edit (penting!)
+      }
+    });
+    
+    if (duplicateTitle) {
+      const error: any = new Error(`Document "${newTitle}" already exists in this folder`);
+      error.errorCode = 'DOCUMENT_TITLE_EXISTS';
+      error.status = 409;
+      throw error;
+    }
+    
+    updateData.title = newTitle;
   }
   
   if (updates.description !== undefined) {
