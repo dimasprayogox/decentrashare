@@ -23,6 +23,81 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
   }
 };
 
+export const handleSearchUsersForShare = async (
+  req: AuthRequest, 
+  res: Response, 
+  next: NextFunction
+) => {
+  try {
+    // ✅ Extract & validate request body
+    const { query, excludeSharedUserIds } = req.body;
+    
+    // ✅ Get authenticated user from middleware (req.user)
+    const currentUserId = req.user?.userId;
+    
+    if (!currentUserId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      });
+    }
+
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Query parameter is required'
+      });
+    }
+
+    // ✅ Call service layer
+    const result = await userService.searchUsersForShare({
+      query,
+      currentUserId,
+      excludeSharedUserIds: Array.isArray(excludeSharedUserIds) 
+        ? excludeSharedUserIds 
+        : [],
+      limit: 20
+    });
+
+    // ✅ Handle service response
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message
+      });
+    }
+
+    // ✅ Success response
+    logger.info('[UserController] Users searched for sharing', {
+      userId: currentUserId,
+      query,
+      resultsCount: result.users.length
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        users: result.users,
+        count: result.users.length
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('[UserController] handleSearchUsersForShare error:', {
+      userId: req.user?.userId,
+      body: req.body,
+      error: error.message,
+      stack: error.stack
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { debug: error.message })
+    });
+  }
+};
+
 export const handleUpdateAvatar = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;

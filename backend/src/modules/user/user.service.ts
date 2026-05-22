@@ -5,6 +5,25 @@ import { pinata } from '../../config/pinata';
 import fs from 'fs';
 import { File, Blob } from 'formdata-node'; // Sesuai dengan cara upload multiple sebelumnya
 
+export type SearchUsersOptions = {
+  query: string;
+  currentUserId: string;
+  excludeSharedUserIds?: string[];
+  limit?: number;
+};
+
+export type SearchUsersResult = {
+  success: boolean;
+  users: Array<{
+    id: string;
+    username: string | null;
+    walletAddress: string;
+    avatarUrl: string | null;
+    email?: string | null;
+  }>;
+  message?: string;
+};
+
 export const userService = {
   async getUserById(userId: string) {
     const user = await prisma.user.findUnique({
@@ -20,9 +39,93 @@ export const userService = {
     return user;
   }, 
 
-  // backend/src/modules/user/user.service.ts
+async searchUsersForShare({
+  query,
+  currentUserId,
+  excludeSharedUserIds = [],
+  limit = 20
+}: SearchUsersOptions): Promise<SearchUsersResult> {
+  try {
+    // ✅ Validation
+    if (!query || query.trim().length < 2) {
+      return {
+        success: false,
+        users: [],
+        message: 'Query minimal 2 karakter'
+      };
+    }
 
-// backend/src/modules/user/user.service.ts
+    if (!currentUserId) {
+      return {
+        success: false,
+        users: [],
+        message: 'User ID required'
+      };
+    }
+
+    // ✅ Prisma query dengan filtering yang aman
+    const users = await prisma.user.findMany({
+      where: {
+        AND: [
+          // Exclude diri sendiri
+          { id: { not: currentUserId } },
+          
+          // Exclude user yang sudah di-share (jika ada)
+          ...(excludeSharedUserIds.length > 0 
+            ? [{ id: { notIn: excludeSharedUserIds } }] 
+            : []),
+          
+          // Search by username, email, or wallet address
+          {
+            OR: [
+              { username: { contains: query, mode: 'insensitive' } },
+              { email: { contains: query, mode: 'insensitive' } },
+              { walletAddress: { contains: query, mode: 'insensitive' } }
+            ]
+          }
+        ]
+      },
+      select: {
+        id: true,
+        username: true,
+        walletAddress: true,
+        avatarUrl: true,
+        email: true
+      },
+      take: limit,
+      orderBy: {
+        // Prioritize username matches, then by last active
+        username: 'asc'
+      }
+    });
+
+    logger.debug('[UserService] searchUsersForShare', {
+      query,
+      currentUserId,
+      found: users.length,
+      excludeCount: excludeSharedUserIds.length
+    });
+
+    return {
+      success: true,
+      users: users as SearchUsersResult['users']
+    };
+
+  } catch (error: any) {
+    logger.error('[UserService] searchUsersForShare error:', {
+      query,
+      currentUserId,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    return {
+      success: false,
+      users: [],
+      message: 'Failed to search users'
+    };
+  }
+},
 
 async updateAvatar(userId: string, file: Express.Multer.File) {
   let oldAvatarHash: string | null = null; // Track old hash for cleanup
