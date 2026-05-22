@@ -4366,3 +4366,45 @@
 {"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-05-07 20:15:02"}
 {"level":"info","message":"HTTP server closed","timestamp":"2026-05-07 20:15:02"}
 {"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-05-07 20:15:02"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-05-22 23:30:12"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-05-22 23:30:12"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-05-22 23:30:12"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-05-22 23:30:12"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-05-22 23:30:12"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-05-22 23:30:15"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-05-22 23:30:15"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-05-22 23:30:15"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-05-22 23:30:15"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-05-22 23:30:15"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-05-22 23:32:50"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-05-22 23:32:50"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-05-22 23:32:50"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-05-22 23:32:50"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-05-22 23:32:50"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-05-22 23:32:59"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-05-22 23:32:59"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-05-22 23:32:59"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-05-22 23:32:59"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-05-22 23:32:59"}
+{"ip":"::1","level":"info","message":"[tmqomswjo] GET /api/health","method":"GET","requestId":"tmqomswjo","timestamp":"2026-05-22 23:33:51","url":"/api/health","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"}
+{"duration":24,"level":"info","message":"[tmqomswjo] 200 24ms","requestId":"tmqomswjo","statusCode":200,"timestamp":"2026-05-22 23:33:51"}
+{"ip":"::1","level":"info","message":"[1nrjjbfc0] GET /favicon.ico","method":"GET","requestId":"1nrjjbfc0","timestamp":"2026-05-22 23:33:51","url":"/favicon.ico","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"}
+{"duration":3,"level":"info","message":"[1nrjjbfc0] 404 3ms","requestId":"1nrjjbfc0","statusCode":404,"timestamp":"2026-05-22 23:33:51"}
+{"ip":"::1","level":"info","message":"[g3k8mhccc] GET /.well-known/appspecific/com.chrome.devtools.json","method":"GET","requestId":"g3k8mhccc","timestamp":"2026-05-22 23:34:17","url":"/.well-known/appspecific/com.chrome.devtools.json","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"}
+{"duration":16,"level":"info","message":"[g3k8mhccc] 404 16ms","requestId":"g3k8mhccc","statusCode":404,"timestamp":"2026-05-22 23:34:17"}
+{"ip":"::1","level":"info","message":"[iw9o3lh2k] GET /.well-known/appspecific/com.chrome.devtools.json","method":"GET","requestId":"iw9o3lh2k","timestamp":"2026-05-22 23:35:11","url":"/.well-known/appspecific/com.chrome.devtools.json","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"}
+{"duration":28,"level":"info","message":"[iw9o3lh2k] 404 28ms","requestId":"iw9o3lh2k","statusCode":404,"timestamp":"2026-05-22 23:35:11"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[muyvoqtzo] POST /api/auth/login","method":"POST","requestId":"muyvoqtzo","timestamp":"2026-05-22 23:36:18","url":"/api/auth/login","userAgent":"insomnia/12.3.1"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[AUTH] Login attempt for wallet: 0x119fb4...","timestamp":"2026-05-22 23:36:18"}
+{"level":"info","message":"[AUTH] Login success for wallet: 0x119fb47efec0d150d27b4312781eefeb12f05eb7","timestamp":"2026-05-22 23:36:19"}
+{"duration":376,"level":"info","message":"[muyvoqtzo] 200 376ms","requestId":"muyvoqtzo","statusCode":200,"timestamp":"2026-05-22 23:36:19"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[6w3lllsen] POST /api/documents/upload","method":"POST","requestId":"6w3lllsen","timestamp":"2026-05-22 23:37:56","url":"/api/documents/upload","userAgent":"insomnia/12.3.1"}
+{"groupId":"1d53806e-e932-4773-9a93-832ce909c5d3","level":"debug","message":"[Pinata] Using user's personal group for document uploads","timestamp":"2026-05-22 23:37:56","userId":"bc802e71-4b39-48d9-a158-255c08f23e0e"}
+{"error":"\nInvalid `tx.document.create()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/document/document.service.ts:441:39\n\n  438 \n  439 // ── 6. DATABASE TRANSACTION ───────────────────────────────────\n  440 const newDocument = await prisma.$transaction(async (tx) => {\n→ 441   const doc = await tx.document.create({\n          data: {\n            fileName: \"cekcek.png\",\n            title: \"cekcek\",\n            description: null,\n            fileSize: 2700,\n            mimeType: \"image/png\",\n            ipfsHash: \"bafkreicn52tfo4l7xnr6bx5algh6o6isri7gq5ubpllftnimosnhyxfx4a\",\n            fileHash: \"4deea657717fbb63e0dfa0598fe779128a3e6876817ad659b50c749a7c5cb7e0\",\n            blockchainTx: null,\n            isOnChain: false,\n            pendingOnChainUntil: new Date(\"2026-05-23T16:37:59.047Z\"),\n            cleanupStatus: \"PENDING\",\n            ownerId: \"bc802e71-4b39-48d9-a158-255c08f23e0e\",\n            folderId: null,\n            privacy: \"PRIVATE\",\n        +   owner: {\n        +     create: UserCreateWithoutDocumentsInput | UserUncheckedCreateWithoutDocumentsInput,\n        +     connectOrCreate: UserCreateOrConnectWithoutDocumentsInput,\n        +     connect: UserWhereUniqueInput\n        +   }\n          }\n        })\n\nArgument `owner` is missing.","fileName":"cekcek.png","folderId":"","level":"error","message":"❌ Upload failed for file:","stack":"Error\n    at wn (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:29:1367)\n    at handleRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6958)\n    at handleAndLogRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6623)\n    at request (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6307)\n    at processTicksAndRejections (unknown:7:39)","timestamp":"2026-05-22 23:37:59","userId":"bc802e71-4b39-48d9-a158-255c08f23e0e"}
+{"folderId":"","level":"info","message":"📦 Document upload batch complete: 0 succeeded, 1 failed","pinataGroupId":"1d53806e-e932-4773-9a93-832ce909c5d3","timestamp":"2026-05-22 23:37:59","userId":"bc802e71-4b39-48d9-a158-255c08f23e0e"}
+{"duration":2494,"level":"info","message":"[6w3lllsen] 201 2494ms","requestId":"6w3lllsen","statusCode":201,"timestamp":"2026-05-22 23:37:59"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-05-22 23:44:14"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-05-22 23:44:14"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-05-22 23:44:14"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-05-22 23:44:14"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-05-22 23:44:14"}

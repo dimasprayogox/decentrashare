@@ -1,12 +1,16 @@
 import express from 'express'
 import cors from 'cors'
+import cron from 'node-cron';
+import { CRON_SCHEDULES } from './config/cron';
+import { runOrphanedPinCleanup } from './jobs/cleanup-orphaned-pins';
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
 import { config } from './config/env'
-import { requestLogger } from './utils/logger'
+import { logger, requestLogger } from './utils/logger'
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware'
 import routes from './routes'
+import { logger } from './utils/logger.js';
 
 const app = express()
 
@@ -81,6 +85,21 @@ app.get('/', (req, res) => {
     health: '/api/health',
   })
 })
+
+if (process.env.ENABLE_JOBS === 'true' || process.env.NODE_ENV === 'production') {
+  
+  // Cleanup orphaned pins
+  cron.schedule(CRON_SCHEDULES.CLEANUP_ORPHANED_PINS, async () => {
+    logger.info('Starting orphaned pin cleanup job...');
+    try {
+      await runOrphanedPinCleanup();
+    } catch (error) {
+      logger.error('Cleanup job crashed', { error });
+    }
+  });
+  
+  logger.info(`Scheduled cleanup job: ${CRON_SCHEDULES.CLEANUP_ORPHANED_PINS}`);
+}
 
 // 404 handler
 app.use(notFoundMiddleware)

@@ -13,6 +13,76 @@ import { logger } from '../../utils/logger';
  * @param username - The user's username (for group naming)
  * @returns The Pinata group ID, or null if creation failed (non-blocking)
  */
+export interface PinCleanupResult {
+  success: boolean;
+  ipfsHash: string;
+  message?: string;
+  error?: string;
+}
+
+export class PinataCleanupService {
+  /**
+   * Unpin file dari Pinata (soft delete)
+   */
+  static async unpin(ipfsHash: string): Promise<PinCleanupResult> {
+    try {
+      // Pinata SDK v3+ syntax
+      await pinata.pin.delete(ipfsHash);
+      
+      logger.info(`🗑️ Successfully unpinned: ${ipfsHash}`);
+      return { success: true, ipfsHash, message: 'Unpinned successfully' };
+    } catch (error: any) {
+      // Handle kasus: pin sudah tidak ada (404)
+      if (error?.status === 404) {
+        logger.warn(`⚠️ Pin already deleted: ${ipfsHash}`);
+        return { success: true, ipfsHash, message: 'Already deleted' };
+      }
+      
+      logger.error(`❌ Failed to unpin ${ipfsHash}`, { 
+        error: error.message, 
+        status: error?.status 
+      });
+      return { 
+        success: false, 
+        ipfsHash, 
+        error: error.message || 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * (Opsional) Archive metadata sebelum delete
+   * Bisa simpan ke S3 Glacier, database archive, atau file JSON
+   */
+  static async archiveMetadata(doc: {
+    id: string;
+    ipfsHash: string;
+    fileName: string;
+    ownerId: string;
+    fileHash: string;
+    createdAt: Date;
+  }): Promise<boolean> {
+    try {
+      // Contoh: simpan ke file JSON lokal (ganti dengan S3/DB production)
+      const archivePath = `./archives/orphaned/${doc.id}.json`;
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      await fs.mkdir(path.dirname(archivePath), { recursive: true });
+      await fs.writeFile(archivePath, JSON.stringify({
+        ...doc,
+        archivedAt: new Date().toISOString(),
+        reason: 'ORPHANED_PIN_CLEANUP'
+      }, null, 2));
+      
+      logger.debug(`📦 Archived metadata: ${doc.id}`);
+      return true;
+    } catch (error: any) {
+      logger.error(`❌ Failed to archive metadata ${doc.id}`, { error: error.message });
+      return false;
+    }
+  }
+}
 
 export const createUserPinGroup = async (userId: string, username: string): Promise<string | null> => {
   try {

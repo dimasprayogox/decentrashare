@@ -405,8 +405,7 @@ export const uploadMultipleFiles = async (
         uploadOptions
       );
 
-      // ── 4. BLOCKCHAIN RECORDING ───────────────────────────────────
-      const blockchainTx = await blockchainService.recordToBlockchain(
+      const blockchainData = blockchainService.prepareTransactionData(
         upload.IpfsHash,
         file.originalname,
         fileHash
@@ -414,10 +413,7 @@ export const uploadMultipleFiles = async (
 
       // ── 5. METADATA PREPARATION ───────────────────────────────────
       const userMeta = metadataMap?.get(file.originalname) || {};
-
-      // ✅ Title: auto-fill dari filename jika kosong
       const finalTitle = userMeta.title?.trim() || formatTitle(file.originalname);
-      // ✅ Description: optional, null jika kosong
       const finalDescription = userMeta.description?.trim() || null;
 
       // ✅ ✅ ✅ INLINE DUPLICATE TITLE CHECK (Pattern sama seperti createFolder)
@@ -445,14 +441,16 @@ export const uploadMultipleFiles = async (
         const doc = await tx.document.create({
           data: {
             fileName: file.originalname,
-            title: finalTitle,              // ✅ Selalu ada value
-            description: finalDescription,  // ✅ Bisa null
+            title: finalTitle,
+            description: finalDescription, 
             fileSize: file.size,
             mimeType: file.mimetype,
             ipfsHash: upload.IpfsHash,
             fileHash,
-            blockchainTx,
-            isOnChain: true,
+            blockchainTx: null,
+            isOnChain: false,
+            pendingOnChainUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            cleanupStatus: 'PENDING',
             ownerId: userId,
             folderId: folderId || null,
             privacy: targetPrivacy,
@@ -462,7 +460,7 @@ export const uploadMultipleFiles = async (
         await tx.activityLog.create({
           data: {
             userId: userId,
-            action: "UPLOAD",
+            action: "UPLOAD_IPFS",
             entityType: "DOCUMENT",
             entityId: doc.id,
             entityName: doc.title,
@@ -479,10 +477,13 @@ export const uploadMultipleFiles = async (
       results.push({ 
         success: true, 
         fileName: file.originalname, 
-        data: newDocument,
+        data: {
+          ...newDocument,
+          blockchainData: blockchainData
+        },
         pinataInfo: {
           groupId: userGroupId,
-          ipfsHash: upload.IpfsHash
+          ipfsHash: upload.IpfsHash,
         }
       });
       

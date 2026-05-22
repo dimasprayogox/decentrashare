@@ -27,6 +27,13 @@ enum AccessRoleFolder {
   EDITOR
 }
 
+enum CleanupStatus {
+  PENDING    
+  ARCHIVED   
+  DELETED   
+  FAILED    
+}
+
 model User {
   id              String    @id @default(uuid())
   walletAddress   String    @unique
@@ -93,6 +100,9 @@ model Document {
   fileHash     String   @unique
   blockchainTx String
   isOnChain    Boolean  @default(false)
+  
+  pendingOnChainUntil DateTime?  
+  cleanupStatus       CleanupStatus @default(PENDING) 
   
   privacy      PrivacyLevel @default(PRIVATE)
   
