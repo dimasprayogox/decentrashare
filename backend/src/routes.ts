@@ -10,7 +10,7 @@ const router = Router()
 router.use('/auth', authRoutes)
 router.use('/documents', documentRoutes)
 router.use('/folders', folderRoutes)
-router.use('/user', userRoutes)
+router.use('/users', userRoutes)
 
 // Health check endpoint
 router.get('/health', (req, res) => {
