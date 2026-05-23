@@ -98,7 +98,7 @@ model Document {
   mimeType     String
   ipfsHash     String   @unique
   fileHash     String   @unique
-  blockchainTx String
+  blockchainTx String?
   isOnChain    Boolean  @default(false)
   
   pendingOnChainUntil DateTime?  
