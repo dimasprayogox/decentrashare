@@ -3,6 +3,7 @@ import { Response, NextFunction } from 'express';
 import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as documentService from './document.service';
+import blockchainService from '../blockchain/blockchain.service';
 import { logger } from '../../utils/logger';
 import { Readable } from 'node:stream'; 
 import * as archiverModule from 'archiver';
@@ -354,7 +355,7 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
     }
 
     // Verifikasi TX valid (opsional tapi recommended)
-    const verification = await documentService.verifyTransaction(txHash);
+    const verification = await blockchainService.verifyTransaction(txHash);
     if (!verification.confirmed) {
       return res.status(400).json({ success: false, message: "Transaction not confirmed yet" });
     }
