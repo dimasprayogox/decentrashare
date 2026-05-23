@@ -366,7 +366,6 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
       data: {
         isOnChain: true,
         blockchainTx: txHash,
-        blockNumber: blockNumber || verification.blockNumber,
         confirmedAt: new Date()
       }
     });
