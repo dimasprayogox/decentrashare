@@ -20,7 +20,8 @@ import {
   handleGetRootDocuments,
   handleMoveDocuments,
   handleGetSharedWithMe,
-  handleGetActivityLogs
+  handleGetActivityLogs,
+  confirmDocumentOnChain
 } from "./document.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requireAdmin } from "../../middlewares/role.middleware";
@@ -59,6 +60,7 @@ router.get('/logs', handleGetActivityLogs);
 
 // Rute dengan ID di bawah
 // GET /api/documents/:id
+router.patch("/:id/confirm-onchain", confirmDocumentOnChain);
 router.patch("/:id/edit", handleUpdateDocumentMetadata);
 
 // routes/storage.ts

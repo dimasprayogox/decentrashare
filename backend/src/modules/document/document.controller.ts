@@ -337,6 +337,47 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
     next(error);
   }
 };
+
+/**
+ * PATCH /api/documents/:id/confirm-onchain
+ * Update status setelah user konfirmasi TX di MetaMask
+ */
+export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { txHash, blockNumber } = req.body;
+    const userId = req.user?.userId;
+
+    if (!txHash) {
+      return res.status(400).json({ success: false, message: "txHash is required" });
+    }
+
+    // Verifikasi TX valid (opsional tapi recommended)
+    const verification = await blockchainService.verifyTransaction(txHash);
+    if (!verification.confirmed) {
+      return res.status(400).json({ success: false, message: "Transaction not confirmed yet" });
+    }
+
+    // Update database
+    const updated = await prisma.document.update({
+      where: { id, ownerId: userId },
+      data: {
+        isOnChain: true,
+        blockchainTx: txHash,
+        blockNumber: blockNumber || verification.blockNumber,
+        confirmedAt: new Date()
+      }
+    });
+
+    res.json({ success: true, message: "Document recorded on blockchain", data: updated });
+
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: "Document not found" });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 /**
  * GET /api/documents/root
  * Mengambil file yang tidak berada dalam folder
