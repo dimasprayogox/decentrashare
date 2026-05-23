@@ -451,7 +451,7 @@ export const uploadMultipleFiles = async (
             isOnChain: false,
             pendingOnChainUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
             cleanupStatus: 'PENDING',
-            ownerId: userId,
+            owner: { connect: { id: userId } }, 
             folderId: folderId || null,
             privacy: targetPrivacy,
           },
