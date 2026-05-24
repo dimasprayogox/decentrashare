@@ -379,6 +379,54 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
   }
 };
 
+export const triggerBlockchainConfirmation = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;  // ← Single document ID dari URL param
+    const userId = req.user?.userId;
+
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    // 1. Ambil document
+    const doc = await prisma.document.findUnique({
+      where: { id, ownerId: userId }
+    });
+
+    if (!doc) return res.status(404).json({ success: false, message: "Document not found" });
+    if (doc.isOnChain) return res.status(400).json({ success: false, message: "Already on-chain" });
+    
+    // 2. Cek TTL: Apakah masih dalam window 24 jam?
+    if (doc.pendingOnChainUntil && new Date() > doc.pendingOnChainUntil) {
+      return res.status(410).json({ 
+        success: false, 
+        message: "Confirmation window expired. File has been removed from storage." 
+      });
+    }
+
+    // 3. Siapkan data blockchain (pakai blockchainService yang sudah ada)
+    const blockchainData = blockchainService.prepareTransactionData(
+      doc.ipfsHash,
+      doc.fileName,
+      doc.fileHash
+    );
+
+    res.json({
+      success: true,
+      message: "Ready for blockchain confirmation",
+      data: {
+        id: doc.id,
+        fileName: doc.fileName,
+        ipfsHash: doc.ipfsHash,
+        fileHash: doc.fileHash,
+        blockchainData
+      }
+    });
+
+  } catch (error: any) {
+    console.error("trigger-blockchain error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 /**
  * POST /api/documents/batch/trigger-blockchain
  * Prepare batch confirmation data for multiple documents

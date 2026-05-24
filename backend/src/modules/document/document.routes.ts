@@ -59,22 +59,17 @@ router.get("/shared-with-me", handleGetSharedWithMe);
 
 router.get('/logs', handleGetActivityLogs);
 
-// Rute dengan ID di bawah
-// GET /api/documents/:id
 router.patch("/:id/confirm-onchain", confirmDocumentOnChain);
 router.post("/:id/trigger-blockchain", triggerBlockchainConfirmation); 
 router.patch("/:id/edit", handleUpdateDocumentMetadata);
 
 // routes/storage.ts
-router.get('/:id/preview', authMiddleware, handlePreviewDocument);
+router.get('/:id/preview',handlePreviewDocument);
 
-router.get('/:id/download', authMiddleware, handleDownloadDocument);
+router.get('/:id/download',handleDownloadDocument);
 router.get("/:id", handleGetDocumentDetail);
 
-router.post('/bulk-download', 
-  authMiddleware, 
-  handleBulkDownloadDocuments
-);
+router.post('/bulk-download', handleBulkDownloadDocuments);
 
 // Ambil file di root saja
 router.get("/root", handleGetRootDocuments);
