@@ -579,8 +579,9 @@ if (existingFile) {
     fileName: r.fileName,
     ipfsHash: r.data.ipfsHash,
     fileHash: r.data.fileHash,
-    fileSize: BigInt(r.data.fileSize),
-    timestamp: BigInt(Math.floor(r.data.createdAt.getTime() / 1000)),
+    fileSize: r.data.fileSize.toString(),  // ← String, bukan BigInt
+    timestamp: Math.floor(r.data.createdAt.getTime() / 1000).toString(), // ← String
+    
     documentId: r.data.id
   }));
 
