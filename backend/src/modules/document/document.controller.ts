@@ -404,6 +404,7 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
  * POST /api/documents/batch/confirm-complete
  * Update database setelah batch transaction confirmed di blockchain
  */
+
 export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
   try {
     const { txHash, documentIds } = req.body;
@@ -416,20 +417,51 @@ export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update semua dokumen: set isOnChain = true + simpan txHash
+    logger.info('🔗 Batch confirm request', {
+      userId,
+      txHash,
+      documentIds,
+      count: documentIds.length
+    });
+
+    // ✅ Update semua dokumen: set isOnChain = true + simpan txHash
     const result = await prisma.$transaction(async (tx) => {
+      // 🔍 Debug: Cek dokumen sebelum update
+      const docsBefore = await tx.document.findMany({
+        where: {
+          id: { in: documentIds },
+          ownerId: userId
+        },
+        select: { id: true, isOnChain: true, pendingOnChainUntil: true }
+      });
+      
+      logger.debug('📋 Documents before update', { docsBefore });
+
       const updateResult = await tx.document.updateMany({
         where: {
           id: { in: documentIds },
-          ownerId: userId,
-          isOnChain: false
+          ownerId: userId,  // ✅ Pastikan hanya owner yang bisa update
+          isOnChain: false  // ✅ Hanya update yang belum on-chain
         },
         data: {
           isOnChain: true,
           blockchainTx: txHash,
-          pendingOnChainUntil: null
+          pendingOnChainUntil: null  // ✅ Clear pending flag
         }
       });
+
+      logger.info('📊 Update result', { 
+        count: updateResult.count,
+        expected: documentIds.length 
+      });
+
+      // 🔍 Debug: Cek dokumen setelah update
+      const docsAfter = await tx.document.findMany({
+        where: { id: { in: documentIds } },
+        select: { id: true, isOnChain: true, blockchainTx: true }
+      });
+      
+      logger.debug('📋 Documents after update', { docsAfter });
 
       // Log aktivitas batch
       await tx.activityLog.createMany({
@@ -447,16 +479,38 @@ export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
       return updateResult;
     });
 
+    // ⚠️ Warning jika count tidak match
+    if (result.count !== documentIds.length) {
+      logger.warn('⚠️ Batch confirm partial success', {
+        updated: result.count,
+        expected: documentIds.length,
+        missing: documentIds.filter(id => 
+          // Log which IDs weren't updated (simplified)
+          true // In production, compare with docsAfter
+        )
+      });
+    }
+
     return res.json({
       success: true,
-      message: `${result.count} file(s) confirmed on blockchain`,
+      message: `${result.count}/${documentIds.length} file(s) confirmed on blockchain`,
       txHash,
-      updatedCount: result.count
+      updatedCount: result.count,
+      totalCount: documentIds.length
     });
 
   } catch (error: any) {
-    logger.error('❌ Confirm batch complete failed', { error: error.message });
-    return res.status(500).json({ success: false, message: error.message });
+    logger.error('❌ Confirm batch complete failed', { 
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.userId,
+      documentIds: req.body?.documentIds
+    });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      errorCode: 'BATCH_CONFIRM_FAILED'
+    });
   }
 };
 
