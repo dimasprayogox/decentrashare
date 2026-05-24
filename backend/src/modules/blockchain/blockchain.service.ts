@@ -2,6 +2,7 @@
 import { ethers } from 'ethers';
 import DecentraShareABI from '../../abis/DecentraShare.json';
 import { config } from '../../config/env';
+import { logger } from '../../utils/logger'; // ✅ Import logger
 
 export interface BlockchainRecordData {
   cid: string;
@@ -13,14 +14,13 @@ export interface BlockchainRecordData {
   args: [string, string, string];
 }
 
-// ✅ NEW: Interface untuk batch payload ke frontend
 export interface BatchBlockchainPayload {
   contractAddress: string;
   abi: any;
   functionName: string;
-  args: [string[], string[], string[]]; // [cids, fileNames, fileHashes]
-  items: Array<{ cid: string; fileName: string; fileHash: string }>; // Untuk referensi frontend
-  documentIds?: string[]; // Optional: untuk update DB setelah tx sukses
+  args: [string[], string[], string[]];
+  items: Array<{ cid: string; fileName: string; fileHash: string }>;
+  documentIds?: string[];
 }
 
 class BlockchainService {
@@ -36,7 +36,6 @@ class BlockchainService {
       throw new Error('Missing CONTRACT_ADDRESS in environment variables.');
     }
 
-    // ✅ Hanya pakai provider (read-only), TANPA wallet/private key
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.contractAddress = contractAddress;
     this.abi = DecentraShareABI.abi;
@@ -57,97 +56,44 @@ class BlockchainService {
     };
   }
 
-  // src/services/blockchain/blockchain.service.ts
-
-/**
- * ✅ NEW: Filter files that are already on-chain before preparing batch
- */
-export const filterNewFilesForBatch = async (
-  items: Array<{ cid: string; fileName: string; fileHash: string; documentId?: string }>,
-  contractAddress?: string
-) => {
-  const rpcUrl = process.env.RPC_URL ?? config.blockchain.ganacheUrl;
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const abi = DecentraShareABI.abi;
-  
-  const contract = new ethers.Contract(
-    contractAddress || process.env.CONTRACT_ADDRESS!,
-    abi,
-    provider
-  );
-
-  const newItems = [];
-  
-  for (const item of items) {
-    try {
-      // ✅ Check if fileHash already exists on-chain
-      const exists = await contract.isFileExists(item.fileHash);
-      
-      if (!exists) {
-        // ✅ Also check if CID already has an owner (different file, same CID edge case)
-        const record = await contract.filesByIPFS(item.cid);
-        if (record.owner === ethers.ZeroAddress) {
-          newItems.push(item);
-        }
-      }
-      // If exists, skip this item (already on-chain)
-      
-    } catch (err) {
-      // If check fails, include item anyway (fail-safe)
-      logger.warn('[Blockchain] Failed to check on-chain status, including item', {
-        fileHash: item.fileHash,
-        error: err instanceof Error ? err.message : 'unknown'
-      });
-      newItems.push(item);
-    }
-  }
-
-  return {
-    newItems,
-    skippedCount: items.length - newItems.length,
-    message: `Filtered: ${newItems.length} new, ${items.length - newItems.length} already on-chain`
-  };
-};
   /**
-   * ✅ ✅ ✅ FUNGSI BARU: Siapkan batch data untuk frontend sign TX
-   * Format: parallel arrays [cids[], fileNames[], fileHashes[]]
-   * Agar frontend bisa langsung panggil: contract.recordFilesBatch(cids, names, hashes)
+   * ✅ Siapkan batch data untuk frontend sign TX (parallel arrays)
    */
   prepareBatchTransactionData(
-  items: Array<{ 
-    cid: string; 
-    fileName: string; 
-    fileHash: string; 
-    fileSize?: number | string; 
-    timestamp?: number | string; 
-    documentId?: string 
-  }>
-): BatchBlockchainPayload {
-  const cids = items.map(item => item.cid);
-  const fileNames = items.map(item => item.fileName);
-  const fileHashes = items.map(item => item.fileHash);
+    items: Array<{ 
+      cid: string; 
+      fileName: string; 
+      fileHash: string; 
+      fileSize?: number | string; 
+      timestamp?: number | string; 
+      documentId?: string 
+    }>
+  ): BatchBlockchainPayload {
+    const cids = items.map(item => item.cid);
+    const fileNames = items.map(item => item.fileName);
+    const fileHashes = items.map(item => item.fileHash);
 
-  const documentIds = items
-    .filter(item => item.documentId)
-    .map(item => item.documentId!);
+    const documentIds = items
+      .filter(item => item.documentId)
+      .map(item => item.documentId!);
 
-  const safeItems = items.map(item => ({
-    cid: item.cid,
-    fileName: item.fileName,
-    fileHash: item.fileHash,
-    ...(item.fileSize && { fileSize: String(item.fileSize) }),
-    ...(item.timestamp && { timestamp: String(item.timestamp) })
-  }));
+    const safeItems = items.map(item => ({
+      cid: item.cid,
+      fileName: item.fileName,
+      fileHash: item.fileHash,
+      ...(item.fileSize && { fileSize: String(item.fileSize) }),
+      ...(item.timestamp && { timestamp: String(item.timestamp) })
+    }));
 
-  return {
-    contractAddress: this.contractAddress,
-    abi: this.abi,
-    functionName: 'recordFilesBatch',
-    args: [cids, fileNames, fileHashes], 
-    items: safeItems, 
-    ...(documentIds.length > 0 && { documentIds })
-  };
-}
+    return {
+      contractAddress: this.contractAddress,
+      abi: this.abi,
+      functionName: 'recordFilesBatch',
+      args: [cids, fileNames, fileHashes],
+      items: safeItems,
+      ...(documentIds.length > 0 && { documentIds })
+    };
+  }
 
   /**
    * ✅ Verifikasi TX hash sudah confirmed di blockchain
@@ -168,8 +114,7 @@ export const filterNewFilesForBatch = async (
   async getFileRecord(fileHash: string): Promise<any | null> {
     try {
       const contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
-      // Sesuaikan dengan signature fungsi view di kontrak Anda
-      const record = await contract.getFileByHash?.(fileHash);
+      const record = await contract.filesByIPFS(fileHash); // ✅ Sesuai contract Anda
       return record || null;
     } catch {
       return null;
@@ -177,15 +122,14 @@ export const filterNewFilesForBatch = async (
   }
 
   /**
-   * ✅ Estimasi gas (opsional, bisa dipanggil frontend juga)
+   * ✅ Estimasi gas (opsional)
    */
   async estimateGas(cid: string, fileName: string, fileHash: string): Promise<bigint> {
     const contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
     try {
       return await contract.recordFile.estimateGas(cid, fileName, fileHash);
     } catch {
-      // Fallback ke estimasi manual jika estimateGas gagal
-      return 200000n; // ~200k gas units sebagai fallback
+      return 200000n;
     }
   }
 
@@ -194,20 +138,67 @@ export const filterNewFilesForBatch = async (
    */
   async estimateBatchGas(items: Array<{ cid: string; fileName: string; fileHash: string }>): Promise<bigint> {
     const contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
-    
     const cids = items.map(i => i.cid);
     const fileNames = items.map(i => i.fileName);
     const fileHashes = items.map(i => i.fileHash);
     
     try {
-      // ⚙️ Sesuaikan nama fungsi jika berbeda
       return await contract.recordFilesBatch.estimateGas(cids, fileNames, fileHashes);
     } catch {
-      // Fallback: estimasi ~200k gas per file, max 10 files = 2M gas
       const estimated = 200000n * BigInt(Math.min(items.length, 10));
       return estimated;
     }
   }
-}
 
-export default new BlockchainService();
+  /**
+   * ✅ NEW: Filter files that are already on-chain before preparing batch
+   */
+  async filterNewFilesForBatch(
+    items: Array<{ cid: string; fileName: string; fileHash: string; documentId?: string }>,
+    contractAddress?: string
+  ) {
+    const rpcUrl = process.env.RPC_URL ?? config.blockchain.ganacheUrl;
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const abi = DecentraShareABI.abi;
+    
+    const contract = new ethers.Contract(
+      contractAddress || this.contractAddress,
+      abi,
+      provider
+    );
+
+    const newItems = [];
+    
+    for (const item of items) {
+      try {
+        // ✅ Check if fileHash already exists on-chain
+        const exists = await contract.isFileExists(item.fileHash);
+        
+        if (!exists) {
+          // ✅ Also check if CID already has an owner
+          const record = await contract.filesByIPFS(item.cid);
+          if (record.owner === ethers.ZeroAddress) {
+            newItems.push(item);
+          }
+        }
+        // If exists, skip this item (already on-chain)
+        
+      } catch (err) {
+        // If check fails, include item anyway (fail-safe)
+        logger.warn('[Blockchain] Failed to check on-chain status, including item', {
+          fileHash: item.fileHash,
+          error: err instanceof Error ? err.message : 'unknown'
+        });
+        newItems.push(item);
+      }
+    }
+
+    return {
+      newItems,
+      skippedCount: items.length - newItems.length,
+      message: `Filtered: ${newItems.length} new, ${items.length - newItems.length} already on-chain`
+    };
+  }
+} // ✅ ← TUTUP CLASS DI SINI
+
+export default new BlockchainService(); // ✅ ← EXPORT DEFAULT DI SINI (PALING BAWAH)
