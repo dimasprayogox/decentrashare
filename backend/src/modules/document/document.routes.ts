@@ -21,7 +21,8 @@ import {
   handleMoveDocuments,
   handleGetSharedWithMe,
   handleGetActivityLogs,
-  confirmDocumentOnChain
+  confirmDocumentOnChain,
+  triggerBlockchainConfirmation
 } from "./document.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requireAdmin } from "../../middlewares/role.middleware";
@@ -61,6 +62,7 @@ router.get('/logs', handleGetActivityLogs);
 // Rute dengan ID di bawah
 // GET /api/documents/:id
 router.patch("/:id/confirm-onchain", confirmDocumentOnChain);
+router.post("/:id/trigger-blockchain", triggerBlockchainConfirmation); 
 router.patch("/:id/edit", handleUpdateDocumentMetadata);
 
 // routes/storage.ts

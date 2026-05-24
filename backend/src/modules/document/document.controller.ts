@@ -378,6 +378,70 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * POST /api/documents/batch/trigger-blockchain
+ * Prepare batch confirmation data for multiple documents
+ */
+export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: Response) => {
+  try {
+    const { documentIds } = req.body;
+    const userId = req.user?.userId;
+
+    // Validasi input
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "documentIds array required" });
+    }
+    if (documentIds.length > 10) {
+      return res.status(400).json({ success: false, message: "Maximum 10 files per batch (gas safety)" });
+    }
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const items = [];
+    
+    // Validasi & kumpulkan data tiap dokumen
+    for (const id of documentIds) {
+      const doc = await prisma.document.findUnique({
+        where: { id, ownerId: userId }
+      });
+
+      if (!doc) continue; // Skip jika tidak ditemukan
+      if (doc.isOnChain) continue; // Skip jika sudah on-chain
+      if (doc.pendingOnChainUntil && new Date() > doc.pendingOnChainUntil) continue; // Skip jika expired
+
+      items.push({
+        docId: doc.id,
+        cid: doc.ipfsHash,
+        fileName: doc.fileName,
+        fileHash: doc.fileHash
+      });
+    }
+
+    if (items.length === 0) {
+      return res.status(400).json({ success: false, message: "No valid files for batch confirmation" });
+    }
+
+    // Siapkan data blockchain via service
+    const batchData = blockchainService.prepareBatchTransactionData(
+      items.map(({ docId, ...item }) => item)
+    );
+
+    res.json({
+      success: true,
+      message: `Ready to confirm ${items.length} file(s) on blockchain`,
+      data: {
+        items: batchData.items,
+        docIds: items.map(i => i.docId), // Untuk update backend setelah TX confirmed
+        contractAddress: batchData.contractAddress,
+        abi: batchData.abi
+      }
+    });
+
+  } catch (error: any) {
+    console.error("batch-trigger error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 /**
  * GET /api/documents/root
  * Mengambil file yang tidak berada dalam folder

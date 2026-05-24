@@ -1,5 +1,5 @@
-// HANYA PANGGIL VERIFY, JANGAN PANGGIL TOOLBOX YANG BIKIN ERROR
 require("@nomicfoundation/hardhat-verify"); 
+require("@nomicfoundation/hardhat-ethers");
 require("dotenv").config();
 
 module.exports = {

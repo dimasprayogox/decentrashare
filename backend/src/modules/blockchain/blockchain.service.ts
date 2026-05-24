@@ -48,6 +48,18 @@ class BlockchainService {
     };
   }
 
+  prepareBatchTransactionData(
+  items: Array<{ cid: string; fileName: string; fileHash: string }>
+) {
+  return {
+    items,
+    contractAddress: this.contractAddress,
+    abi: this.abi,
+    functionName: 'recordFilesBatch',
+    // Frontend akan pisahkan array sendiri: cids, names, hashes
+  };
+}
+
   /**
    * ✅ Verifikasi TX hash sudah confirmed di blockchain
    */

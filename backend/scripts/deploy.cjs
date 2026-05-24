@@ -1,17 +1,22 @@
-import hre from "hardhat";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+require("dotenv").config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// ✅ Require plugin ethers secara eksplisit
+require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-verify");
+
+const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
   console.log("Memulai proses deployment ke jaringan SEPOLIA...");
 
-  // Akses ethers langsung dari hre (jangan di-destructure)
-  const [deployer] = await hre.ethers.getSigners();
+  // ✅ Debug: pastikan ethers ter-load
+  if (!hre.ethers) {
+    throw new Error("hre.ethers is undefined! Plugin hardhat-ethers tidak ter-load.");
+  }
 
+  const [deployer] = await hre.ethers.getSigners();
   console.log(`Deploying dengan akun: ${deployer.address}`);
 
   const balance = await deployer.provider.getBalance(deployer.address);
@@ -21,7 +26,6 @@ async function main() {
   
   const factory = await hre.ethers.getContractFactory("DecentraShare");
   const contract = await factory.deploy();
-
   await contract.waitForDeployment();
 
   const address = await contract.getAddress();

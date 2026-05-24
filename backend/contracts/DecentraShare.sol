@@ -1,33 +1,55 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 contract DecentraShare {
     struct FileRecord {
-        string ipfsHash;  
-        string fileName;    
-        string fileHash;    
-        address owner;      
-        uint256 timestamp;  
+        string ipfsHash;
+        string fileName;
+        string fileHash;
+        address owner;
+        uint256 timestamp;
     }
 
-    // Mapping berdasarkan IPFS Hash (untuk akses file)
     mapping(string => FileRecord) public filesByIPFS;
-    
-    // Mapping berdasarkan SHA-256 (untuk cek duplikasi isi file)
     mapping(string => bool) public isFileExists;
 
-    event FileRecorded(string ipfsHash, string fileHash, address indexed owner);
+    event FileRecorded(string indexed ipfsHash, string indexed fileHash, address indexed owner);
+    event BatchFilesRecorded(uint256 count, address indexed owner);
 
     function recordFile(
-        string memory _ipfsHash, 
-        string memory _fileName, 
-        string memory _fileHash // Input SHA-256 dari backend
-    ) public {
-        // CEK 1: Apakah isi file ini sudah pernah ada? (Anti-Duplicate)
-        require(!isFileExists[_fileHash], "Isi file ini sudah pernah di-upload sebelumnya!");
-        
-        // CEK 2: Apakah CID IPFS ini sudah terdaftar?
-        require(filesByIPFS[_ipfsHash].owner == address(0), "CID IPFS ini sudah terdaftar!");
+        string calldata _ipfsHash,
+        string calldata _fileName,
+        string calldata _fileHash
+    ) external {
+        _recordSingle(_ipfsHash, _fileName, _fileHash);
+    }
+
+    function recordFilesBatch(
+        string[] calldata _ipfsHashes,
+        string[] calldata _fileNames,
+        string[] calldata _fileHashes
+    ) external {
+        require(
+            _ipfsHashes.length == _fileNames.length && 
+            _fileNames.length == _fileHashes.length,
+            "ArrayLengthMismatch"
+        );
+        require(_ipfsHashes.length > 0, "EmptyBatch");
+        require(_ipfsHashes.length <= 10, "BatchTooLarge"); 
+
+        for (uint256 i = 0; i < _ipfsHashes.length; i++) {
+            _recordSingle(_ipfsHashes[i], _fileNames[i], _fileHashes[i]);
+        }
+
+        emit BatchFilesRecorded(_ipfsHashes.length, msg.sender);
+    }
+
+    function _recordSingle(
+        string calldata _ipfsHash,
+        string calldata _fileName,
+        string calldata _fileHash
+    ) private {
+        require(!isFileExists[_fileHash], "DuplicateContent");
+        require(filesByIPFS[_ipfsHash].owner == address(0), "DuplicateCID");
 
         filesByIPFS[_ipfsHash] = FileRecord({
             ipfsHash: _ipfsHash,
@@ -37,13 +59,15 @@ contract DecentraShare {
             timestamp: block.timestamp
         });
 
-        // Tandai bahwa hash file ini sudah terdaftar
         isFileExists[_fileHash] = true;
-
         emit FileRecorded(_ipfsHash, _fileHash, msg.sender);
     }
 
-    function verifyOwner(string memory _ipfsHash) public view returns (address) {
+    function verifyOwner(string calldata _ipfsHash) external view returns (address) {
         return filesByIPFS[_ipfsHash].owner;
+    }
+
+    function checkFileExists(string calldata _fileHash) external view returns (bool) {
+        return isFileExists[_fileHash];
     }
 }
