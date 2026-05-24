@@ -1,5 +1,5 @@
 // src/lib/services/web3/blockchain.ts
-import { ethers, type ContractInterface } from "ethers";
+import { ethers, type ContractInterface, Interface } from "ethers";
 import type { BlockchainRecordData, BatchBlockchainPayload } from "$lib/types/storage";
 
 // ── Helper: Switch to Sepolia Network ───────────────────────
@@ -28,6 +28,73 @@ async function switchToSepolia() {
       throw e;
     }
   }
+}
+
+// ── Helper: Validate Batch Payload ──────────────────────────
+function validateBatchPayload(payload: BatchBlockchainPayload): void {
+  const [arg1, arg2, arg3] = payload.args;
+  
+  // Check if args is array of arrays (parallel arrays format)
+  if (Array.isArray(arg1) && Array.isArray(arg2) && Array.isArray(arg3)) {
+    const [cids, fileNames, fileHashes] = payload.args as [string[], string[], string[]];
+    
+    if (cids.length === 0) {
+      throw new Error('Empty batch: no files to confirm');
+    }
+    if (cids.length !== fileNames.length || cids.length !== fileHashes.length) {
+      throw new Error(`Array length mismatch: cids=${cids.length}, names=${fileNames.length}, hashes=${fileHashes.length}`);
+    }
+    if (cids.length > 50) {
+      throw new Error(`Batch too large: ${cids.length} files (max 50 for gas safety)`);
+    }
+    
+    // Validate CID format (basic check)
+    cids.forEach((cid, i) => {
+      if (!cid || cid.length < 10 || !cid.startsWith('Qm')) {
+        console.warn(`[Web3] Suspicious CID at index ${i}:`, cid?.slice(0, 30));
+      }
+    });
+  }
+  // If single arg (struct array format), just check it's not empty
+  else if (Array.isArray(arg1) && payload.args.length === 1) {
+    const records = payload.args[0] as any[];
+    if (records.length === 0) {
+      throw new Error('Empty batch: no records to confirm');
+    }
+    if (records.length > 50) {
+      throw new Error(`Batch too large: ${records.length} records (max 50)`);
+    }
+  }
+  else {
+    throw new Error(`Invalid payload format: expected parallel arrays or single struct array`);
+  }
+}
+
+// ── Helper: Extract Revert Reason from Error ────────────────
+function extractRevertReason(error: any, abi: ContractInterface, functionName: string): string {
+  // ethers v6: check various error properties
+  if (error.revert?.reason) return error.revert.reason;
+  if (error.reason && error.reason !== 'unknown error') return error.reason;
+  
+  // Try decode from error data
+  if (error.data?.data) {
+    try {
+      const iface = new Interface(abi as any);
+      const decoded = iface.parseError(error.data.data);
+      if (decoded?.name) return decoded.name;
+    } catch (e) {
+      // Decode failed, fallback to raw message
+    }
+  }
+  
+  // Check error message for common patterns
+  const msg = error.message?.toLowerCase() || '';
+  if (msg.includes('length') || msg.includes('array')) return 'Array length mismatch';
+  if (msg.includes('empty') || msg.includes('zero')) return 'Empty batch not allowed';
+  if (msg.includes('owner') || msg.includes('access') || msg.includes('permission')) return 'Access denied';
+  if (msg.includes('duplicate') || msg.includes('exists')) return 'Record already exists';
+  
+  return error.message || 'Unknown revert reason';
 }
 
 // ── Single File: recordFileOnChain (existing) ───────────────
@@ -118,7 +185,8 @@ export async function recordFileOnChain(
       throw new Error('WRONG_NETWORK');
     }
     if (error.message?.includes('execution reverted')) {
-      throw new Error(`CONTRACT_ERROR: ${error.reason || error.message}`);
+      const reason = extractRevertReason(error, data.abi, data.functionName);
+      throw new Error(`CONTRACT_ERROR: ${reason}`);
     }
     if (error.message === 'TX_CONFIRMATION_TIMEOUT') {
       throw new Error('TX_CONFIRMATION_TIMEOUT');
@@ -160,6 +228,36 @@ export async function recordFilesBatchOnChain(
     signer
   );
 
+  // ✅ VALIDASI PAYLOAD SEBELUM KIRIM (PENTING!)
+  try {
+    validateBatchPayload(payload);
+  } catch (validationError: any) {
+    console.error('[Web3] Payload validation failed:', validationError.message);
+    throw new Error(`PAYLOAD_ERROR: ${validationError.message}`);
+  }
+
+  // ✅ DEBUG LOG: Tampilkan payload sebelum kirim
+  const [arg1, arg2, arg3] = payload.args;
+  if (Array.isArray(arg1) && Array.isArray(arg2) && Array.isArray(arg3)) {
+    console.log('[Web3] Sending batch tx (parallel arrays):', {
+      contractAddress: payload.contractAddress,
+      functionName: payload.functionName,
+      arrayLengths: [arg1.length, arg2.length, arg3.length],
+      sample: {
+        cid: arg1[0]?.slice(0, 20),
+        fileName: arg2[0],
+        fileHash: arg3[0]?.slice(0, 20)
+      }
+    });
+  } else {
+    console.log('[Web3] Sending batch tx (struct array):', {
+      contractAddress: payload.contractAddress,
+      functionName: payload.functionName,
+      recordCount: (payload.args[0] as any[])?.length,
+      sample: payload.items?.[0]
+    });
+  }
+
   // Estimasi gas + buffer 20%
   let gasLimit: bigint;
   try {
@@ -168,15 +266,17 @@ export async function recordFilesBatchOnChain(
     console.log('[Web3] Estimated gas:', estimated.toString(), 'with buffer:', gasLimit.toString());
   } catch (err) {
     console.warn('[Web3] Batch gas estimation failed, using fallback');
-    // Fallback: ~200k gas per file, max 10 files
-    gasLimit = 200000n * BigInt(Math.min(payload.items.length, 10));
+    // Fallback: ~250k gas per file (lebih aman untuk batch), max 10 files
+    const perFileGas = 250000n;
+    const fileCount = BigInt(Math.min(payload.items.length, 10));
+    gasLimit = perFileGas * fileCount + 100000n; // +100k buffer base
+    console.log('[Web3] Using fallback gas:', gasLimit.toString());
   }
 
   try {
     if (callbacks?.onStatus) callbacks.onStatus('🔐 Confirm batch in wallet...');
     
     // ✅ Send SINGLE transaction untuk semua file
-    // Spread args: [cids[], names[], hashes[]] → recordFilesBatch(cids, names, hashes)
     const tx = await contract[payload.functionName](...payload.args, { gasLimit });
     
     if (callbacks?.onTxHash) callbacks.onTxHash(tx.hash);
@@ -195,7 +295,8 @@ export async function recordFilesBatchOnChain(
     console.log('[Web3] Batch confirmed:', { 
       txHash: receipt.hash, 
       block: receipt.blockNumber,
-      gasUsed: receipt.gasUsed?.toString()
+      gasUsed: receipt.gasUsed?.toString(),
+      status: receipt.status
     });
     
     if (receipt.status !== 1) {
@@ -213,6 +314,21 @@ export async function recordFilesBatchOnChain(
     };
     
   } catch (error: any) {
+    // ✅ Extract detailed revert reason
+    const revertReason = extractRevertReason(error, payload.abi, payload.functionName);
+    
+    console.error('[Web3] Batch transaction failed:', {
+      reason: revertReason,
+      originalMessage: error.message,
+      code: error.code,
+      data: error.data,
+      receipt: error.receipt ? {
+        status: error.receipt.status,
+        gasUsed: error.receipt.gasUsed?.toString(),
+        logs: error.receipt.logs?.length
+      } : null
+    });
+
     // Specific error handling
     if (error.code === 4001 || error.message?.includes('rejected')) {
       throw new Error('TRANSACTION_REJECTED');
@@ -223,8 +339,8 @@ export async function recordFilesBatchOnChain(
     if (error.code === 4902 || error.message?.includes('unrecognized chain')) {
       throw new Error('WRONG_NETWORK');
     }
-    if (error.message?.includes('execution reverted')) {
-      throw new Error(`CONTRACT_ERROR: ${error.reason || error.message}`);
+    if (error.message?.includes('execution reverted') || revertReason !== error.message) {
+      throw new Error(`CONTRACT_ERROR: ${revertReason}`);
     }
     if (error.message === 'TX_CONFIRMATION_TIMEOUT') {
       throw new Error('TX_CONFIRMATION_TIMEOUT');

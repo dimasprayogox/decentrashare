@@ -57,6 +57,57 @@ class BlockchainService {
     };
   }
 
+  // src/services/blockchain/blockchain.service.ts
+
+/**
+ * ✅ NEW: Filter files that are already on-chain before preparing batch
+ */
+export const filterNewFilesForBatch = async (
+  items: Array<{ cid: string; fileName: string; fileHash: string; documentId?: string }>,
+  contractAddress?: string
+) => {
+  const rpcUrl = process.env.RPC_URL ?? config.blockchain.ganacheUrl;
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const abi = DecentraShareABI.abi;
+  
+  const contract = new ethers.Contract(
+    contractAddress || process.env.CONTRACT_ADDRESS!,
+    abi,
+    provider
+  );
+
+  const newItems = [];
+  
+  for (const item of items) {
+    try {
+      // ✅ Check if fileHash already exists on-chain
+      const exists = await contract.isFileExists(item.fileHash);
+      
+      if (!exists) {
+        // ✅ Also check if CID already has an owner (different file, same CID edge case)
+        const record = await contract.filesByIPFS(item.cid);
+        if (record.owner === ethers.ZeroAddress) {
+          newItems.push(item);
+        }
+      }
+      // If exists, skip this item (already on-chain)
+      
+    } catch (err) {
+      // If check fails, include item anyway (fail-safe)
+      logger.warn('[Blockchain] Failed to check on-chain status, including item', {
+        fileHash: item.fileHash,
+        error: err instanceof Error ? err.message : 'unknown'
+      });
+      newItems.push(item);
+    }
+  }
+
+  return {
+    newItems,
+    skippedCount: items.length - newItems.length,
+    message: `Filtered: ${newItems.length} new, ${items.length - newItems.length} already on-chain`
+  };
+};
   /**
    * ✅ ✅ ✅ FUNGSI BARU: Siapkan batch data untuk frontend sign TX
    * Format: parallel arrays [cids[], fileNames[], fileHashes[]]

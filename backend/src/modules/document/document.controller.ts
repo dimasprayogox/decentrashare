@@ -566,19 +566,14 @@ export const triggerBlockchainConfirmation = async (req: AuthRequest, res: Respo
  * POST /api/documents/batch/trigger-blockchain
  * Prepare batch confirmation data for multiple documents
  */
+// controllers/document.controller.ts
+
 export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: Response) => {
   try {
     const { documentIds } = req.body;
     const userId = req.user?.userId;
 
-    // Validasi input
-    if (!Array.isArray(documentIds) || documentIds.length === 0) {
-      return res.status(400).json({ success: false, message: "documentIds array required" });
-    }
-    if (documentIds.length > 10) {
-      return res.status(400).json({ success: false, message: "Maximum 10 files per batch (gas safety)" });
-    }
-    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    // ... [existing validation code] ...
 
     const items = [];
     
@@ -588,9 +583,9 @@ export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: 
         where: { id, ownerId: userId }
       });
 
-      if (!doc) continue; // Skip jika tidak ditemukan
-      if (doc.isOnChain) continue; // Skip jika sudah on-chain
-      if (doc.pendingOnChainUntil && new Date() > doc.pendingOnChainUntil) continue; // Skip jika expired
+      if (!doc) continue;
+      if (doc.isOnChain) continue; // Skip jika sudah on-chain di DB
+      if (doc.pendingOnChainUntil && new Date() > doc.pendingOnChainUntil) continue;
 
       items.push({
         docId: doc.id,
@@ -604,21 +599,35 @@ export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: 
       return res.status(400).json({ success: false, message: "No valid files for batch confirmation" });
     }
 
-    // Siapkan data blockchain via service
-    const batchData = blockchainService.prepareBatchTransactionData(
+    // ✅ NEW: Filter files that are already on-chain via contract view call
+    const { newItems, skippedCount, message } = await blockchainService.filterNewFilesForBatch(
       items.map(({ docId, ...item }) => item)
     );
 
+    if (newItems.length === 0) {
+      return res.json({
+        success: true,
+        skipConfirmation: true,
+        message: `All ${skippedCount} file(s) already confirmed on-chain`,
+        data: { docIds: items.map(i => i.docId) }
+      });
+    }
+
+    // Prepare batch data with filtered items only
+    const batchData = blockchainService.prepareBatchTransactionData(newItems);
+
     res.json({
       success: true,
-      message: `Ready to confirm ${items.length} file(s) on blockchain`,
+      message: `Ready to confirm ${newItems.length} new file(s) on blockchain (${skippedCount} skipped - already on-chain)`,
       data: {
+        items: batchData.items,
+        docIds: newItems.map((_, idx) => items[idx].docId), // Map back to original docIds
         contractAddress: batchData.contractAddress,
         abi: batchData.abi,
         functionName: batchData.functionName,
-        args: batchData.args,  
-        items: batchData.items,
-        docIds: items.map(i => i.docId), 
+        args: batchData.args,
+        skippedCount,
+        filterMessage: message
       }
     });
 
