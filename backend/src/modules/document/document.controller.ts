@@ -299,34 +299,58 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
       });
     }
 
-    const results = await documentService.uploadMultipleFiles(
+    // ✅ FIX 1: Destructure dengan benar (termasuk blockchainPayload & folderId)
+    const { 
+      results, 
+      summary, 
+      blockchainPayload,  // ← ✅ Tambahkan ini
+      folderId: returnedFolderId  // ← ✅ Gunakan alias untuk menghindari conflict
+    } = await documentService.uploadMultipleFiles(
       files, 
       userId, 
       folderId,
       metadataMap
     );
 
-    // ✅ Optional: Check if any file failed due to duplicate title
-    const hasDuplicateTitle = results.some((r: any) => r.error?.errorCode === 'DOCUMENT_TITLE_EXISTS');
-    
-    if (hasDuplicateTitle) {
-      // Return partial success with specific error info
-      return res.status(409).json({
-        success: false,
-        message: 'Some files could not be uploaded due to duplicate titles',
-        errorCode: 'PARTIAL_UPLOAD_FAILED',
-        results  // ← Frontend bisa lihat detail per-file
-      });
+    // ✅ FIX 2: Tentukan HTTP status berdasarkan summary
+    let httpStatus = 201; // Created
+    let responseMessage = 'File processing completed';
+    let isSuccess = true;
+
+    if (summary.error === results.length) {
+      // ❌ Semua gagal
+      httpStatus = 400;
+      responseMessage = 'All uploads failed';
+      isSuccess = false;
+    } else if (summary.duplicate > 0 && summary.uploaded === 0) {
+      // ⚠️ Semua duplicate (bukan error, tapi info)
+      httpStatus = 200; // OK
+      responseMessage = 'All files already exist in system';
+    } else if (summary.duplicate > 0 || summary.error > 0) {
+      // 🟡 Partial success: ada yang uploaded + ada duplicate/error
+      httpStatus = 207; // Multi-Status (RFC 4918)
+      responseMessage = 'Upload completed with some notices';
     }
 
-    return res.status(201).json({
-      success: true,
-      message: 'File processing completed',
+    // ✅ FIX 3: Build response object secara dinamis
+    const responseData: any = {
+      success: isSuccess,
+      message: responseMessage,
+      summary,
       results,
-    });
+    };
+
+    // ✅ Tambahkan blockchainPayload HANYA jika ada file yang perlu dikonfirmasi on-chain
+    if (summary.uploaded > 0 && blockchainPayload && blockchainPayload.length > 0) {
+      responseData.blockchainPayload = blockchainPayload;
+      responseData.folderId = returnedFolderId;
+    }
+
+    // ✅ Return response yang sudah dibangun
+    return res.status(httpStatus).json(responseData);
     
   } catch (error: any) {
-    // ✅ Handle duplicate title error specifically
+    // ✅ Handle duplicate TITLE error (beda dengan duplicate CONTENT)
     if (error.errorCode === 'DOCUMENT_TITLE_EXISTS') {
       return res.status(409).json({
         success: false,
@@ -340,10 +364,6 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
   }
 };
 
-/**
- * PATCH /api/documents/:id/confirm-onchain
- * Update status setelah user konfirmasi TX di MetaMask
- */
 export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -376,6 +396,67 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
       return res.status(404).json({ success: false, message: "Document not found" });
     }
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+// ✅ TAMBAHKAN di document.controller.ts:
+
+/**
+ * POST /api/documents/batch/confirm-complete
+ * Update database setelah batch transaction confirmed di blockchain
+ */
+export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
+  try {
+    const { txHash, documentIds } = req.body;
+    const userId = req.user?.userId;
+
+    if (!txHash || !Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'txHash and documentIds array required' 
+      });
+    }
+
+    // Update semua dokumen: set isOnChain = true + simpan txHash
+    const result = await prisma.$transaction(async (tx) => {
+      const updateResult = await tx.document.updateMany({
+        where: {
+          id: { in: documentIds },
+          ownerId: userId,
+          isOnChain: false
+        },
+        data: {
+          isOnChain: true,
+          blockchainTx: txHash,
+          pendingOnChainUntil: null
+        }
+      });
+
+      // Log aktivitas batch
+      await tx.activityLog.createMany({
+        data: documentIds.map(docId => ({
+          userId,
+          action: 'BLOCKCHAIN_CONFIRM_BATCH',
+          entityType: 'DOCUMENT',
+          entityId: docId,
+          entityName: 'Batch confirmation',
+          blockchainTx: txHash,
+          details: `Batch of ${documentIds.length} files confirmed on-chain`
+        }))
+      });
+
+      return updateResult;
+    });
+
+    return res.json({
+      success: true,
+      message: `${result.count} file(s) confirmed on blockchain`,
+      txHash,
+      updatedCount: result.count
+    });
+
+  } catch (error: any) {
+    logger.error('❌ Confirm batch complete failed', { error: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -478,10 +559,12 @@ export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: 
       success: true,
       message: `Ready to confirm ${items.length} file(s) on blockchain`,
       data: {
-        items: batchData.items,
-        docIds: items.map(i => i.docId), // Untuk update backend setelah TX confirmed
         contractAddress: batchData.contractAddress,
-        abi: batchData.abi
+        abi: batchData.abi,
+        functionName: batchData.functionName,
+        args: batchData.args,  
+        items: batchData.items,
+        docIds: items.map(i => i.docId), 
       }
     });
 

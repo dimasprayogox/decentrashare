@@ -322,19 +322,31 @@ export const logBulkDownloadActivity = async (
   }
 };
 
+// Tambahkan type ini di atas fungsi uploadMultipleFiles
+type UploadResultItem = {
+  success: boolean;
+  fileName: string;
+  status: 'uploaded' | 'duplicate' | 'error';  // ← ✅ NEW: Status spesifik
+  data?: any;
+  error?: string;
+  errorCode?: string;  // ← Untuk error handling spesifik di frontend
+  pinataInfo?: { groupId: string | null; ipfsHash: string };
+  existingDocument?: {  // ← ✅ NEW: Info jika duplicate
+    id: string;
+    title: string;
+    ipfsHash: string;
+    fileHash: string;
+    createdAt: Date;
+  };
+};
+
 export const uploadMultipleFiles = async (
   files: Express.Multer.File[],
   userId: string,
   folderId?: string,
   metadataMap?: Map<string, { title?: string; description?: string }>  // ← ✅ Parameter baru
 ) => {
-  const results: Array<{
-    success: boolean;
-    fileName: string;
-    data?: any;
-    error?: string;
-    pinataInfo?: { groupId: string | null; ipfsHash: string };
-  }> = [];
+  const results: UploadResultItem[] = [];
 
   // ── 0. PRE-FETCH: Get user's Pinata group ID ─────────
   const user = await prisma.user.findUnique({
@@ -369,11 +381,40 @@ export const uploadMultipleFiles = async (
       const fileHash = await generateFileHash(file.path);
 
       // ── 2. DUPLICATE CHECK ─────────────
-      const existingFile = await prisma.document.findUnique({
-        where: { fileHash }
-      });
-      if (existingFile) throw new Error(`Duplicate detected. This file content already exists.`);
+      // ── 2. DUPLICATE CHECK BY CONTENT HASH ─────────────
+const existingFile = await prisma.document.findUnique({
+  where: { fileHash }
+});
 
+// ✅ JANGAN THROW ERROR - Return sebagai "duplicate"
+if (existingFile) {
+  logger.debug(`[Duplicate] File already exists, skipping upload`, {
+    fileName: file.originalname,
+    fileHash,
+    existingDocId: existingFile.id
+  });
+  
+  results.push({ 
+    success: true,  // ← Tetap true karena bukan error sistem
+    fileName: file.originalname, 
+    status: 'duplicate',  // ← ✅ Status spesifik
+    error: 'File content already exists in system',
+    errorCode: 'FILE_DUPLICATE',
+    existingDocument: {  // ← ✅ Kirim info existing doc ke frontend
+      id: existingFile.id,
+      title: existingFile.title,
+      ipfsHash: existingFile.ipfsHash,
+      fileHash: existingFile.fileHash,
+      createdAt: existingFile.createdAt
+    }
+  });
+  
+  // ✅ Cleanup temp file dan lanjut ke file berikutnya
+  if (fs.existsSync(file.path)) {
+    try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+  }
+  continue;
+}
       // ── 3. IPFS UPLOAD (Pinata) ───────
       const fileBuffer = fs.readFileSync(file.path);
       
@@ -477,6 +518,7 @@ export const uploadMultipleFiles = async (
       results.push({ 
         success: true, 
         fileName: file.originalname, 
+        status: 'uploaded', 
         data: {
           ...newDocument,
           blockchainData: blockchainData
@@ -493,13 +535,15 @@ export const uploadMultipleFiles = async (
         userId,
         folderId,
         error: error.message,
-        stack: error.stack 
+        stack: error.stack,
+        errorCode: error.errorCode
       });
       
       results.push({ 
         success: false, 
         fileName: file.originalname, 
-        error: error.message 
+        error: error.message,
+        errorCode: error.errorCode
       });
     } finally {
       // ── 7. CLEANUP ───────────────────────
@@ -516,13 +560,38 @@ export const uploadMultipleFiles = async (
   // ── Log summary ───────────────────────────────────────────────────
   const successCount = results.filter(r => r.success).length;
   const failCount = results.length - successCount;
-  logger.info(`📦 Document upload batch complete: ${successCount} succeeded, ${failCount} failed`, { 
+  logger.info(`Document upload batch complete: ${successCount} succeeded, ${failCount} failed`, { 
     userId, 
     folderId,
     pinataGroupId: userGroupId 
   });
+
+  const summary = {
+  total: results.length,
+  uploaded: results.filter(r => r.status === 'uploaded').length,
+  duplicate: results.filter(r => r.status === 'duplicate').length,
+  error: results.filter(r => r.status === 'error').length,
+};
+
+  const blockchainPayload = results
+  .filter(r => r.status === 'uploaded' && r.data?.blockchainData)
+  .map(r => ({
+    fileName: r.fileName,
+    ipfsHash: r.data.ipfsHash,
+    fileHash: r.data.fileHash,
+    fileSize: BigInt(r.data.fileSize),
+    timestamp: BigInt(Math.floor(r.data.createdAt.getTime() / 1000)),
+    documentId: r.data.id
+  }));
+
+logger.info(`Document upload batch complete`, { 
+  userId, 
+  folderId,
+  pinataGroupId: userGroupId,
+  summary
+});
   
-  return results;
+  return { results, summary, blockchainPayload, folderId };
 };
 
 export const getRootDocuments = async (userId: string) => {

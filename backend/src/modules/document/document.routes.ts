@@ -22,7 +22,9 @@ import {
   handleGetSharedWithMe,
   handleGetActivityLogs,
   confirmDocumentOnChain,
-  triggerBlockchainConfirmation
+  triggerBlockchainConfirmation,
+  confirmBatchComplete,
+  triggerBatchBlockchainConfirmation
 } from "./document.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requireAdmin } from "../../middlewares/role.middleware";
@@ -56,6 +58,9 @@ router.delete("/shared", handleRevokeAccess);
 router.post("/shared-details", handleGetSharedUsers);
 
 router.get("/shared-with-me", handleGetSharedWithMe);
+
+router.post("/batch/confirm-complete", confirmBatchComplete);
+router.post("/batch/trigger-blockchain", triggerBatchBlockchainConfirmation);
 
 router.get('/logs', handleGetActivityLogs);
 
