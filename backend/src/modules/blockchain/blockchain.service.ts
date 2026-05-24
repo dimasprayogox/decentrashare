@@ -63,27 +63,40 @@ class BlockchainService {
    * Agar frontend bisa langsung panggil: contract.recordFilesBatch(cids, names, hashes)
    */
   prepareBatchTransactionData(
-    items: Array<{ cid: string; fileName: string; fileHash: string; documentId?: string }>
-  ): BatchBlockchainPayload {
-    // ✅ Pisahkan menjadi 3 parallel arrays (sesuai signature contract)
-    const cids = items.map(item => item.cid);
-    const fileNames = items.map(item => item.fileName);
-    const fileHashes = items.map(item => item.fileHash);
-    
-    // ✅ Optional: kumpulkan documentIds untuk update DB setelah tx sukses
-    const documentIds = items
-      .filter(item => item.documentId)
-      .map(item => item.documentId!);
+  items: Array<{ 
+    cid: string; 
+    fileName: string; 
+    fileHash: string; 
+    fileSize?: number | string; 
+    timestamp?: number | string; 
+    documentId?: string 
+  }>
+): BatchBlockchainPayload {
+  const cids = items.map(item => item.cid);
+  const fileNames = items.map(item => item.fileName);
+  const fileHashes = items.map(item => item.fileHash);
 
-    return {
-      contractAddress: this.contractAddress,
-      abi: this.abi,
-      functionName: 'recordFilesBatch', // ← ⚙️ Sesuaikan jika nama fungsi di contract berbeda
-      args: [cids, fileNames, fileHashes], // ← ✅ Format: [string[], string[], string[]]
-      items, // ← Untuk referensi/debugging di frontend
-      ...(documentIds.length > 0 && { documentIds }) // ← Optional, hanya jika ada documentId
-    };
-  }
+  const documentIds = items
+    .filter(item => item.documentId)
+    .map(item => item.documentId!);
+
+  const safeItems = items.map(item => ({
+    cid: item.cid,
+    fileName: item.fileName,
+    fileHash: item.fileHash,
+    ...(item.fileSize && { fileSize: String(item.fileSize) }),
+    ...(item.timestamp && { timestamp: String(item.timestamp) })
+  }));
+
+  return {
+    contractAddress: this.contractAddress,
+    abi: this.abi,
+    functionName: 'recordFilesBatch',
+    args: [cids, fileNames, fileHashes], 
+    items: safeItems, 
+    ...(documentIds.length > 0 && { documentIds })
+  };
+}
 
   /**
    * ✅ Verifikasi TX hash sudah confirmed di blockchain

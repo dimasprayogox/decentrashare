@@ -1,6 +1,61 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { page } from '$app/state'; // ✅ Svelte 5
+  import { userService } from '$lib/services/settings/profile'; 
+
   let { userAddress = "0x00...000" } = $props();
   let searchQuery = $state("");
+
+  // ── User Profile State ──
+  let profile = $state({ username: '', avatarUrl: '', email: '' });
+  let isLoadingProfile = $state(true);
+
+  // ── Dynamic Page Title Mapping ──
+  const PAGE_TITLES: Record<string, { main: string; sub?: string }> = {
+    '/dashboard': { main: 'Main', sub: 'Dashboard' },
+    '/storage': { main: 'Storage', sub: 'My Files' },
+    '/shared': { main: 'Shared', sub: 'With Me' },
+    '/settings': { main: 'Settings', sub: '' },
+    '/settings/profile': { main: 'Settings/', sub: 'Profile' },
+    '/settings/security': { main: 'Settings/', sub: 'Security' },
+    '/settings/notifications': { main: 'Settings/', sub: 'Notifications' },
+    '/login': { main: 'Welcome', sub: 'Back' },
+    '/register': { main: 'Join', sub: 'DecentraShare' },
+  };
+
+  // ✅ CORRECT: Extract path first, then derive pageTitle
+  // Step 1: Derived path (normalize trailing slash)
+  const currentPath = $derived(page.url.pathname.replace(/\/$/, '') || '/dashboard');
+  
+  // Step 2: Derived pageTitle based on currentPath
+  const pageTitle = $derived(
+    PAGE_TITLES[currentPath] || 
+    PAGE_TITLES[`/${currentPath.split('/')[1]}`] || 
+    { main: 'DecentraShare', sub: '' }
+  );
+
+  // ── Load User Profile ──
+  onMount(async () => {
+    try {
+      const res = await userService.getProfile();
+      if (res?.success && res?.data) {
+        profile = {
+          username: res.data.username || '',
+          avatarUrl: res.data.avatarUrl || '',
+          email: res.data.email || ''
+        };
+      }
+    } catch (err) {
+      console.error("Failed to load header profile:", err);
+    } finally {
+      isLoadingProfile = false;
+    }
+  });
+
+  function getInitials(): string {
+    const name = profile.username || profile.email || userAddress || 'U';
+    return name.charAt(0).toUpperCase();
+  }
 </script>
 
 <header class="h-20 border-b border-white/5 bg-[#0a0a0c]/80 backdrop-blur-xl sticky top-0 z-[60] flex items-center justify-between px-4 md:px-8 w-full gap-4">
@@ -8,8 +63,13 @@
     <div class="flex items-center gap-4 flex-1 min-w-0">
         <div class="lg:hidden w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shrink-0">D</div>
         
+        <!-- ✅ Dynamic Title with Debug Fallback -->
         <h2 class="text-sm md:text-lg font-semibold text-white truncate mr-2">
-          <span class="hidden sm:inline">Main</span> Dashboard
+          {#if pageTitle?.sub}
+            <span class="hidden sm:inline text-gray-400">{pageTitle?.main}</span> {pageTitle?.sub}
+          {:else}
+            {pageTitle?.main || 'DecentraShare'}
+          {/if}
         </h2>
         
         <div class="relative w-full max-w-md hidden sm:block">
@@ -37,24 +97,35 @@
             </a>
         </div>
 
+        <!-- Bagian User Info -->
         <div class="flex items-center gap-3 pl-2">
             <div class="hidden sm:flex flex-col items-end">
-                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">Terhubung</span>
-                <span class="text-xs font-mono text-blue-400 leading-none truncate max-w-[120px]">{userAddress}</span>
+                <span class="text-xs font-semibold text-white leading-none truncate max-w-[150px]">
+                    @{profile.username || userAddress}
+                </span>
             </div>
 
             <div class="relative group">
                 <button class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 p-[2px] active:scale-95 transition-transform">
                     <div class="w-full h-full rounded-full bg-[#0a0a0c] flex items-center justify-center overflow-hidden">
-                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                        {#if profile.avatarUrl}
+                            <img src={profile.avatarUrl} alt="Avatar" class="w-full h-full object-cover" />
+                        {:else}
+                            <span class="text-sm font-bold text-white">{getInitials()}</span>
+                        {/if}
                     </div>
                 </button>
 
-                <div class="absolute right-0 mt-2 w-48 bg-[#121214] border border-white/10 rounded-2xl shadow-2xl p-2 hidden group-hover:block transition-all">
-                    <button class="w-full text-left px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-2">
+                <div class="absolute right-0 mt-2 w-56 bg-[#121214] border border-white/10 rounded-2xl shadow-2xl p-2 hidden group-hover:block transition-all">
+                    <div class="px-3 py-2 mb-1 border-b border-white/5">
+                        <p class="text-sm font-semibold text-white truncate">@{profile.username || 'User'}</p>
+                        <p class="text-xs text-gray-500 truncate">{profile.email || 'user@example.com'}</p>
+                    </div>
+                    
+                    <a href="/settings/profile" class="w-full text-left px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         Profil Saya
-                    </button>
+                    </a>
                     <hr class="border-white/5 my-1" />
                     <button class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>

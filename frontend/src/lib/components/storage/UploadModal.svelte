@@ -1,20 +1,148 @@
 <script lang="ts">
   import { fade, scale, slide } from 'svelte/transition';
-  import { storageService } from '$lib/services'; // Pastikan import service Bos
+  import { cubicOut } from 'svelte/easing';
+  import { storageService } from '$lib/services/storage/storage';
+  import type { 
+    UploadFilesResponse, 
+    BatchConfirmationResponse,
+    BatchBlockchainPayload,
+    BatchTriggerResponse 
+  } from '$lib/types/storage';
+  import { recordFilesBatchOnChain } from '$lib/services/web3/blockchain'; 
   
-  // Ambil props dengan Svelte 5 style
-  // folderId sangat penting dikirim dari parent agar file masuk ke folder yang benar
-  let { isOpen, onClose, onUploaded, folderId = null } = $props();
+  // ── Props (Svelte 5 Style) ──
+  let {
+    isOpen,
+    onClose,
+    onUploaded,
+    folderId = null
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onUploaded: () => void;
+    folderId?: string | null;
+  } = $props();
 
+  // ── State ──────────────────────────────────────────────────
   let isDragging = $state(false);
   let files = $state<File[]>([]);
-  let isUploading = $state(false); // State untuk loading button
+  let isUploading = $state(false);
+  
+  // ✅ NEW: Metadata per-file (title & description)
+  let fileMetadata = $state<Record<string, { title: string; description: string }>>({});
+  
+  // ✅ Inline feedback states
+  let uploadError = $state("");
+  let uploadSuccess = $state("");
+  let fileErrors = $state<Record<number, string>>({});
+  let uploadStatus = $state("");
+  
+  // ✅ NEW: Batch confirmation state
+  let isConfirmingBatch = $state(false);
+  let confirmationProgress = $state(0);
+  
+  // ✅ Validation config
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+  const MAX_FILES = 10;                     // ✅ Max 10 files per upload
+  const ALLOWED_TYPES = [
+    'application/pdf', 'application/msword', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'video/mp4', 'video/webm',
+    'text/plain', 'text/csv', 'application/json'
+  ];
+
+  // ── Helpers ────────────────────────────────────────────────
+  
+  function formatTitle(fileName: string): string {
+    const name = fileName.replace(/\.[^/.]+$/, "");
+    return name
+      .replace(/[-_]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ')
+      .map(word => {
+        if (word.length <= 2) return word.toUpperCase();
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(' ')
+      .slice(0, 50);
+  }
+  
+  function validateFile(file: File): string | null {
+    if (file.size > MAX_FILE_SIZE) return `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`;
+    if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      return 'Unsupported file type';
+    }
+    return null;
+  }
+
+  function setUploadError(message: string) {
+    uploadError = message;
+    uploadSuccess = "";
+    setTimeout(() => { if (uploadError === message) uploadError = ""; }, 5000);
+  }
+
+  function setUploadSuccess(message: string) {
+    uploadSuccess = message;
+    uploadError = "";
+    setTimeout(() => { if (uploadSuccess === message) uploadSuccess = ""; }, 4000);
+  }
+
+  function clearFeedback() {
+    uploadError = "";
+    uploadSuccess = "";
+    fileErrors = {};
+  }
+
+  function formatSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // ── File Handlers ─────────────────────────────────────────
 
   function handleFiles(newFiles: FileList | null) {
     if (!newFiles) return;
+    clearFeedback();
+    
     const array = Array.from(newFiles);
-    const validFiles = array.filter(f => f.size <= 100 * 1024 * 1024);
-    files = [...files, ...validFiles];
+    const validFiles: File[] = [];
+    const currentCount = files.length;
+    const remainingSlots = MAX_FILES - currentCount;
+    
+    if (currentCount >= MAX_FILES) {
+      setUploadError(`Maximum ${MAX_FILES} files allowed. Please remove some files first.`);
+      return;
+    }
+    
+    array.forEach((file, index) => {
+      if (validFiles.length + currentCount >= MAX_FILES) {
+        fileErrors[files.length + validFiles.length] = `Limit ${MAX_FILES} files reached`;
+        return;
+      }
+      
+      const error = validateFile(file);
+      if (error) {
+        fileErrors[files.length + validFiles.length] = error;
+      } else {
+        validFiles.push(file);
+      }
+    });
+    
+    if (validFiles.length > 0) files = [...files, ...validFiles];
+    
+    const rejected = array.length - validFiles.length;
+    if (rejected > 0) {
+      if (remainingSlots < array.length) {
+        setUploadError(`Only ${remainingSlots} more file${remainingSlots > 1 ? 's' : ''} allowed. ${rejected} file${rejected > 1 ? 's were' : ' was'} rejected.`);
+      } else {
+        setUploadError(`${rejected} file${rejected > 1 ? 's' : ''} rejected due to validation errors`);
+      }
+    }
   }
 
   function handleDrop(e: DragEvent) {
@@ -24,143 +152,513 @@
   }
 
   function removeFile(index: number) {
+    const file = files[index];
+    const metaKey = `${file.name}_${file.size}_${file.lastModified}`;
+    
     files = files.filter((_, i) => i !== index);
+    delete fileMetadata[metaKey];
+    
+    const newErrors = { ...fileErrors };
+    delete newErrors[index];
+    fileErrors = newErrors;
+    
+    if (uploadError?.includes('Maximum') || uploadError?.includes('allowed') || uploadError?.includes('Limit')) {
+      clearFeedback();
+    }
   }
 
-  // --- FUNGSI UPLOAD YANG SUDAH DISESUAIKAN ---
+  function clearAllFiles() {
+    files = [];
+    fileMetadata = {};
+    fileErrors = {};
+    clearFeedback();
+  }
+
+  // ── Upload Handler ─────────────────────────────────────────
+
   async function startUpload() {
     if (files.length === 0) return;
     
     try {
       isUploading = true;
+      clearFeedback();
+      setUploadStatus('📤 Uploading files to IPFS...');
       
-      // 1. Ambil data asli dari Proxy Svelte 5 menggunakan snapshot
       const rawFiles = $state.snapshot(files);
+      const rawMetadata = $state.snapshot(fileMetadata);
       
-      // 2. Bungkus ke FormData
+      // ── PHASE 1: Upload ke Backend/IPFS ───────────────────
       const formData = new FormData();
-      rawFiles.forEach((file) => {
-        formData.append('files', file); // 'files' harus sama dengan di backend Multer
+      rawFiles.forEach(file => formData.append('files', file));
+      if (folderId) formData.append('folderId', folderId);
+
+      const metadataArray = rawFiles.map(file => {
+        const metaKey = `${file.name}_${file.size}_${file.lastModified}`;
+        const meta = rawMetadata[metaKey] || { title: '', description: '' };
+        return { fileName: file.name, title: meta.title?.trim(), description: meta.description?.trim() };
       });
+      formData.append('metadata', JSON.stringify(metadataArray));
 
-      // 3. Tambahkan folderId jika user sedang di dalam folder
-      if (folderId) {
-        formData.append('folderId', folderId);
+      // ✅ Panggil API Upload
+      const uploadResult = await storageService.uploadMultipleFiles(formData) as BatchConfirmationResponse;
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.message || 'Upload failed');
       }
 
-      console.log("Mengunggah ke IPFS & Blockchain...", rawFiles);
-
-      // 4. Panggil service (Sesuaikan nama fungsi di storageService Bos)
-      const result = await storageService.uploadMultipleFiles(formData);
-
-      if (result.success) {
-        // Beri feedback atau refresh data di dashboard
-        files = []; // Kosongkan antrean
-        onUploaded(); // Trigger fungsi loadStorageData() di parent
-        onClose(); // Tutup modal
-      } else {
-        alert("Beberapa file gagal diunggah: " + result.message);
+      const { results, summary, blockchainPayload, folderId: returnedFolderId } = uploadResult;
+      
+      // ✅ Tampilkan feedback berdasarkan summary
+      if (summary.duplicate > 0 && summary.uploaded === 0) {
+        setUploadSuccess(`⚠️ All ${summary.duplicate} file(s) already exist in system`);
+      } else if (summary.duplicate > 0 && summary.uploaded > 0) {
+        let msg = `✅ ${summary.uploaded} uploaded`;
+        if (summary.duplicate > 0) msg += ` • ⚠️ ${summary.duplicate} already existed`;
+        if (summary.error > 0) msg += ` • ❌ ${summary.error} failed`;
+        setUploadSuccess(msg);
+      } else if (summary.uploaded > 0) {
+        setUploadSuccess(`✅ ${summary.uploaded} file(s) uploaded successfully!`);
       }
+      
+      // ✅ Highlight status per-file di UI
+      results.forEach((result, index) => {
+        if (result.status === 'duplicate') {
+          fileErrors[index] = `⚠️ Exists: ${result.existingDocument?.title}`;
+        } else if (result.status === 'error') {
+          fileErrors[index] = `❌ ${result.error}`;
+        }
+      });
+      
+      // ── PHASE 2: Batch Blockchain Confirmation (JIKA ADA FILE BARU) ─────
+      if (summary.uploaded > 0 && blockchainPayload?.length > 0) {
+        await handleBatchBlockchainConfirmation(blockchainPayload, returnedFolderId);
+      }
+      
+      // Reset state & refresh parent
+      files = [];
+      fileMetadata = {};
+      fileErrors = {};
+      onUploaded?.();
+      
+      // Tutup modal otomatis setelah 3 detik
+      setTimeout(() => { if (uploadSuccess) onClose?.(); }, 3000);
+      
     } catch (error: any) {
       console.error("Upload Error:", error);
-      alert("Gagal mengunggah: " + (error.response?.data?.message || error.message));
+      setUploadError(error?.message || 'Failed to upload files');
     } finally {
       isUploading = false;
+      isConfirmingBatch = false;
+      setUploadStatus('');
     }
   }
+  
+  // ✅ NEW: Handle batch blockchain confirmation
+  async function handleBatchBlockchainConfirmation(
+    payload: Array<{ fileName: string; ipfsHash: string; fileHash: string; fileSize: string; timestamp: string; documentId: string }>,
+    folderId?: string | null
+  ) {
+    try {
+      isConfirmingBatch = true;
+      confirmationProgress = 25;
+      setUploadStatus('🔐 Preparing blockchain confirmation...');
+      
+      // ✅ 1. Trigger backend untuk prepare batch data
+      const documentIds = payload.map(p => p.documentId);
+      const triggerResponse = await storageService.triggerBatchBlockchainConfirmation(documentIds) as BatchTriggerResponse;
+      
+      if (!triggerResponse.success || !triggerResponse.data) {
+        throw new Error(triggerResponse.message || 'Failed to prepare batch confirmation');
+      }
+      
+      confirmationProgress = 50;
+      
+      const { contractAddress, abi, functionName, args, docIds } = triggerResponse.data;
+      
+      // ✅ 2. Prepare payload untuk recordFilesBatchOnChain
+      const batchPayload: BatchBlockchainPayload = {
+        contractAddress,
+        abi,
+        functionName,
+        args, // [cids[], fileNames[], fileHashes[]]
+        items: payload.map(p => ({ cid: p.ipfsHash, fileName: p.fileName, fileHash: p.fileHash })),
+        documentIds: docIds
+      };
+      
+      confirmationProgress = 75;
+      setUploadStatus('⏳ Confirm in wallet...');
+      
+      // ✅ 3. Request wallet signature (HANYA 1 KALI!)
+      const txResult = await recordFilesBatchOnChain(batchPayload, {
+        onStatus: (status) => setUploadStatus(status),
+        onTxHash: (txHash) => {
+          console.log('Batch TX hash:', txHash);
+          confirmationProgress = 90;
+        }
+      });
+      
+      confirmationProgress = 100;
+      setUploadStatus('✅ Confirmed on-chain!');
+      
+      // ✅ 4. Notify backend bahwa batch tx sukses
+      await storageService.confirmBatchComplete(txResult.txHash, docIds);
+      
+      // Update success message
+      setUploadSuccess(prev => `${prev} • 🔗 Confirmed on blockchain!`);
+      
+    } catch (error: any) {
+      // Handle wallet rejection atau error
+      if (error.message === 'TRANSACTION_REJECTED') {
+        setUploadSuccess(prev => `${prev} • ⚠️ Confirmation skipped`);
+      } else if (error.message === 'INSUFFICIENT_FUNDS') {
+        setUploadError('⚠️ Insufficient ETH for gas. Files uploaded but not confirmed on-chain.');
+      } else if (error.message === 'WRONG_NETWORK') {
+        setUploadError('⚠️ Please switch to Sepolia testnet');
+      } else {
+        console.warn('Batch confirmation failed:', error);
+        setUploadSuccess(prev => `${prev} • ⚠️ On-chain pending`);
+      }
+    } finally {
+      isConfirmingBatch = false;
+      confirmationProgress = 0;
+    }
+  }
+  
+  // Helper untuk status progress
+  function setUploadStatus(status: string) {
+    if (status && !status.startsWith('✅') && !status.startsWith('⚠️')) {
+      uploadError = status;
+      uploadSuccess = "";
+    }
+  }
+
+  // ── Modal Lifecycle ───────────────────────────────────────
+  $effect(() => {
+    if (!isOpen) { 
+      clearFeedback(); 
+      isDragging = false;
+      isConfirmingBatch = false;
+      confirmationProgress = 0;
+    } else { 
+      clearFeedback(); 
+    }
+  });
+
+  $effect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isUploading && !isConfirmingBatch) onClose?.();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  });
 </script>
 
 {#if isOpen}
-<div class="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-6">
-  <div 
-    transition:fade={{ duration: 200 }}
-    class="absolute inset-0 bg-black/80 backdrop-blur-md" 
-    onclick={onClose}
-  ></div>
+  <div class="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-6">
+    <!-- Backdrop -->
+    <div transition:fade={{ duration: 200, easing: cubicOut }} 
+         class="absolute inset-0 bg-black/80 backdrop-blur-md" 
+         onclick={onClose}></div>
 
-  <div 
-    in:scale={{ start: 0.9, duration: 300 }}
-    out:fade={{ duration: 200 }}
-    class="relative w-full max-w-xl bg-[#121214] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl"
-  >
-    <div class="p-6 md:p-8">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h3 class="text-xl font-bold text-white">Unggah ke IPFS</h3>
-          <p class="text-xs text-gray-500 mt-1">File akan terdesentralisasi secara permanen.</p>
+    <!-- Modal -->
+    <div in:scale={{ start: 0.95, duration: 250, easing: cubicOut }} 
+         out:fade={{ duration: 150 }}
+         class="relative w-full max-w-xl bg-[#1a1a1e] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl"
+         role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+      
+      <!-- Header -->
+      <div class="p-6 md:p-8 border-b border-white/5">
+        <div class="flex justify-between items-start">
+          <div>
+            <h3 id="upload-modal-title" class="text-xl font-bold text-white">Upload to IPFS</h3>
+            <p class="text-xs text-gray-500 mt-1">Files will be permanently decentralized.</p>
+          </div>
+          <button onclick={onClose} 
+                  disabled={isUploading || isConfirmingBatch} 
+                  class="p-2 text-gray-500 hover:text-white transition-colors disabled:opacity-50" 
+                  aria-label="Close">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
-        <button onclick={onClose} class="p-2 text-gray-500 hover:text-white transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
       </div>
 
-      <label 
-        ondragover={(e) => { e.preventDefault(); isDragging = true; }}
-        ondragleave={() => isDragging = false}
-        ondrop={handleDrop}
-        class="group border-2 border-dashed {isDragging ? 'border-blue-500 bg-blue-500/5' : 'border-white/10 hover:border-white/20'} rounded-2xl p-10 text-center transition-all cursor-pointer block relative"
-      >
-        <input 
-          type="file" 
-          multiple 
-          class="absolute inset-0 opacity-0 cursor-pointer" 
-          onchange={(e) => handleFiles(e.currentTarget.files)} 
-        />
+      <div class="p-6 md:p-8">
+        <!-- Status Progress -->
+        {#if uploadStatus && !uploadStatus.startsWith('✅') && !uploadStatus.startsWith('⚠️')}
+          <div class="mb-4 px-4 py-3 rounded-xl border bg-blue-500/10 border-blue-500/20 text-blue-400 flex items-center gap-3" role="status">
+            <svg class="w-5 h-5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <p class="text-sm flex-1">{uploadStatus}</p>
+            {#if isConfirmingBatch}
+              <span class="text-xs font-mono">{confirmationProgress}%</span>
+            {/if}
+          </div>
+          
+          <!-- Progress Bar untuk Batch Confirmation -->
+          {#if isConfirmingBatch}
+            <div class="w-full bg-gray-700/50 rounded-full h-1.5 mb-4 overflow-hidden">
+              <div class="bg-gradient-to-r from-purple-500 to-blue-500 h-1.5 rounded-full transition-all duration-300" 
+                   style="width: {confirmationProgress}%"></div>
+            </div>
+          {/if}
+        {/if}
         
-        <div class="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500 group-hover:scale-110 transition-transform">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-        </div>
-        <p class="text-white font-medium">Klik atau tarik file ke sini</p>
-        <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Maksimal 100MB per file</p>
-      </label>
+        <!-- ✅ Inline Feedback Banner -->
+        {#if uploadError || uploadSuccess}
+          <div transition:slide={{ axis: 'y', duration: 150 }}
+               class="mb-6 px-4 py-3 rounded-xl border flex items-start gap-3 {uploadError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}"
+               role="alert" aria-live="polite">
+            {#if uploadError}
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            {:else}
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            {/if}
+            <p class="text-sm flex-1">{uploadError || uploadSuccess}</p>
+            <button onclick={clearFeedback} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        {/if}
 
-      {#if files.length > 0}
-        <div class="mt-6 space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-          {#each files as file, i (file.name + i)}
-            <div transition:slide class="flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-xl group/item">
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                </div>
-                <div class="truncate">
-                    <p class="text-sm text-gray-200 truncate">{file.name}</p>
-                    <p class="text-[10px] text-gray-500 font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                </div>
-              </div>
-              <button 
-                onclick={() => removeFile(i)}
-                class="p-2 text-gray-600 hover:text-red-400 transition-colors"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        <!-- Drop Zone -->
+        <label ondragover={(e) => { e.preventDefault(); isDragging = true; }} 
+               ondragleave={() => isDragging = false} 
+               ondrop={handleDrop}
+               class="group border-2 border-dashed {isDragging ? 'border-blue-500 bg-blue-500/5' : 'border-white/10 hover:border-white/20'} rounded-2xl p-8 md:p-10 text-center transition-all cursor-pointer block relative disabled:opacity-50"
+               aria-disabled={isUploading || isConfirmingBatch || files.length >= MAX_FILES}>
+          <input type="file" 
+                 multiple 
+                 disabled={isUploading || isConfirmingBatch || files.length >= MAX_FILES}
+                 class="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" 
+                 onchange={(e) => handleFiles(e.currentTarget.files)} 
+                 aria-label="Select files"/>
+          
+          <div class="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500 group-hover:scale-110 transition-transform">
+            {#if isUploading || isConfirmingBatch}
+              <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            {:else}
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+            {/if}
+          </div>
+          {#if isConfirmingBatch}
+            <p class="text-white font-medium">Confirming on blockchain...</p>
+            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">1 wallet signature for all files</p>
+          {:else if isUploading}
+            <p class="text-white font-medium">Uploading to IPFS...</p>
+            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Please wait</p>
+          {:else}
+            <p class="text-white font-medium">Click or drag files here</p>
+            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">
+              Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB each
+            </p>
+            {#if files.length > 0}
+              <p class="text-[9px] text-blue-400 mt-1">
+                {MAX_FILES - files.length} slot{MAX_FILES - files.length !== 1 ? 's' : ''} remaining
+              </p>
+            {/if}
+          {/if}
+        </label>
+
+        <!-- File List with Metadata Inputs -->
+        {#if files.length > 0}
+          <div class="mt-6">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-medium text-gray-300">{files.length} file{files.length > 1 ? 's' : ''} selected</h4>
+              <button onclick={clearAllFiles} 
+                      disabled={isUploading || isConfirmingBatch} 
+                      class="text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50">
+                Clear all
               </button>
             </div>
-          {/each}
-        </div>
-      {/if}
-
-      <button 
-        disabled={files.length === 0 || isUploading}
-        onclick={startUpload}
-        class="w-full mt-8 h-14 bg-blue-600 disabled:bg-white/5 disabled:text-gray-500 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-95 shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3"
-      >
-        {#if isUploading}
-          <div class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-          <span>Sedang Memproses Blockchain...</span>
-        {:else}
-          <span>{files.length > 0 ? `Upload ${files.length} File` : 'Pilih File Terlebih Dahulu'}</span>
+            
+            <!-- ✅ Warning banner when at max limit -->
+            {#if files.length >= MAX_FILES}
+              <div class="mt-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-[10px] text-yellow-400 flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span>Maximum {MAX_FILES} files reached. Remove files to add more.</span>
+              </div>
+            {/if}
+            
+            <div class="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+              {#each files as file, i (file.name + file.size + file.lastModified)}
+                {@const metaKey = `${file.name}_${file.size}_${file.lastModified}`}
+                {@const meta = fileMetadata[metaKey] || { title: '', description: '' }}
+                 
+                <div transition:slide={{ axis: 'y', duration: 150, easing: cubicOut }}
+                     class="flex flex-col p-3 bg-white/[0.03] border {fileErrors[i] ? (fileErrors[i].includes('Exists') ? 'border-yellow-500/30' : 'border-red-500/30') : 'border-white/5'} rounded-xl">
+                  
+                  <!-- Header: File Info + Remove + Status Badge -->
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <!-- Icon -->
+                      <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
+                        {#if file.type.startsWith('image/')}
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                          </svg>
+                        {:else if file.type.startsWith('video/')}
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                          </svg>
+                        {:else if file.type === 'application/pdf'}
+                          <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                          </svg>
+                        {:else}
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                          </svg>
+                        {/if}
+                      </div>
+                      
+                      <!-- Name + Size + Status -->
+                      <div class="truncate min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                          <p class="text-sm text-gray-200 truncate">{file.name}</p>
+                          {#if fileErrors[i]?.includes('Exists')}
+                            <span class="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[8px] rounded border border-yellow-500/30">Duplicate</span>
+                          {:else if fileErrors[i]}
+                            <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] rounded border border-red-500/30">Error</span>
+                          {:else if !isUploading && !isConfirmingBatch}
+                            <span class="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[8px] rounded border border-green-500/30">Ready</span>
+                          {/if}
+                        </div>
+                        <p class="text-[10px] {fileErrors[i] ? (fileErrors[i].includes('Exists') ? 'text-yellow-400' : 'text-red-400') : 'text-gray-500'} font-mono">
+                          {fileErrors[i] || formatSize(file.size)}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <!-- Remove Button -->
+                    <button onclick={() => { removeFile(i); delete fileMetadata[metaKey]; }} 
+                            disabled={isUploading || isConfirmingBatch} 
+                            class="p-2 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50" 
+                            aria-label={`Remove ${file.name}`}>
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <!-- ✅ Expandable Metadata Inputs -->
+                  <div class="mt-3 pt-3 border-t border-white/5">
+                    <!-- Title Input -->
+                    <div class="mb-2">
+                      <label class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">
+                        Title <span class="text-gray-600">(optional)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={meta.title}
+                        oninput={(e) => {
+                          fileMetadata[metaKey] = { 
+                            ...meta, 
+                            title: (e.target as HTMLInputElement).value 
+                          };
+                        }}
+                        placeholder="Leave empty to use filename"
+                        disabled={isUploading || isConfirmingBatch}
+                        class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 disabled:opacity-50 transition-colors"
+                      />
+                      {#if !meta.title.trim() && !fileErrors[i]?.includes('Exists')}
+                        <p class="text-[10px] text-gray-600 mt-1 italic">
+                          Preview: {formatTitle(file.name)}
+                        </p>
+                      {/if}
+                    </div>
+                    
+                    <!-- Description Input -->
+                    <div>
+                      <label class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">
+                        Description <span class="text-gray-600">(optional)</span>
+                      </label>
+                      <textarea 
+                        value={meta.description}
+                        oninput={(e) => {
+                          const val = (e.target as HTMLTextAreaElement).value;
+                          if (val.length <= 500) {
+                            fileMetadata[metaKey] = { ...meta, description: val };
+                          }
+                        }}
+                        placeholder="Add context, credits, or story..."
+                        disabled={isUploading || isConfirmingBatch}
+                        rows={2}
+                        maxlength={500}
+                        class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 disabled:opacity-50 transition-colors resize-none"
+                      />
+                      {#if meta.description.length > 450}
+                        <p class="text-[9px] text-gray-600 text-right mt-1">
+                          {meta.description.length}/500
+                        </p>
+                      {/if}
+                    </div>
+                  </div>
+                  
+                </div>
+              {/each}
+            </div>
+          </div>
         {/if}
-      </button>
+
+        <!-- Upload Button -->
+        <button disabled={files.length === 0 || isUploading || isConfirmingBatch} 
+                onclick={startUpload}
+                class="w-full mt-8 h-14 bg-blue-600 disabled:bg-white/5 disabled:text-gray-500 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 disabled:cursor-not-allowed">
+          {#if isConfirmingBatch}
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span>Confirming on-chain...</span>
+          {:else if isUploading}
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span>Uploading...</span>
+          {:else}
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            <span>Upload {files.length > 0 ? `${files.length} File${files.length > 1 ? 's' : ''}` : ''}</span>
+          {/if}
+        </button>
+        
+        <p class="text-[10px] text-gray-600 text-center mt-4">
+          Supported: PDF, DOC, Images, Videos • Max {MAX_FILE_SIZE / 1024 / 1024}MB each
+        </p>
+        
+        {#if isConfirmingBatch}
+          <p class="text-[9px] text-purple-400/80 text-center mt-2">
+            🔐 Single wallet signature for all files
+          </p>
+        {/if}
+      </div>
     </div>
   </div>
-</div>
 {/if}
 
 <style>
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
-    }
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 </style>

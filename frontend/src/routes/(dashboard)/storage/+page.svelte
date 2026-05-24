@@ -1,31 +1,133 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade, scale } from 'svelte/transition';
-  import { storageService } from '$lib/services';
-  import { page } from '$app/stores';
+  import { fade, scale, fly } from 'svelte/transition';
+  
+  import { storageService } from '$lib/services/storage/storage';
+  import { page } from '$app/state';
   import { goto } from '$app/navigation';
 
-  // Komponen Refactor
+  // Components
   import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
   import ViewSwitcher from '$lib/components/storage/ViewSwitcher.svelte';
   import FileTable from '$lib/components/storage/FileTable.svelte';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
-
-  // Komponen Modal
   import UploadModal from '$lib/components/storage/UploadModal.svelte';
   import FolderModal from '$lib/components/storage/FolderModal.svelte';
+  import BulkActionBar from '$lib/components/storage/BulkActionBar.svelte';
+  import ShareModal from '$lib/components/storage/ShareModal.svelte';
 
-  // State Management
-  let folders = $state([]);
-  let items = $state([]);
-  let breadcrumbs = $state([]);
-  let currentFolder = $state(null);
+  // Composables
+  import { useSelection } from '$lib/composables/useSelection.svelte';
+  import { useDelete } from '$lib/composables/useDelete.svelte';
+  import { useRename } from '$lib/composables/useRename.svelte';
+
+  import type { Folder, Document, SortField, SortDirection, PrivacyLevel } from '$lib/types/storage';
+
+  // ── Composables ──────────────────────────────────────────
+  // ✅ Hanya ambil functions yang tidak butuh state management
+  const {
+    // Tidak perlu ambil selectedItems, toggleSelection, clearSelection dari composable
+    // Kita akan buat local state sendiri untuk reactivity
+  } = useSelection();
+
+  // ✅ DELETE: Destructuring TANPA rename (pakai nama asli)
+  const {
+    isProcessing: isDeleteProcessing,
+    confirmDelete,
+    executeDelete,
+    cancelDelete,
+    confirmBulkDelete,
+    executeBulkDelete,
+    cancelBulkDelete
+  } = useDelete(loadStorageData);
+
+  // ✅ RENAME: Destructuring DENGAN rename (karena butuh local wrappers)
+  const {
+    isProcessing: isRenameProcessing,
+    startRename: startRenameFromComposable,
+    submitRename: submitRenameFromComposable,
+    cancelRename: cancelRenameFromComposable
+  } = useRename(loadStorageData);
+
+  // ── Local State (untuk UI reactivity) ───────────────────
+  let folders = $state<Folder[]>([]);
+  let items = $state<Document[]>([]);
+  let breadcrumbs = $state<{ id: string; name: string }[]>([]);
+  let currentFolder = $state<{ id: string; name: string } | null>(null);
   let isLoading = $state(true);
-  let isProcessing = $state(false); 
-  let viewMode = $state(1); 
+  let viewMode = $state(1);
   let showUpload = $state(false);
   let showFolder = $state(false);
 
+  // ✅ FIX UTAMA: Deklarasikan selectedItems sebagai local $state!
+  let selectedItems = $state<string[]>([]);
+  let selectionMode = $state(false);
+  
+  // ✅ Local state untuk rename modal
+  let renamingItem = $state<{ id: string; type: 'folder' | 'document'; name: string } | null>(null);
+  let renameInputValue = $state(""); 
+  let renameError = $state("");
+  
+  // ✅ Local state untuk delete modal
+  let deletingItem = $state<{ id: string; type: 'folder' | 'document'; name: string } | null>(null);
+  let bulkDeleteItems = $state<Array<{ id: string; type: 'folder' | 'document'; name: string }>>([]);
+  let deleteError = $state("");
+
+  let showShareModal = $state(false);
+  let shareTarget = $state<{
+    id: string;
+    type: 'folder' | 'document';
+    name: string;
+    privacy: PrivacyLevel;
+  } | null>(null);
+
+  // ✅ TAMBAHKAN: Current user state
+  let currentUser = $state<{ 
+    id: string; 
+    username: string; 
+    walletAddress: string;
+  } | null>(null);
+  
+  // Sort state
+  let sortOption = $state<{ field: SortField; direction: SortDirection }>({ 
+    field: 'name', 
+    direction: 'asc' 
+  });
+  let showSortDropdown = $state(false);
+
+  // Combined processing state
+  const isProcessing = $derived(isDeleteProcessing || isRenameProcessing || isLoading);
+  
+  // ✅ Helper: Check if item is selected (reactive karena selectedItems adalah $state)
+  const isSelected = (id: string): boolean => selectedItems.includes(id);
+
+  // ✅ Helper functions untuk selection logic (pakai local selectedItems)
+  function getSelectedFolders(folders: Folder[]) {
+    return folders.filter(f => selectedItems.includes(f.id));
+  }
+
+  function getSelectedDocuments(items: Document[]) {
+    return items.filter(d => selectedItems.includes(d.id));
+  }
+
+  function getSelectedType(folders: Folder[], items: Document[]): 'folders' | 'documents' | 'mixed' | 'items' {
+    const selectedFolders = getSelectedFolders(folders);
+    const selectedDocuments = getSelectedDocuments(items);
+    if (selectedFolders.length > 0 && selectedDocuments.length > 0) return 'mixed';
+    if (selectedFolders.length > 0) return 'folders';
+    if (selectedDocuments.length > 0) return 'documents';
+    return 'items';
+  }
+
+  // ✅ Derived values
+  const selectedTypeValue = $derived(getSelectedType(folders, items, selectedItems));
+
+  // ✅ Debug effect
+  $effect(() => {
+    console.log('🔍 selectedItems:', selectedItems);
+  });
+
+  // ── Helpers ──────────────────────────────────────────────
   function getFileTheme(mimeType: string) {
     if (mimeType.includes('image')) return { color: 'text-purple-500 bg-purple-500/10' };
     if (mimeType.includes('video')) return { color: 'text-red-500 bg-red-500/10' };
@@ -33,61 +135,329 @@
     return { color: 'text-blue-500 bg-blue-500/10' };
   }
 
+  // ✅ Local selection functions (update local $state)
+  function toggleSelection(id: string) {
+    if (selectedItems.includes(id)) {
+      selectedItems = selectedItems.filter(i => i !== id);
+    } else {
+      selectedItems = [...selectedItems, id];
+    }
+  }
+
+  function clearSelection() {
+    selectedItems = [];
+  }
+
+  function toggleSelectMode() {
+    selectionMode = !selectionMode;
+    if (!selectionMode) clearSelection();
+  }
+
+  function buildQueryString(params: Record<string, string | number | null | undefined>): string {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        searchParams.append(key, String(value));
+      }
+    });
+    return searchParams.toString() ? `?${searchParams.toString()}` : '';
+  }
+
+  // ── Sorting ──────────────────────────────────────────────
+  function sortItems<T extends { name?: string; title?: string; createdAt?: string; fileSize?: number; mimeType?: string }>(
+    array: T[], 
+    { field, direction }: { field: SortField; direction: SortDirection }
+  ): T[] {
+    return [...array].sort((a, b) => {
+      let aValue: string | number = '';
+      let bValue: string | number = '';
+      
+      switch (field) {
+        case 'name':
+          aValue = (a.name || a.title || '').toLowerCase();
+          bValue = (b.name || b.title || '').toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        case 'fileSize':
+          aValue = a.fileSize || 0;
+          bValue = b.fileSize || 0;
+          break;
+        case 'type':
+          aValue = a.mimeType?.split('/')[0] || 'unknown';
+          bValue = b.mimeType?.split('/')[0] || 'unknown';
+          break;
+      }
+      
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const sortedFolders = $derived(sortItems(folders, sortOption));
+  const sortedItems = $derived(sortItems(items, sortOption));
+
+  // ── Data Loading ─────────────────────────────────────────
   async function loadStorageData() {
     try {
       isLoading = true;
-      const folderId = $page.url.searchParams.get('folder');
+      const folderId = page.url.searchParams.get('folder');
 
       if (folderId) {
-        const pathRes = await storageService.getFolderPath(folderId);
-        if (pathRes.success) {
-          breadcrumbs = pathRes.data;
-          currentFolder = pathRes.data[pathRes.data.length - 1];
+        try {
+          const pathRes = await storageService.getFolderPath(folderId);
+          if (pathRes.success) {
+            breadcrumbs = pathRes.data;
+            currentFolder = pathRes.data[pathRes.data.length - 1] || null;
+          }
+        } catch (e) {
+          console.warn('Failed to load folder path:', e);
+          breadcrumbs = [];
+          currentFolder = null;
         }
       } else {
         breadcrumbs = [];
         currentFolder = null;
       }
 
-      const [fRes, dRes] = await Promise.all([
-        storageService.getFolders(folderId).catch(() => ({ success: false, data: [] })),
-        storageService.getDocuments(folderId).catch(() => ({ success: false, data: [] }))
+      const [fRes, dRes] = await Promise.allSettled([
+        storageService.getFolders(folderId),
+        storageService.getDocuments(folderId)
       ]);
       
-      folders = fRes.success ? fRes.data : [];
-      items = dRes.success ? dRes.data : [];
+      folders = (fRes.status === 'fulfilled' && fRes.value.success) ? fRes.value.data : [];
+      items = (dRes.status === 'fulfilled' && dRes.value.success) ? dRes.value.data : [];
+      
     } catch (err) {
-      console.error(err);
+      console.error('[Storage] loadStorageData error:', err);
     } finally {
-      setTimeout(() => { isLoading = false; }, 300);
+      setTimeout(() => { isLoading = false; }, 200);
     }
   }
 
   $effect(() => {
-    $page.url.searchParams.get('folder');
+    page.url.searchParams.get('folder');
     loadStorageData();
   });
 
-  const navigateTo = (folder: any | null) => {
-    goto(folder ? `?folder=${folder.id}` : '?', { noScroll: true });
+  // ── Navigation ───────────────────────────────────────────
+  const openFolder = (folder: { id: string } | null) => {
+    if (folder) {
+      goto(`?folder=${folder.id}`, { noScroll: true });
+    } else {
+      goto('?', { noScroll: true });
+    }
   };
 
-  async function withLoading(fn: () => Promise<void>) {
-    isProcessing = true;
-    try { await fn(); } finally { isProcessing = false; }
+  const goBack = () => {
+    if (breadcrumbs.length > 1) {
+      const parentFolder = breadcrumbs[breadcrumbs.length - 2];
+      goto(`?folder=${parentFolder.id}`, { noScroll: true });
+    } else {
+      goto('?', { noScroll: true });
+    }
+  };
+
+  // ── Sort Handlers ────────────────────────────────────────
+  function toggleSortDropdown() {
+    showSortDropdown = !showSortDropdown;
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Hapus file ini?")) return;
-    await withLoading(async () => { await storageService.deleteItem(id); await loadStorageData(); });
+  function applySort(field: SortField) {
+    if (sortOption.field === field) {
+      sortOption = { field, direction: sortOption.direction === 'asc' ? 'desc' : 'asc' };
+    } else {
+      sortOption = { field, direction: 'asc' };
+    }
+    showSortDropdown = false;
   }
 
-  async function handleDeleteFolder(id: string) {
-    if (!confirm("Hapus folder ini?")) return;
-    await withLoading(async () => { await storageService.deleteFolder(id); await loadStorageData(); });
+  function getSortLabel(): string {
+    const labels: Record<SortField, string> = {
+      name: 'Name',
+      createdAt: 'Date',
+      fileSize: 'Size',
+      type: 'Type'
+    };
+    const arrow = sortOption.direction === 'asc' ? '↑' : '↓';
+    return `${labels[sortOption.field]} ${arrow}`;
   }
 
-  onMount(loadStorageData);
+  $effect(() => {
+    if (!showSortDropdown) return;
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest?.('[data-sort-container]')) {
+        showSortDropdown = false;
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  });
+
+  // ── Delete Handlers ─────────────────────────────────────
+
+  const handleDelete = (id: string) => {
+    const item = items.find(d => d.id === id);
+    if (item) {
+      deletingItem = { id, type: 'document', name: item.title };
+      confirmDelete({ id, type: 'document', name: item.title });
+      deleteError = "";
+    }
+  };
+
+  const handleDeleteFolder = (id: string) => {
+    const folder = folders.find(f => f.id === id);
+    if (folder) {
+      deletingItem = { id, type: 'folder', name: folder.name };
+      confirmDelete({ id, type: 'folder', name: folder.name });
+      deleteError = "";
+    }
+  };
+
+  async function handleExecuteDelete() {
+    if (!deletingItem) return;
+    const result = await executeDelete();
+    if (result.success) {
+      deletingItem = null;
+      deleteError = "";
+    } else {
+      deleteError = result.error || "Unknown error";
+    }
+  }
+
+  function handleCancelDelete() {
+    deletingItem = null;
+    deleteError = "";
+    cancelDelete();
+  }
+
+  // ✅ Bulk delete handlers
+  const handleConfirmBulkDelete = () => {
+    if (selectedItems.length === 0) return;
+    
+    const itemsToDelete = [
+      ...getSelectedFolders(folders).map(f => ({ id: f.id, type: 'folder' as const, name: f.name })),
+      ...getSelectedDocuments(items).map(d => ({ id: d.id, type: 'document' as const, name: d.title }))
+    ];
+    
+    bulkDeleteItems = itemsToDelete;
+    confirmBulkDelete(itemsToDelete);
+    deleteError = "";
+  };
+
+  async function handleExecuteBulkDelete() {
+    const result = await executeBulkDelete();
+    if (result.success) {
+      bulkDeleteItems = [];
+      deleteError = "";
+      clearSelection();
+    } else {
+      deleteError = result.error || "Unknown error";
+    }
+  }
+
+  function handleCancelBulkDelete() {
+    bulkDeleteItems = [];
+    deleteError = "";
+    cancelBulkDelete();
+  }
+
+  // ── Rename Handlers ─────────────────────────────────────
+
+  const handleRename = (id: string, type: 'folder' | 'document', name: string) => {
+    renamingItem = { id, type, name };
+    startRenameFromComposable({ id, type, name });
+    renameInputValue = name;
+    renameError = "";
+  };
+
+  async function handleSubmitRename() {
+    if (!renamingItem || !renameInputValue.trim()) return;
+    const result = await submitRenameFromComposable(renameInputValue);
+    if (result.success) {
+      renamingItem = null;
+      renameInputValue = "";
+      renameError = "";
+    } else {
+      renameError = result.error || "Unknown error";
+    }
+  }
+
+  function handleCancelRename() {
+    renamingItem = null;
+    renameInputValue = "";
+    renameError = "";
+    cancelRenameFromComposable();
+  }
+
+  // ── Other Handlers ──────────────────────────────────────
+
+ // ✅ FIX: handleShare harus set shareTarget dengan lengkap
+const handleShare = (id: string, type: 'folder' | 'document') => {
+  // Cari item berdasarkan type
+  const item = type === 'document' 
+    ? items.find(d => d.id === id)
+    : folders.find(f => f.id === id);
+  
+  if (!item) {
+    console.error('Item not found:', id, type);
+    return;
+  }
+  
+  // Set shareTarget dengan semua data yang dibutuhkan ShareModal
+  shareTarget = {
+    id: item.id,
+    type,
+    name: type === 'document' ? (item as Document).title : (item as Folder).name,
+    privacy: item.privacy
+  };
+  
+  // Buka modal
+  showShareModal = true;
+};
+
+  async function handleDownload(documentId: string) {
+    try {
+      const doc = items.find(d => d.id === documentId);
+      const filename = doc?.fileName || 'download';
+      
+      const res = await fetch(`/api/documents/${documentId}/download`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Download failed');
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Download failed:', err);
+      throw new Error(err.message || 'Failed to download file');
+    }
+  }
+
+  const handleBulkMove = () => alert('Move feature coming soon!');
+  const handleBulkManageAccess = () => alert('Share feature coming soon!');
+
+  const handleFolderCreated = () => loadStorageData();
+  const handleFilesUploaded = () => loadStorageData();
+
+  onMount(async () => {
+  currentUser = { 
+    id: 'user_123', 
+    username: 'demo_user', 
+    walletAddress: '0xabc123def456' 
+  };
+
+  await loadStorageData();
+});
 </script>
 
 <main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto">
@@ -97,52 +467,372 @@
       <div class="bg-[#121214] p-8 rounded-[40px] border border-white/10 shadow-2xl flex flex-col items-center" in:scale>
         <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
         <h3 class="text-white font-bold text-lg">DecentraShare Sync</h3>
-        <p class="text-gray-500 text-sm italic">Processing Ledger...</p>
+        <p class="text-gray-500 text-sm italic">Wait a minute...</p>
       </div>
     </div>
   {/if}
 
-  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
-    <div>
-      <Breadcrumbs {breadcrumbs} {currentFolder} {navigateTo} />
-      <div class="flex items-center gap-4">
-        <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight">
-          {currentFolder ? currentFolder.name : 'All Files'}
-        </h2>
-        <ViewSwitcher bind:viewMode />
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MODALS -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  
+  <!-- Rename Modal -->
+<!-- Rename Modal - Sudah benar, tidak perlu change -->
+{#if renamingItem}
+  <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+    <div class="bg-[#1a1a1e] p-6 rounded-2xl border border-white/10 shadow-2xl w-full max-w-sm" in:scale>
+      <h3 class="text-white font-bold mb-4">Rename {renamingItem.type}</h3>
+      
+      <input 
+        bind:value={renameInputValue}
+        oninput={() => renameError = ""} 
+        onkeydown={(e) => {
+          if (e.key === 'Enter') handleSubmitRename();
+          if (e.key === 'Escape') handleCancelRename();
+        }}
+        class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 transition-all mb-2
+               {renameError ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-blue-500 focus:ring-blue-500/50'}"
+        placeholder="Enter new name..."
+        autofocus
+        disabled={isRenameProcessing}
+      />
+      
+      {#if renameError}
+        <p class="text-xs text-red-400 ml-1 mb-4 flex items-center gap-1" role="alert" aria-live="polite">
+          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span class="truncate">{renameError}</span>
+        </p>
+      {/if}
+      
+      <div class="flex gap-3">
+        <button 
+          onclick={handleCancelRename}
+          class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
+          disabled={isRenameProcessing}
+        >
+          Cancel
+        </button>
+        <button 
+          onclick={handleSubmitRename}
+          class="flex-1 h-10 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          disabled={isRenameProcessing || !renameInputValue.trim()}
+        >
+          {#if isRenameProcessing}
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+          {:else}
+            Save
+          {/if}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete Modal - ✅ FIX: Buttons call local wrappers (yang call composable nama asli) -->
+{#if deletingItem}
+  <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+    <div class="bg-[#1a1a1e] p-6 rounded-2xl border border-white/10 shadow-2xl w-full max-w-sm" in:scale>
+      
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-white font-bold">Delete {deletingItem.type}</h3>
+          <p class="text-xs text-gray-500">This action cannot be undone.</p>
+        </div>
+      </div>
+      
+      <p class="text-sm text-gray-300 mb-4">
+        Are you sure you want to delete "<span class="text-white font-medium">{deletingItem.name}</span>"?
+      </p>
+      
+      {#if deleteError}
+        <p class="text-xs text-red-400 ml-1 mb-4 flex items-center gap-1" role="alert" aria-live="polite">
+          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span class="truncate">{deleteError}</span>
+        </p>
+      {/if}
+      
+      <div class="flex gap-3">
+        <!-- ✅ Call local wrapper (yang call composable nama asli) -->
+        <button onclick={handleCancelDelete} class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50" disabled={isProcessing}>Cancel</button>
+        <button onclick={handleExecuteDelete} class="flex-1 h-10 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled={isProcessing}>
+          {#if isProcessing}<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{:else}Delete{/if}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Bulk Delete Modal - ✅ FIX: Buttons call local wrappers -->
+{#if bulkDeleteItems.length > 0}
+  <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+    <div class="bg-[#1a1a1e] p-6 rounded-2xl border border-white/10 shadow-2xl w-full max-w-sm" in:scale>
+      
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-white font-bold">Delete {bulkDeleteItems.length} Items</h3>
+          <p class="text-xs text-gray-500">This action cannot be undone.</p>
+        </div>
+      </div>
+      
+      <div class="max-h-48 overflow-y-auto mb-4 pr-2">
+        {#each bulkDeleteItems.slice(0, 5) as item}
+          <p class="text-sm text-gray-300 py-1 flex items-center gap-2">
+            {#if item.type === 'folder'}
+              <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            {:else}
+              <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            {/if}
+            <span class="truncate">{item.name}</span>
+          </p>
+        {/each}
+        {#if bulkDeleteItems.length > 5}<p class="text-xs text-gray-500 italic mt-2">+ {bulkDeleteItems.length - 5} more...</p>{/if}
+      </div>
+      
+      {#if deleteError}
+        <p class="text-xs text-red-400 ml-1 mb-4 flex items-center gap-1" role="alert" aria-live="polite">
+          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="truncate">{deleteError}</span>
+        </p>
+      {/if}
+      
+      <div class="flex gap-3">
+        <!-- ✅ Call local wrapper (yang call composable nama asli) -->
+        <button onclick={handleCancelBulkDelete} class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50" disabled={isProcessing}>Cancel</button>
+        <button onclick={handleExecuteBulkDelete} class="flex-1 h-10 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled={isProcessing}>
+          {#if isProcessing}<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{:else}Delete {bulkDeleteItems.length}{/if}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+  <!-- Share Modal Placeholder -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- HEADER -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-10">
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      {#if breadcrumbs.length > 0}
+        <button onclick={goBack} class="p-2 mt-7 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0" title="Back to parent folder">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        </button>
+      {/if}
+      
+      <div class="min-w-0">
+        <Breadcrumbs {breadcrumbs} {currentFolder} {openFolder} />
+        <div class="flex items-center gap-3">
+          <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">{currentFolder ? currentFolder.name : 'All Files'}</h2>
+          <ViewSwitcher bind:viewMode />
+        </div>
       </div>
     </div>
     
     <div class="flex gap-3 w-full sm:w-auto">
+      <!-- Sort Dropdown -->
+      <div class="relative" data-sort-container>
+        <button onclick={toggleSortDropdown} class="flex items-center gap-2 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
+          <span class="hidden sm:inline">Sort:</span> {getSortLabel()}
+          <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        
+        {#if showSortDropdown}
+          <div transition:fly={{ y: -8, duration: 150 }} class="absolute right-0 mt-2 w-48 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-1 z-50">
+            {#each ['name', 'createdAt', 'fileSize', 'type'] as field}
+              <button onclick={() => applySort(field as SortField)} class="w-full flex items-center justify-between px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
+                <span>{field === 'createdAt' ? 'Date' : field === 'fileSize' ? 'Size' : field.charAt(0).toUpperCase() + field.slice(1)}</span>
+                {#if sortOption.field === field}<span class="text-blue-400">{sortOption.direction === 'asc' ? '↑' : '↓'}</span>{/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Select Mode Toggle -->
+     <button 
+  onclick={toggleSelectMode}
+  class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center gap-2 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
+  title={selectionMode ? 'Exit selection mode' : 'Select items'}
+>
+  <span class="relative">
+    <svg class="w-4 h-4 transition-all duration-300 {selectionMode ? 'drop-shadow-[0_0_8px_rgba(248,113,113,0.6)]' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {#if selectionMode}
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+      {:else}
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      {/if}
+    </svg>
+    {#if selectionMode}
+      <span class="absolute inset-0 rounded-full bg-blue-500/40 blur-md animate-ping opacity-70"></span>
+    {/if}
+  </span>
+  <span class="hidden sm:inline transition-colors duration-300 {selectionMode ? 'text-blue-100 font-semibold' : ''}">
+    {selectionMode ? 'Cancel' : 'Select'}
+  </span>
+  {#if selectionMode && selectedItems?.length > 0}
+  {/if}
+</button>
+      
+      <!-- Action Buttons -->
       <button onclick={() => showFolder = true} class="flex-1 sm:flex-none px-6 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-bold text-sm hover:bg-white/10 transition-all">+ Folder</button>
       <button onclick={() => showUpload = true} class="flex-1 sm:flex-none px-6 py-3 bg-blue-600 text-white rounded-[20px] font-bold text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20">Upload</button>
     </div>
   </header>
 
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- CONTENT -->
+  <!-- ═══════════════════════════════════════════════════ -->
   {#if isLoading}
-    <div class="flex flex-col items-center justify-center h-80 border border-white/5 rounded-[48px] bg-white/[0.01]">
-      <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p class="text-gray-500 text-sm animate-pulse font-bold tracking-widest uppercase text-[10px]">Syncing...</p>
-    </div>
+    
   {:else}
     <div in:fade>
       {#if viewMode === 1}
+        <!-- Split View -->
         <section class="mb-10">
-          <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Folders</h3>
-          <FileGrid {folders} items={[]} openFolder={navigateTo} {handleDeleteFolder} {handleDelete} {getFileTheme} />
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Folders</h3>
+            <span class="text-[10px] text-gray-600">{sortedFolders.length} items</span>
+          </div>
+          {#if sortedFolders.length > 0}
+            <FileGrid 
+              folders={sortedFolders} items={[]} {openFolder}
+              handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
+              onRename={(id, name) => handleRename(id, 'folder', name)}
+              onShare={handleShare} onDownload={handleDownload}
+              onDeleteConfirm={(id, type, name) => {
+                deletingItem = { id, type, name };  
+                confirmDelete({ id, type, name });   
+                deleteError = "";
+              }}
+              {selectedItems} 
+              {selectionMode}
+              onToggleSelect={toggleSelection}
+              {isSelected} 
+              onRefresh={loadStorageData}
+            />
+          {:else}<p class="text-gray-600 text-sm italic pl-2">No folders yet</p>{/if}
         </section>
         <section>
-          <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Documents</h3>
-          <FileTable folders={[]} {items} viewMode={1} openFolder={navigateTo} {handleDeleteFolder} {handleDelete} {getFileTheme} />
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Documents</h3>
+            <span class="text-[10px] text-gray-600">{sortedItems.length} items</span>
+          </div>
+          {#if sortedItems.length > 0}
+            <FileTable 
+              folders={[]} items={sortedItems} viewMode={1} {openFolder}
+              handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
+              onRename={(id, name) => handleRename(id, 'document', name)}
+              onShare={handleShare} onDownload={handleDownload}
+              onDeleteConfirm={(id, type, name) => {
+                deletingItem = { id, type, name };  
+                confirmDelete({ id, type, name });   
+                deleteError = "";
+              }}
+              {selectedItems} 
+              {selectionMode}
+              onToggleSelect={toggleSelection}
+              {isSelected}
+              onRefresh={loadStorageData}
+            />
+          {:else}<p class="text-gray-600 text-sm italic pl-2">No documents yet</p>{/if}
         </section>
       {:else if viewMode === 2}
-        <FileTable {folders} {items} viewMode={2} openFolder={navigateTo} {handleDeleteFolder} {handleDelete} {getFileTheme} />
+        <!-- Table View -->
+        {#if sortedFolders.length > 0 || sortedItems.length > 0}
+          <FileTable 
+            folders={sortedFolders} items={sortedItems} viewMode={2} {openFolder}
+            handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
+            onRename={(id, name) => handleRename(id, folders.some(f => f.id === id) ? 'folder' : 'document', name)}
+            onShare={handleShare} onDownload={handleDownload}
+            onDeleteConfirm={(id, type, name) => {
+                deletingItem = { id, type, name };  
+                confirmDelete({ id, type, name });   
+                deleteError = "";
+              }}
+            {selectedItems} 
+            {selectionMode}
+            onToggleSelect={toggleSelection}
+            {isSelected}
+            onRefresh={loadStorageData}
+          />
+        {:else}
+          <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">No items in this folder</p></div>
+        {/if}
       {:else}
-        <FileGrid {folders} {items} openFolder={navigateTo} {handleDeleteFolder} {handleDelete} {getFileTheme} />
+        <!-- Grid View -->
+        {#if sortedFolders.length > 0 || sortedItems.length > 0}
+          <FileGrid 
+            folders={sortedFolders} items={sortedItems} {openFolder}
+            handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
+            onRename={(id, name) => handleRename(id, folders.some(f => f.id === id) ? 'folder' : 'document', name)}
+            onShare={handleShare} onDownload={handleDownload}
+            onDeleteConfirm={(id, type, name) => {
+              deletingItem = { id, type, name };
+              confirmDelete({ id, type, name });
+              deleteError = "";
+            }}
+            {selectedItems} 
+            {selectionMode}
+            onToggleSelect={toggleSelection}
+            {isSelected}
+            onRefresh={loadStorageData}
+          />
+        {:else}
+          <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">No items in this folder</p></div>
+        {/if}
       {/if}
     </div>
   {/if}
 
-  <FolderModal isOpen={showFolder} onClose={() => showFolder = false} onCreated={loadStorageData} parentId={currentFolder?.id} />
-  <UploadModal isOpen={showUpload} onClose={() => showUpload = false} onUploaded={() => withLoading(loadStorageData)} folderId={currentFolder?.id} />
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- CHILD MODALS -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <FolderModal isOpen={showFolder} onClose={() => showFolder = false} onCreated={handleFolderCreated} parentId={currentFolder?.id ?? null} existingFolders={folders} />
+  <UploadModal isOpen={showUpload} onClose={() => showUpload = false} onUploaded={handleFilesUploaded} folderId={currentFolder?.id ?? null} />
+
+  {#if selectionMode}
+    <BulkActionBar
+      selectedCount={selectedItems.length}
+      selectedType={selectedTypeValue} 
+      onMove={handleBulkMove}
+      onManageAccess={handleBulkManageAccess}
+      onDelete={handleConfirmBulkDelete}
+      onCancel={clearSelection}
+    />
+  {/if}
+
+  {#if showShareModal && shareTarget && currentUser}
+  <ShareModal
+    isOpen={showShareModal}
+    itemId={shareTarget.id}
+    itemType={shareTarget.type}
+    itemName={shareTarget.name}
+    currentPrivacy={shareTarget.privacy}
+    currentUserId={currentUser.id}
+    onClose={() => { 
+      showShareModal = false; 
+      shareTarget = null; 
+    }}
+    onShared={loadStorageData} 
+  />
+{/if}
 </main>
