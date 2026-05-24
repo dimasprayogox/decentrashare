@@ -568,42 +568,66 @@ export const triggerBlockchainConfirmation = async (req: AuthRequest, res: Respo
  */
 // controllers/document.controller.ts
 
+/**
+ * POST /api/documents/batch/trigger-blockchain
+ * Prepare batch confirmation data for multiple documents
+ * ✅ ONLY uses blockchainService.filterNewFilesForBatch for on-chain checking
+ */
 export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: Response) => {
   try {
     const { documentIds } = req.body;
     const userId = req.user?.userId;
 
-    // ... [existing validation code] ...
+    // Validasi input
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "documentIds array required" });
+    }
+    if (documentIds.length > 10) {
+      return res.status(400).json({ success: false, message: "Maximum 10 files per batch (gas safety)" });
+    }
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const items = [];
-    
-    // Validasi & kumpulkan data tiap dokumen
-    for (const id of documentIds) {
-      const doc = await prisma.document.findUnique({
-        where: { id, ownerId: userId }
-      });
+    // 1. Ambil dokumen dari DB
+    const docs = await prisma.document.findMany({
+      where: { id: { in: documentIds }, ownerId: userId }
+    });
 
-      if (!doc) continue;
-      if (doc.isOnChain) continue; // Skip jika sudah on-chain di DB
-      if (doc.pendingOnChainUntil && new Date() > doc.pendingOnChainUntil) continue;
+    if (docs.length === 0) {
+      return res.status(404).json({ success: false, message: "No valid documents found" });
+    }
 
-      items.push({
+    // 2. Siapkan items untuk filtering (hanya yang belum on-chain di DB)
+    const items = docs
+      .filter(doc => !doc.isOnChain && (!doc.pendingOnChainUntil || new Date() <= doc.pendingOnChainUntil))
+      .map(doc => ({
         docId: doc.id,
         cid: doc.ipfsHash,
         fileName: doc.fileName,
         fileHash: doc.fileHash
+      }));
+
+    if (items.length === 0) {
+      return res.json({
+        success: true,
+        skipConfirmation: true,
+        message: `All ${docs.length} file(s) already confirmed on-chain or expired`
       });
     }
 
-    if (items.length === 0) {
-      return res.status(400).json({ success: false, message: "No valid files for batch confirmation" });
-    }
-
-    // ✅ NEW: Filter files that are already on-chain via contract view call
+    // 3. ✅ FILTER via contract view function (pindah ke blockchainService)
     const { newItems, skippedCount, message } = await blockchainService.filterNewFilesForBatch(
-      items.map(({ docId, ...item }) => item)
+      items,
+      process.env.CONTRACT_ADDRESS
     );
 
+    logger.info('🔍 Batch pre-check result', {
+      totalRequested: items.length,
+      newItems: newItems.length,
+      skipped: skippedCount,
+      message
+    });
+
+    // 4. Jika semua sudah on-chain, return early
     if (newItems.length === 0) {
       return res.json({
         success: true,
@@ -613,15 +637,17 @@ export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: 
       });
     }
 
-    // Prepare batch data with filtered items only
+    // 5. Prepare batch payload HANYA untuk file baru
     const batchData = blockchainService.prepareBatchTransactionData(newItems);
 
     res.json({
       success: true,
-      message: `Ready to confirm ${newItems.length} new file(s) on blockchain (${skippedCount} skipped - already on-chain)`,
+      message: `Ready to confirm ${newItems.length} new file(s) on blockchain (${skippedCount} skipped)`,
       data: {
         items: batchData.items,
-        docIds: newItems.map((_, idx) => items[idx].docId), // Map back to original docIds
+        docIds: newItems.map(item => 
+          items.find(i => i.cid === item.cid && i.fileHash === item.fileHash)?.docId
+        ).filter(Boolean) as string[],
         contractAddress: batchData.contractAddress,
         abi: batchData.abi,
         functionName: batchData.functionName,
@@ -632,7 +658,12 @@ export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: 
     });
 
   } catch (error: any) {
-    console.error("batch-trigger error:", error);
+    logger.error("❌ batch-trigger error:", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.userId,
+      documentIds: req.body?.documentIds
+    });
     res.status(500).json({ success: false, message: error.message });
   }
 };
