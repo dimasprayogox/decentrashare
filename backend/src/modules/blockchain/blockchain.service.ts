@@ -30,7 +30,7 @@ class BlockchainService {
 
   constructor() {
     const rpcUrl = process.env.RPC_URL ?? config.blockchain.ganacheUrl;
-    const contractAddress = process.env.CONTRACT_ADDRESS ?? config.blockchain.contractAddress;
+    const contractAddress = process.env.CONTRACT_ADDRESS ?? "0xa56DE256D4AfD0CdF9860FccD281147B67F6ae85";
 
     if (!contractAddress) {
       throw new Error('Missing CONTRACT_ADDRESS in environment variables.');
