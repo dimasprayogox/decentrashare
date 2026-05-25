@@ -36,6 +36,7 @@ import type {
   StorageErrorResponse,
   PrivacyLevel,
   BlockchainRecordData,
+  ShareableUser,
 } from '$lib/types/storage';
 
 

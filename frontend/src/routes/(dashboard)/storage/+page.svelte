@@ -22,7 +22,7 @@
   import { useDelete } from '$lib/composables/useDelete.svelte';
   import { useRename } from '$lib/composables/useRename.svelte';
 
-  import type { Folder, Document, SortField, SortDirection, PrivacyLevel } from '$lib/types/storage';
+  import type { Folder, Document, SortField, SortDirection, PrivacyLevel, ShareableUser } from '$lib/types/storage';
 
   // ── Composables ──────────────────────────────────────────
   // ✅ Hanya ambil functions yang tidak butuh state management
@@ -40,7 +40,7 @@
     confirmBulkDelete,
     executeBulkDelete,
     cancelBulkDelete
-  } = useDelete(loadStorageData);
+  } = useDelete(refreshStorage);
 
   // ✅ RENAME: Destructuring DENGAN rename (karena butuh local wrappers)
   const {
@@ -48,7 +48,7 @@
     startRename: startRenameFromComposable,
     submitRename: submitRenameFromComposable,
     cancelRename: cancelRenameFromComposable
-  } = useRename(loadStorageData);
+  } = useRename(refreshStorage);
 
   // ── Local State (untuk UI reactivity) ───────────────────
   let folders = $state<Folder[]>([]);
@@ -56,6 +56,7 @@
   let breadcrumbs = $state<{ id: string; name: string }[]>([]);
   let currentFolder = $state<{ id: string; name: string } | null>(null);
   let isLoading = $state(true);
+  let isRefreshingStorage = $state(false);
   let viewMode = $state(1);
   let showUpload = $state(false);
   let showFolder = $state(false);
@@ -92,6 +93,18 @@
     name: string;
     privacy: PrivacyLevel;
   } | null>(null);
+
+  let showBulkShareModal = $state(false);
+  let bulkShareTargets = $state<Array<{ id: string; type: 'folder' | 'document'; name: string }>>([]);
+  let bulkShareSearchQuery = $state('');
+  let bulkShareSearchResults = $state<ShareableUser[]>([]);
+  let bulkShareSelectedUsers = $state<ShareableUser[]>([]);
+  let bulkShareRole = $state<'VIEWER' | 'EDITOR'>('VIEWER');
+  let bulkShareError = $state('');
+  let bulkShareSuccess = $state('');
+  let isBulkShareSearching = $state(false);
+  let isBulkShareProcessing = $state(false);
+  let bulkShareSearchTimeout: ReturnType<typeof setTimeout>;
 
   // ✅ TAMBAHKAN: Current user state
   let currentUser = $state<{ 
@@ -167,9 +180,9 @@
     return moveFolderTree[moveTreeKey(folderId)] ?? [];
   }
 
-  async function loadMoveFolderChildren(folderId: string | null) {
+  async function loadMoveFolderChildren(folderId: string | null, force = false) {
     const key = moveTreeKey(folderId);
-    if (moveFolderTree[key]) return;
+    if (moveFolderTree[key] && !force) return;
 
     try {
       if (folderId) moveLoadingFolders = [...moveLoadingFolders, folderId];
@@ -336,6 +349,17 @@
   const sortedItems = $derived(sortItems(items, sortOption));
 
   // ── Data Loading ─────────────────────────────────────────
+  async function refreshStorage() {
+    if (isRefreshingStorage) return;
+
+    try {
+      isRefreshingStorage = true;
+      await loadStorageData();
+    } finally {
+      isRefreshingStorage = false;
+    }
+  }
+
   async function loadStorageData() {
     try {
       isLoading = true;
@@ -533,7 +557,7 @@
 
       bulkConfirmStatus = 'Updating database...';
       await storageService.confirmBatchComplete(txResult.txHash, confirmedIds);
-      await loadStorageData();
+      await refreshStorage();
 
       bulkConfirmSuccess = `${confirmedIds.length} file berhasil dikonfirmasi on-chain.`;
       bulkConfirmStatus = '';
@@ -595,15 +619,15 @@
  // ✅ FIX: handleShare harus set shareTarget dengan lengkap
 const handleShare = (id: string, type: 'folder' | 'document') => {
   // Cari item berdasarkan type
-  const item = type === 'document' 
+  const item = type === 'document'
     ? items.find(d => d.id === id)
     : folders.find(f => f.id === id);
-  
+
   if (!item) {
     console.error('Item not found:', id, type);
     return;
   }
-  
+
   // Set shareTarget dengan semua data yang dibutuhkan ShareModal
   shareTarget = {
     id: item.id,
@@ -611,10 +635,122 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     name: type === 'document' ? (item as Document).title : (item as Folder).name,
     privacy: item.privacy
   };
-  
+
   // Buka modal
   showShareModal = true;
 };
+
+  function resetBulkShareState() {
+    showBulkShareModal = false;
+    bulkShareTargets = [];
+    bulkShareSearchQuery = '';
+    bulkShareSearchResults = [];
+    bulkShareSelectedUsers = [];
+    bulkShareRole = 'VIEWER';
+    bulkShareError = '';
+  }
+
+  function toggleBulkShareUser(user: ShareableUser) {
+    if (bulkShareSelectedUsers.some(selected => selected.id === user.id)) {
+      bulkShareSelectedUsers = bulkShareSelectedUsers.filter(selected => selected.id !== user.id);
+    } else {
+      bulkShareSelectedUsers = [...bulkShareSelectedUsers, user];
+      bulkShareSearchResults = bulkShareSearchResults.filter(result => result.id !== user.id);
+    }
+  }
+
+  async function performBulkShareSearch() {
+    if (bulkShareSearchQuery.trim().length < 2) {
+      bulkShareSearchResults = [];
+      return;
+    }
+
+    try {
+      isBulkShareSearching = true;
+      bulkShareError = '';
+      const response = await storageService.searchUsersForShare(bulkShareSearchQuery, {
+        excludeSharedUserIds: bulkShareSelectedUsers.map(user => user.id)
+      });
+      bulkShareSearchResults = response.success ? response.data.users : [];
+    } catch (error: unknown) {
+      bulkShareError = error instanceof Error ? error.message : 'Gagal mencari user.';
+    } finally {
+      isBulkShareSearching = false;
+    }
+  }
+
+  function handleBulkShareSearchInput() {
+    if (bulkShareSearchTimeout) clearTimeout(bulkShareSearchTimeout);
+    bulkShareSearchTimeout = setTimeout(() => {
+      void performBulkShareSearch();
+    }, 300);
+  }
+
+  function handleBulkManageAccess() {
+    const targets = [
+      ...getSelectedFolders(folders).map(folder => ({ id: folder.id, type: 'folder' as const, name: folder.name })),
+      ...getSelectedDocuments(items).map(document => ({ id: document.id, type: 'document' as const, name: document.title }))
+    ];
+
+    if (targets.length === 0) {
+      bulkShareError = 'Pilih minimal satu item untuk dibagikan.';
+      return;
+    }
+
+    bulkShareTargets = targets;
+    bulkShareSearchQuery = '';
+    bulkShareSearchResults = [];
+    bulkShareSelectedUsers = [];
+    bulkShareRole = 'VIEWER';
+    bulkShareError = '';
+    bulkShareSuccess = '';
+    showBulkShareModal = true;
+  }
+
+  async function handleExecuteBulkShare() {
+    if (bulkShareSelectedUsers.length === 0) {
+      bulkShareError = 'Pilih minimal satu user tujuan.';
+      return;
+    }
+
+    const selectedUserIds = bulkShareSelectedUsers.map(user => user.id);
+    const folderTargets = bulkShareTargets.filter(target => target.type === 'folder');
+    const documentTargets = bulkShareTargets.filter(target => target.type === 'document');
+
+    try {
+      isBulkShareProcessing = true;
+      bulkShareError = '';
+
+      if (documentTargets.length > 0) {
+        await storageService.shareDocuments(documentTargets.map(target => ({
+          documentId: target.id,
+          targetUsers: selectedUserIds
+        })));
+      }
+
+      if (folderTargets.length > 0) {
+        await storageService.shareFolders(folderTargets.map(target => ({
+          itemId: target.id,
+          itemType: 'folder',
+          targetUsers: selectedUserIds.map(userId => ({ userId, role: bulkShareRole }))
+        })));
+      }
+
+      bulkShareSuccess = `${bulkShareTargets.length} item berhasil dibagikan.`;
+      showBulkShareModal = false;
+      clearSelection();
+      selectionMode = false;
+      await refreshStorage();
+
+      setTimeout(() => {
+        bulkShareSuccess = '';
+      }, 4000);
+    } catch (error: unknown) {
+      bulkShareError = error instanceof Error ? error.message : 'Gagal membagikan item.';
+    } finally {
+      isBulkShareProcessing = false;
+    }
+  }
 
   async function handleDownload(documentId: string) {
     try {
@@ -645,8 +781,11 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     moveError = "";
     moveSuccess = "";
     moveNotice = "";
+    moveFolderTree = {};
+    moveExpandedFolders = [];
+    moveLoadingFolders = [];
     showMoveModal = true;
-    void loadMoveFolderChildren(null);
+    void loadMoveFolderChildren(null, true);
   }
 
   function handleSingleMove(id: string, type: 'folder' | 'document') {
@@ -730,7 +869,10 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
 
       moveSuccess = `${parts.join(' dan ')} dipindahkan ke ${getMoveDestinationLabel()}. ${appliedPrivacy ? `Privacy disesuaikan menjadi ${appliedPrivacy}.` : ''}`;
       showMoveModal = false;
-      await loadStorageData();
+      await refreshStorage();
+      moveFolderTree = {};
+      moveExpandedFolders = [];
+      moveLoadingFolders = [];
       clearSelection();
       selectionMode = false;
 
@@ -748,23 +890,33 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     showMoveModal = false;
     moveTargetFolderId = null;
     moveTargets = [];
+    moveFolderTree = {};
+    moveExpandedFolders = [];
+    moveLoadingFolders = [];
     moveError = "";
     moveNotice = "";
   }
 
-  const handleBulkManageAccess = () => alert('Share feature coming soon!');
+  const handleFolderCreated = () => refreshStorage();
+  const handleFilesUploaded = () => refreshStorage();
 
-  const handleFolderCreated = () => loadStorageData();
-  const handleFilesUploaded = () => loadStorageData();
-
-  onMount(async () => {
-  currentUser = { 
-    id: 'user_123', 
-    username: 'demo_user', 
-    walletAddress: '0xabc123def456' 
+  onMount(() => {
+  currentUser = {
+    id: 'user_123',
+    username: 'demo_user',
+    walletAddress: '0xabc123def456'
   };
 
-  await loadStorageData();
+  const handleStorageRefresh = () => {
+    void refreshStorage();
+  };
+
+  window.addEventListener('decentrashare:refresh', handleStorageRefresh);
+  void refreshStorage();
+
+  return () => {
+    window.removeEventListener('decentrashare:refresh', handleStorageRefresh);
+  };
 });
 </script>
 
@@ -1023,8 +1175,77 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
 </div>
 {/if}
 
-  <!-- Share Modal Placeholder -->
+  {#if showBulkShareModal}
+    <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-md px-4" transition:fade>
+      <div class="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#111115] shadow-2xl shadow-black/60 overflow-hidden" in:scale>
+        <div class="p-6 border-b border-white/10 bg-gradient-to-br from-violet-600/15 via-white/[0.03] to-transparent">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h3 class="text-white font-black text-xl">Bulk Share</h3>
+              <p class="text-sm text-gray-400">Bagikan {bulkShareTargets.length} item ke user terpilih.</p>
+            </div>
+            <button onclick={resetBulkShareState} class="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-colors" disabled={isBulkShareProcessing} aria-label="Close bulk share modal">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
 
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Cari user</label>
+            <input bind:value={bulkShareSearchQuery} oninput={handleBulkShareSearchInput} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500" placeholder="Username atau wallet address" disabled={isBulkShareProcessing} />
+          </div>
+
+          {#if isBulkShareSearching}
+            <p class="text-sm text-gray-500">Searching...</p>
+          {:else if bulkShareSearchResults.length > 0}
+            <div class="max-h-44 overflow-y-auto rounded-2xl border border-white/10 bg-black/20">
+              {#each bulkShareSearchResults as user (user.id)}
+                <button onclick={() => toggleBulkShareUser(user)} class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors">
+                  <span class="min-w-0">
+                    <span class="block text-sm text-white font-medium truncate">{user.username}</span>
+                    <span class="block text-xs text-gray-500 truncate">{user.walletAddress}</span>
+                  </span>
+                  <span class="text-violet-300 text-xs font-bold">Add</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
+
+          {#if bulkShareSelectedUsers.length > 0}
+            <div class="flex flex-wrap gap-2">
+              {#each bulkShareSelectedUsers as user (user.id)}
+                <button onclick={() => toggleBulkShareUser(user)} class="px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-200 text-xs hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-300 transition-colors">
+                  {user.username} ×
+                </button>
+              {/each}
+            </div>
+          {/if}
+
+          {#if bulkShareTargets.some(target => target.type === 'folder')}
+            <div>
+              <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Folder role</label>
+              <select bind:value={bulkShareRole} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-violet-500" disabled={isBulkShareProcessing}>
+                <option value="VIEWER" class="bg-[#111115]">Viewer</option>
+                <option value="EDITOR" class="bg-[#111115]">Editor</option>
+              </select>
+            </div>
+          {/if}
+
+          {#if bulkShareError}
+            <p class="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3" role="alert">{bulkShareError}</p>
+          {/if}
+        </div>
+
+        <div class="p-5 border-t border-white/10 flex gap-3">
+          <button onclick={resetBulkShareState} class="flex-1 h-11 rounded-2xl bg-white/5 text-white hover:bg-white/10 transition-colors" disabled={isBulkShareProcessing}>Cancel</button>
+          <button onclick={handleExecuteBulkShare} class="flex-1 h-11 rounded-2xl bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={isBulkShareProcessing || bulkShareSelectedUsers.length === 0}>
+            {isBulkShareProcessing ? 'Sharing...' : 'Share'}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- HEADER -->
@@ -1098,7 +1319,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     </div>
   </header>
 
-  {#if moveSuccess || (moveError && !showMoveModal)}
+  {#if moveSuccess || bulkShareSuccess || (moveError && !showMoveModal)}
     <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {moveError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}" role="status" aria-live="polite">
       {#if moveError}
         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1109,8 +1330,8 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
         </svg>
       {/if}
-      <p class="text-sm flex-1">{moveError || moveSuccess}</p>
-      <button onclick={() => { moveError = ''; moveSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss move status">
+      <p class="text-sm flex-1">{moveError || moveSuccess || bulkShareSuccess}</p>
+      <button onclick={() => { moveError = ''; moveSuccess = ''; bulkShareSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss move status">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
@@ -1174,7 +1395,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
               {selectionMode}
               onToggleSelect={toggleSelection}
               {isSelected} 
-              onRefresh={loadStorageData}
+              onRefresh={refreshStorage}
             />
           {:else}<p class="text-gray-600 text-sm italic pl-2">No folders yet</p>{/if}
         </section>
@@ -1198,7 +1419,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
               {selectionMode}
               onToggleSelect={toggleSelection}
               {isSelected}
-              onRefresh={loadStorageData}
+              onRefresh={refreshStorage}
             />
           {:else}<p class="text-gray-600 text-sm italic pl-2">No documents yet</p>{/if}
         </section>
@@ -1219,7 +1440,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
             {selectionMode}
             onToggleSelect={toggleSelection}
             {isSelected}
-            onRefresh={loadStorageData}
+            onRefresh={refreshStorage}
           />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">No items in this folder</p></div>
@@ -1241,7 +1462,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
             {selectionMode}
             onToggleSelect={toggleSelection}
             {isSelected}
-            onRefresh={loadStorageData}
+            onRefresh={refreshStorage}
           />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">No items in this folder</p></div>
@@ -1284,7 +1505,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       showShareModal = false; 
       shareTarget = null; 
     }}
-    onShared={loadStorageData} 
+    onShared={refreshStorage} 
   />
 {/if}
 </main>

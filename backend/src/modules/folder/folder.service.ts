@@ -494,43 +494,43 @@ export const shareFoldersFlexible = async (
     const finalResults = [];
 
     for (const item of shares) {
-      // 1. Validasi Kepemilikan Folder
       const folder = await tx.folder.findUnique({ where: { id: item.folderId } });
       if (!folder || folder.ownerId !== ownerId) continue;
 
-      // 2. Loop User yang akan diberi akses ke folder ini
+      const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
       const folderResults = [];
+
       for (const target of item.targetUsers) {
         if (target.userId === ownerId) continue;
 
-        // Gunakan upsert: Jika sudah ada update rolenya, jika belum buat baru
-        const access = await tx.folderAccess.upsert({
-          where: {
-            folderId_userId: { folderId: item.folderId, userId: target.userId }
-          },
-          update: { role: target.role }, 
-          create: { 
-            folderId: item.folderId, 
-            userId: target.userId, 
-            role: target.role 
-          }
-        });
+        for (const folderId of subtreeFolderIds) {
+          await tx.folderAccess.upsert({
+            where: {
+              folderId_userId: { folderId, userId: target.userId }
+            },
+            update: { role: target.role },
+            create: {
+              folderId,
+              userId: target.userId,
+              role: target.role
+            }
+          });
+        }
+
         folderResults.push({ userId: target.userId, role: target.role, status: 'granted' });
       }
 
-      // 3. AUTOMATIC PRIVACY SYNC (Google Drive Style)
-      // Saat dishare ke orang tertentu, folder & isinya otomatis jadi SPECIFIC_USER
-      await tx.folder.update({
-        where: { id: item.folderId },
+      await tx.folder.updateMany({
+        where: { id: { in: subtreeFolderIds }, ownerId },
         data: { privacy: 'SPECIFIC_USER' }
       });
 
       await tx.document.updateMany({
-        where: { folderId: item.folderId, ownerId },
+        where: { folderId: { in: subtreeFolderIds }, ownerId },
         data: { privacy: 'SPECIFIC_USER' }
       });
 
-      finalResults.push({ folderId: item.folderId, sharedWith: folderResults });
+      finalResults.push({ folderId: item.folderId, sharedWith: folderResults, cascadedFolders: subtreeFolderIds.length });
     }
 
     return finalResults;
@@ -583,42 +583,42 @@ export const revokeFoldersAccess = async (
     const finalResults = [];
 
     for (const item of revokes) {
-      // 1. Validasi Kepemilikan Folder
       const folder = await tx.folder.findUnique({ where: { id: item.folderId } });
       if (!folder || folder.ownerId !== ownerId) continue;
 
-      // 2. Hapus Akses User dari tabel FolderAccess
+      const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
       const deleteResult = await tx.folderAccess.deleteMany({
         where: {
-          folderId: item.folderId,
+          folderId: { in: subtreeFolderIds },
           userId: { in: item.targetUserIds }
         }
       });
 
-      // 3. Check: Jika sudah tidak ada lagi yang punya akses, 
-      // kembalikan folder & semua isinya ke PRIVATE (Google Drive Style)
-      const remainingAccess = await tx.folderAccess.count({
-        where: { folderId: item.folderId }
+      const foldersWithAccess = await tx.folderAccess.findMany({
+        where: { folderId: { in: subtreeFolderIds } },
+        select: { folderId: true },
+        distinct: ['folderId']
       });
+      const sharedFolderIds = new Set(foldersWithAccess.map((access: any) => access.folderId));
+      const privateFolderIds = subtreeFolderIds.filter(folderId => !sharedFolderIds.has(folderId));
 
-      if (remainingAccess === 0) {
-        // Kunci Foldernya
-        await tx.folder.update({
-          where: { id: item.folderId },
+      if (privateFolderIds.length > 0) {
+        await tx.folder.updateMany({
+          where: { id: { in: privateFolderIds }, ownerId },
           data: { privacy: 'PRIVATE' }
         });
 
-        // Kunci semua isinya (Penting untuk keamanan!)
         await tx.document.updateMany({
-          where: { folderId: item.folderId, ownerId },
+          where: { folderId: { in: privateFolderIds }, ownerId },
           data: { privacy: 'PRIVATE' }
         });
       }
 
-      finalResults.push({ 
-        folderId: item.folderId, 
+      finalResults.push({
+        folderId: item.folderId,
         revokedCount: deleteResult.count,
-        newStatus: remainingAccess === 0 ? 'PRIVATE' : 'SPECIFIC_USER'
+        cascadedFolders: subtreeFolderIds.length,
+        newStatus: privateFolderIds.length === subtreeFolderIds.length ? 'PRIVATE' : 'SPECIFIC_USER'
       });
     }
 
@@ -648,24 +648,10 @@ export const getSharedWithMeFolders = async (userId: string) => {
               avatarUrl: true
             }
           },
-          // AMBIL SEMUA DOKUMEN DI DALAM FOLDER INI
+          // Akses folder sudah memberi hak melihat dokumen di dalam folder tersebut.
           documents: {
-            where: { 
-              isArchived: false,
-              OR: [
-                { privacy: 'PUBLIC' }, // Lolos jika publik
-                { privacy: 'LINK_ONLY' }, // Lolos jika link only
-                {
-                  AND: [
-                    { privacy: 'SPECIFIC_USER' },
-                    { 
-                      sharedWith: { 
-                        some: { userId: userId } // Lolos HANYA jika user terdaftar di file ini
-                      } 
-                    }
-                  ]
-                }
-              ]
+            where: {
+              isArchived: false
             },
             include: {
               owner: {
@@ -744,24 +730,36 @@ export const updateFoldersPrivacy = async (
     const results = [];
 
     for (const item of updates) {
-      // 1. Update Foldernya
+      const folder = await tx.folder.findFirst({
+        where: { id: item.folderId, ownerId }
+      });
+
+      if (!folder) {
+        results.push({
+          folderId: item.folderId,
+          status: 'failed',
+          newPrivacy: item.newPrivacy,
+          accessRevoked: 0
+        });
+        continue;
+      }
+
+      const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
+
       const folderUpdate = await tx.folder.updateMany({
-        where: { id: item.folderId, ownerId: ownerId },
+        where: { id: { in: subtreeFolderIds }, ownerId },
         data: { privacy: item.newPrivacy }
       });
 
-      // 2. Sinkronisasi Dokumen di dalamnya
       await tx.document.updateMany({
-        where: { folderId: item.folderId, ownerId: ownerId },
+        where: { folderId: { in: subtreeFolderIds }, ownerId },
         data: { privacy: item.newPrivacy }
       });
 
-      // 3. LOGIKA CLEANUP TOTAL:
-      // Jika status baru BUKAN 'SPECIFIC_USER', hapus semua akses user agar tidak menumpuk.
       let accessDeleted = 0;
       if (item.newPrivacy !== 'SPECIFIC_USER') {
         const deleted = await tx.folderAccess.deleteMany({
-          where: { folderId: item.folderId }
+          where: { folderId: { in: subtreeFolderIds } }
         });
         accessDeleted = deleted.count;
       }
@@ -770,7 +768,8 @@ export const updateFoldersPrivacy = async (
         folderId: item.folderId,
         status: folderUpdate.count > 0 ? 'updated' : 'failed',
         newPrivacy: item.newPrivacy,
-        accessRevoked: accessDeleted
+        accessRevoked: accessDeleted,
+        cascadedFolders: subtreeFolderIds.length
       });
     }
 

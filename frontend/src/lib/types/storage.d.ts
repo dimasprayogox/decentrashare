@@ -113,6 +113,13 @@ export interface AuthUser {
   email?: string;
 }
 
+export interface ShareableUser {
+  id: string;
+  username: string;
+  walletAddress: string;
+  avatarUrl?: string | null;
+}
+
 // ── Folder Types ───────────────────────────────────────────
 export interface Folder {
   id: string;
