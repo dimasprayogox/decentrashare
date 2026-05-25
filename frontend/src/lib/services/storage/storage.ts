@@ -7,6 +7,7 @@ import type {
   GetDocumentDetailResponse,
   UploadFilesResponse,
   MoveDocumentsResponse,
+  MoveFolderResponse,
   BulkOperationResponse,
   UpdatePrivacyResponse,
   ShareDocumentsResponse,
@@ -294,111 +295,6 @@ confirmBatchComplete: async (txHash: string, documentIds: string[]) => {
   });
 },
 
-/**
- * ✅ NEW: Helper untuk batch record on-chain (dipanggil setelah trigger)
- */
-recordFilesBatchOnChain: async (
-  payload: BatchBlockchainPayload,
-  callbacks?: {
-    onStatus?: (status: string) => void;
-    onTxHash?: (txHash: string) => void;
-  }
-) => {
-  if (!window.ethereum) throw new Error('Wallet not detected. Install MetaMask/Rabby.');
-
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  
-  // ✅ Pastikan jaringan Sepolia
-  const network = await provider.getNetwork();
-  if (network.chainId !== 11155111n) {
-    await switchToSepolia();
-  }
-
-  const signer = await provider.getSigner();
-  
-  console.log('[Web3] Recording batch to blockchain:', { 
-    fileCount: payload.items.length,
-    user: await signer.getAddress()
-  });
-
-  const contract = new ethers.Contract(
-    payload.contractAddress, 
-    payload.abi, 
-    signer
-  );
-
-  // Estimasi gas + buffer 20%
-  let gasLimit: bigint;
-  try {
-    const estimated = await contract[payload.functionName].estimateGas(...payload.args);
-    gasLimit = (estimated * 120n) / 100n;
-    console.log('[Web3] Estimated gas:', estimated.toString(), 'with buffer:', gasLimit.toString());
-  } catch (err) {
-    console.warn('[Web3] Gas estimation failed, using fallback');
-    gasLimit = 300000n * BigInt(Math.min(payload.items.length, 10));
-  }
-
-  try {
-    if (callbacks?.onStatus) callbacks.onStatus('🔐 Confirm batch in wallet...');
-    
-    // ✅ Send SINGLE transaction untuk semua file
-    const tx = await contract[payload.functionName](...payload.args, { gasLimit });
-    
-    if (callbacks?.onTxHash) callbacks.onTxHash(tx.hash);
-    if (callbacks?.onStatus) callbacks.onStatus('⛓️ TX sent, waiting for confirmation...');
-    
-    console.log('[Web3] Batch TX sent:', tx.hash);
-    
-    // Wait with timeout
-    const receipt = await Promise.race([
-      tx.wait(1),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('TX_CONFIRMATION_TIMEOUT')), 180000) // 3 min for batch
-      )
-    ]) as ethers.TransactionReceipt;
-    
-    console.log('[Web3] Batch confirmed:', { 
-      txHash: receipt.hash, 
-      block: receipt.blockNumber,
-      gasUsed: receipt.gasUsed?.toString()
-    });
-    
-    if (receipt.status !== 1) {
-      throw new Error('TRANSACTION_FAILED_ON_CHAIN');
-    }
-    
-    if (callbacks?.onStatus) callbacks.onStatus('✅ Batch confirmed!');
-    
-    return {
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber,
-      success: true,
-      gasUsed: receipt.gasUsed?.toString(),
-      fileCount: payload.items.length
-    };
-    
-  } catch (error: any) {
-    // Specific error handling
-    if (error.code === 4001 || error.message?.includes('rejected')) {
-      throw new Error('TRANSACTION_REJECTED');
-    }
-    if (error.code === -32603 || error.message?.includes('insufficient funds')) {
-      throw new Error('INSUFFICIENT_FUNDS');
-    }
-    if (error.code === 4902 || error.message?.includes('unrecognized chain')) {
-      throw new Error('WRONG_NETWORK');
-    }
-    if (error.message?.includes('execution reverted')) {
-      throw new Error(`CONTRACT_ERROR: ${error.reason || error.message}`);
-    }
-    if (error.message === 'TX_CONFIRMATION_TIMEOUT') {
-      throw new Error('TX_CONFIRMATION_TIMEOUT');
-    }
-    
-    console.error('[Web3] Batch unexpected error:', error);
-    throw new Error(`BLOCKCHAIN_ERROR: ${error.message || 'Unknown error'}`);
-  }
-},
   // ── Bulk Operations ─────────────────────────────────────
   
   // ✅ SOFT DELETE: Archive documents (pindah ke Trash)
@@ -497,6 +393,14 @@ recordFilesBatchOnChain: async (
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ documentIds, targetFolderId })
+    });
+  },
+
+  moveFolder: (folderId: string, targetFolderId: string | null) => {
+    return apiClient<MoveFolderResponse>('/folders/move', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderId, targetFolderId })
     });
   },
 // src/lib/services/storage.service.ts

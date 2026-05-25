@@ -19,6 +19,7 @@
     onDeleteConfirm,
     onShare,
     onDownload,
+    onMove,
     selectedItems = [],
     onToggleSelect,
     selectionMode = false,
@@ -36,6 +37,7 @@
     onDeleteConfirm?: (id: string, type: 'folder' | 'document', name: string) => void;
     onShare?: (id: string, type: 'folder' | 'document') => void;
     onDownload?: (id: string) => void;
+    onMove?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
     selectedItems?: string[];
     onToggleSelect?: (id: string) => void;
     selectionMode?: boolean;
@@ -454,7 +456,7 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
 
 async function handleConfirmBlockchain(item: Document) {
   // ✅ Cek lokal: jika sudah ada blockchainTx, tidak perlu confirm lagi
-  if (item.blockchainTx && item.blockchainTx.length > 10) {
+  if (getBlockchainTx(item)) {
     txStatus = new Map(txStatus).set(item.id, { success: false, message: '✅ Sudah on-chain!' });
     setTimeout(() => txStatus.delete(item.id), 2000);
     return;
@@ -841,6 +843,7 @@ async function handleConfirmBlockchain(item: Document) {
                     isOwner={true}
                     onRename={onRename}
                     onShare={onShare}
+                    onMove={onMove}
                     onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
                     onDownload={undefined}
                   />
@@ -1047,20 +1050,21 @@ async function handleConfirmBlockchain(item: Document) {
 <!-- Blockchain Tx Column - ROBUST: Cek blockchainTx langsung -->
 <td class="hidden lg:table-cell px-4 py-4 text-center">
   
-  {#if item.blockchainTx && item.blockchainTx.length > 10}
+  {#if getBlockchainTx(item)}
+    {@const blockchainTx = getBlockchainTx(item)!}
     <!-- ✅ Sudah ada TX hash: Show link ke Etherscan -->
     <a
-      href={`https://sepolia.etherscan.io/tx/${item.blockchainTx}`}
+      href={`https://sepolia.etherscan.io/tx/${blockchainTx}`}
       target="_blank"
       rel="noopener noreferrer"
-      class="inline-flex items-center gap-1.5 text-xs font-mono 
+      class="inline-flex items-center gap-1.5 text-xs font-mono
              text-blue-400 bg-white/5 hover:bg-blue-500/10 hover:text-blue-300
              px-2.5 py-1.5 rounded-lg transition-all duration-150 ease-out"
       title="View on Etherscan"
       onclick={(e) => e.stopPropagation()}
     >
       <span class="truncate max-w-[90px]">
-        {item.blockchainTx.slice(0, 6)}...{item.blockchainTx.slice(-4)}
+        {blockchainTx.slice(0, 6)}...{blockchainTx.slice(-4)}
       </span>
       <svg class="w-3.5 h-3.5 opacity-70 hover:opacity-100 transition-opacity" 
            fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1124,6 +1128,7 @@ async function handleConfirmBlockchain(item: Document) {
                 onRename={onRename}
                 onEdit={(id, title, description) => openEditModal({ id, title, description })}
                 onShare={onShare}
+                onMove={onMove}
                 onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
                 onDownload={onDownload}
               />

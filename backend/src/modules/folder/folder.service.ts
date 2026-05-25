@@ -45,14 +45,14 @@ export const createFolder = async (
 };
 
 export const renameFolder = async (
-  folderId: string, 
-  userId: string, 
+  folderId: string,
+  userId: string,
   newName: string
 ) => {
   const folderName = newName.trim();
 
-  const folder = await prisma.folder.findUnique({ 
-    where: { id: folderId } 
+  const folder = await prisma.folder.findUnique({
+    where: { id: folderId }
   });
 
   if (!folder || folder.ownerId !== userId) {
@@ -61,14 +61,14 @@ export const renameFolder = async (
 
   const existingFolder = await prisma.folder.findFirst({
     where: {
-      name: { 
-        equals: folderName, 
-        mode: 'insensitive' 
+      name: {
+        equals: folderName,
+        mode: 'insensitive'
       },
       ownerId: userId,
-      parentId: folder.parentId, 
-      id: { not: folderId },    
-      isArchived: false,         
+      parentId: folder.parentId,
+      id: { not: folderId },
+      isArchived: false,
       deletedAt: null
     }
   });
@@ -80,6 +80,120 @@ export const renameFolder = async (
   return await prisma.folder.update({
     where: { id: folderId },
     data: { name: folderName }
+  });
+};
+
+export const moveFolder = async (
+  folderId: string,
+  userId: string,
+  targetFolderId: string | null = null
+) => {
+  return await prisma.$transaction(async (tx) => {
+    const folder = await tx.folder.findUnique({ where: { id: folderId } });
+
+    if (!folder || folder.ownerId !== userId || folder.isArchived) {
+      throw new Error('Folder not found or unauthorized.');
+    }
+
+    if (folderId === targetFolderId) {
+      throw new Error('Cannot move a folder into itself.');
+    }
+
+    let targetPrivacy: 'PRIVATE' | 'PUBLIC' | 'LINK_ONLY' | 'SPECIFIC_USER' = 'PRIVATE';
+    let location = 'Root';
+
+    if (targetFolderId) {
+      const targetFolder = await tx.folder.findUnique({ where: { id: targetFolderId } });
+
+      if (!targetFolder || targetFolder.ownerId !== userId || targetFolder.isArchived) {
+        throw new Error('Target folder not found or unauthorized.');
+      }
+
+      const descendantIds = await getAllDescendantFolderIds(tx, [folderId]);
+      if (descendantIds.includes(targetFolderId)) {
+        throw new Error('Cannot move a folder into its own subfolder.');
+      }
+
+      targetPrivacy = targetFolder.privacy;
+      location = targetFolder.name;
+    }
+
+    const normalizedTargetFolderId = targetFolderId ?? null;
+
+    if (folder.parentId === normalizedTargetFolderId) {
+      throw new Error('Folder is already in this location.');
+    }
+
+    const duplicateFolder = await tx.folder.findFirst({
+      where: {
+        id: { not: folderId },
+        ownerId: userId,
+        parentId: normalizedTargetFolderId,
+        isArchived: false,
+        deletedAt: null,
+        name: {
+          equals: folder.name,
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    if (duplicateFolder) {
+      throw new Error(`Folder "${folder.name}" already exists in this location`);
+    }
+
+    const subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
+
+    await tx.folder.updateMany({
+      where: { id: { in: subtreeFolderIds }, ownerId: userId },
+      data: { privacy: targetPrivacy }
+    });
+
+    const movedFolder = await tx.folder.update({
+      where: { id: folderId },
+      data: {
+        parentId: targetFolderId,
+        privacy: targetPrivacy
+      }
+    });
+
+    await tx.document.updateMany({
+      where: {
+        folderId: { in: subtreeFolderIds },
+        ownerId: userId,
+        isArchived: false
+      },
+      data: { privacy: targetPrivacy }
+    });
+
+    if (targetPrivacy !== 'SPECIFIC_USER') {
+      await tx.folderAccess.deleteMany({
+        where: { folderId: { in: subtreeFolderIds } }
+      });
+
+      const documents = await tx.document.findMany({
+        where: {
+          folderId: { in: subtreeFolderIds },
+          ownerId: userId
+        },
+        select: { id: true }
+      });
+
+      const documentIds = documents.map((document: any) => document.id);
+
+      if (documentIds.length > 0) {
+        await tx.documentAccess.deleteMany({
+          where: { documentId: { in: documentIds } }
+        });
+      }
+    }
+
+    return {
+      folder: movedFolder,
+      count: subtreeFolderIds.length,
+      appliedPrivacy: targetPrivacy,
+      location
+    };
   });
 };
 

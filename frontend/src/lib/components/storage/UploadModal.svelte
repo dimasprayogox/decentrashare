@@ -8,7 +8,7 @@
     BatchBlockchainPayload,
     BatchTriggerResponse 
   } from '$lib/types/storage';
-  import { recordFilesBatchOnChain } from '$lib/services/web3/blockchain'; 
+  import { recordFilesBatchOnChain, tryBatchWithSingleFallback, recordFileOnChain } from '$lib/services/web3/blockchain'; 
   
   // ── Props (Svelte 5 Style) ──
   let {
@@ -253,76 +253,139 @@
     }
   }
   
-  // ✅ NEW: Handle batch blockchain confirmation
-  async function handleBatchBlockchainConfirmation(
-    payload: Array<{ fileName: string; ipfsHash: string; fileHash: string; fileSize: string; timestamp: string; documentId: string }>,
-    folderId?: string | null
-  ) {
-    try {
-      isConfirmingBatch = true;
-      confirmationProgress = 25;
-      setUploadStatus('🔐 Preparing blockchain confirmation...');
-      
-      // ✅ 1. Trigger backend untuk prepare batch data
-      const documentIds = payload.map(p => p.documentId);
-      const triggerResponse = await storageService.triggerBatchBlockchainConfirmation(documentIds) as BatchTriggerResponse;
-      
-      if (!triggerResponse.success || !triggerResponse.data) {
-        throw new Error(triggerResponse.message || 'Failed to prepare batch confirmation');
-      }
-      
-      confirmationProgress = 50;
-      
-      const { contractAddress, abi, functionName, args, docIds } = triggerResponse.data;
-      
-      // ✅ 2. Prepare payload untuk recordFilesBatchOnChain
-      const batchPayload: BatchBlockchainPayload = {
-        contractAddress,
-        abi,
-        functionName,
-        args, // [cids[], fileNames[], fileHashes[]]
-        items: payload.map(p => ({ cid: p.ipfsHash, fileName: p.fileName, fileHash: p.fileHash })),
-        documentIds: docIds
-      };
-      
-      confirmationProgress = 75;
-      setUploadStatus('⏳ Confirm in wallet...');
-      
-      // ✅ 3. Request wallet signature (HANYA 1 KALI!)
-      const txResult = await recordFilesBatchOnChain(batchPayload, {
-        onStatus: (status) => setUploadStatus(status),
-        onTxHash: (txHash) => {
-          console.log('Batch TX hash:', txHash);
-          confirmationProgress = 90;
-        }
-      });
-      
-      confirmationProgress = 100;
-      setUploadStatus('✅ Confirmed on-chain!');
-      
-      // ✅ 4. Notify backend bahwa batch tx sukses
-      await storageService.confirmBatchComplete(txResult.txHash, docIds);
-      
-      // Update success message
-      setUploadSuccess(prev => `${prev} • 🔗 Confirmed on blockchain!`);
-      
-    } catch (error: any) {
-      // Handle wallet rejection atau error
-      if (error.message === 'TRANSACTION_REJECTED') {
-        setUploadSuccess(prev => `${prev} • ⚠️ Confirmation skipped`);
-      } else if (error.message === 'INSUFFICIENT_FUNDS') {
-        setUploadError('⚠️ Insufficient ETH for gas. Files uploaded but not confirmed on-chain.');
-      } else if (error.message === 'WRONG_NETWORK') {
-        setUploadError('⚠️ Please switch to Sepolia testnet');
-      } else {
-        console.warn('Batch confirmation failed:', error);
-        setUploadSuccess(prev => `${prev} • ⚠️ On-chain pending`);
-      }
-    } finally {
-      isConfirmingBatch = false;
-      confirmationProgress = 0;
+ // ✅ Handle batch blockchain confirmation - FIXED VERSION
+async function handleBatchBlockchainConfirmation(
+  payload: Array<{ fileName: string; ipfsHash: string; fileHash: string; fileSize: string; timestamp: string; documentId: string }>,
+  folderId?: string | null
+) {
+  try {
+    isConfirmingBatch = true;
+    confirmationProgress = 25;
+    setUploadStatus('🔐 Preparing blockchain confirmation...');
+    
+    // ✅ 1. Trigger backend untuk prepare batch data
+    const documentIds = payload.map(p => p.documentId);
+    const triggerResponse = await storageService.triggerBatchBlockchainConfirmation(documentIds) as BatchTriggerResponse;
+    
+    if (!triggerResponse.success || !triggerResponse.data) {
+      throw new Error(triggerResponse.message || 'Failed to prepare batch confirmation');
     }
+    
+    // ✅ Handle case: all files already on-chain
+    if (triggerResponse.data?.skipConfirmation) {
+      setUploadSuccess(prev => `${prev} • ✅ All files already on-chain!`);
+      return;
+    }
+    
+    confirmationProgress = 50;
+    
+    const { contractAddress, abi, functionName, args, docIds, skippedCount } = triggerResponse.data;
+    
+    // ✅ 2. Prepare payload untuk blockchain call
+    const batchPayload: BatchBlockchainPayload = {
+      contractAddress,
+      abi,
+      functionName,
+      args,
+      items: payload.map(p => ({ cid: p.ipfsHash, fileName: p.fileName, fileHash: p.fileHash })),
+      documentIds: docIds
+    };
+    
+    confirmationProgress = 75;
+    setUploadStatus('⏳ Confirm in wallet...');
+    
+    // 🎯 EARLY RETURN FOR SINGLE FILE - FIXED ARG EXTRACTION
+if (payload.length === 1) {
+  console.log('[Web3] 🎯 Single file detected, using direct recordFileOnChain...');
+  
+  // ✅ Unwrap ABI
+  const rawAbi = Array.isArray(batchPayload.abi) 
+    ? batchPayload.abi 
+    : (batchPayload.abi as any)?.abi;
+  
+  // ✅ CORRECT: Extract from parallel arrays [cids[], names[], hashes[]]
+  const [cids, fileNames, fileHashes] = batchPayload.args as [string[], string[], string[]];
+  const cid = cids[0]?.trim();
+  const fileName = fileNames[0]?.trim();
+  const fileHash = fileHashes[0]?.trim();
+  
+  // ✅ Validate before send
+  if (!cid || !fileName || !fileHash) {
+    throw new Error('Invalid payload: missing required fields');
   }
+  
+  // ✅ Gunakan 'singleTxResult' (bukan 'txResult') untuk hindari conflict
+  const singleTxResult = await recordFileOnChain({
+    cid,
+    fileName,
+    fileHash,
+    contractAddress: batchPayload.contractAddress,
+    abi: rawAbi,
+    functionName: 'recordFile',
+    args: [cid, fileName, fileHash]  // ← ✅ Array of 3 strings
+  }, {
+    onStatus: (status) => setUploadStatus(status),
+    onTxHash: (txHash) => {
+      console.log('✅ Single TX hash:', txHash);
+      confirmationProgress = 90;
+    }
+  });
+  
+  confirmationProgress = 100;
+  setUploadStatus('✅ Confirmed on-chain!');
+  
+  // ✅ Update DB
+  await storageService.confirmBatchComplete(singleTxResult.txHash, docIds);
+  setUploadSuccess(prev => `${prev} • 🔗 1/1 confirmed!`);
+  
+  return; // ← ✅ EXIT EARLY
+}
+    // ✅ Jika >1 file, pakai batch + fallback - SATU-SATUNYA deklarasi 'txResult' di sini
+    console.log('[Web3] 📦 Multiple files detected, using batch with fallback...');
+    
+    const txResult = await tryBatchWithSingleFallback(batchPayload, {
+      onStatus: (status) => setUploadStatus(status),
+      onTxHash: (txHash) => {
+        console.log('Batch TX hash:', txHash);
+        confirmationProgress = 90;
+      }
+    });
+    
+    confirmationProgress = 100;
+    setUploadStatus('✅ Confirmed on-chain!');
+    
+    // ✅ Handle fallback result
+    const confirmedCount = txResult.fallback ? txResult.fileCount : docIds.length;
+    const fallbackNote = txResult.fallback ? ' (via fallback)' : '';
+    
+    // ✅ Notify backend
+    await storageService.confirmBatchComplete(txResult.txHash, docIds);
+    
+    // ✅ Update success message
+    const totalProcessed = confirmedCount + (skippedCount || 0);
+    setUploadSuccess(prev => `${prev} • 🔗 ${confirmedCount}/${totalProcessed} confirmed${fallbackNote}!`);
+    
+  } catch (error: any) {
+    console.error('Batch confirmation error:', error);
+    
+    if (error.message?.includes('CONTRACT_ERROR: DuplicateContent')) {
+      setUploadError('⚠️ File content already registered');
+    } else if (error.message?.includes('CONTRACT_ERROR: DuplicateCID')) {
+      setUploadError('⚠️ IPFS CID already registered');
+    } else if (error.message === 'TRANSACTION_REJECTED') {
+      setUploadSuccess(prev => `${prev} • ⚠️ Skipped by user`);
+    } else if (error.message === 'INSUFFICIENT_FUNDS') {
+      setUploadError('⚠️ Insufficient ETH for gas');
+    } else if (error.message === 'WRONG_NETWORK') {
+      setUploadError('⚠️ Switch to Sepolia');
+    } else {
+      setUploadSuccess(prev => `${prev} • ⚠️ Pending`);
+    }
+  } finally {
+    isConfirmingBatch = false;
+    confirmationProgress = 0;
+  }
+}
   
   // Helper untuk status progress
   function setUploadStatus(status: string) {

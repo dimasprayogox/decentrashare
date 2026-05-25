@@ -302,6 +302,16 @@ export interface MoveDocumentsResponse extends StorageApiResponse {
   };
 }
 
+export interface MoveFolderResponse extends StorageApiResponse {
+  details?: string;
+  data: {
+    folder: Folder;
+    count: number;
+    appliedPrivacy: PrivacyLevel;
+    location: string;
+  };
+}
+
 export interface BulkOperationResponse extends StorageApiResponse {
   data: { count: number };
 }

@@ -9,17 +9,25 @@
     selectedType,
     onMove,
     onManageAccess,
+    onConfirmBlockchain,
     onDelete,      // ✅ Hanya untuk soft delete
     onCancel,
-    isProcessing = false  // ✅ Loading state
+    isProcessing = false,  // ✅ Loading state
+    isConfirmingBlockchain = false,
+    canConfirmBlockchain = false,
+    confirmBlockchainCount = 0
   }: {
     selectedCount: number;
-    selectedType: 'folders' | 'documents' | 'items';
+    selectedType: 'folders' | 'documents' | 'mixed' | 'items';
     onMove?: () => void;
     onManageAccess?: () => void;
+    onConfirmBlockchain?: () => void;
     onDelete?: () => void;  // ✅ No isPermanent param needed
     onCancel?: () => void;
     isProcessing?: boolean;
+    isConfirmingBlockchain?: boolean;
+    canConfirmBlockchain?: boolean;
+    confirmBlockchainCount?: number;
   } = $props();
 </script>
 
@@ -54,7 +62,7 @@
     </button>
     
     <!-- Share Button -->
-    <button 
+    <button
       onclick={() => onManageAccess?.()}
       disabled={isProcessing}
       class="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -65,9 +73,31 @@
       </svg>
       <span class="hidden sm:inline">Share</span>
     </button>
-    
+
+    {#if canConfirmBlockchain || isConfirmingBlockchain}
+      <button
+        onclick={() => onConfirmBlockchain?.()}
+        disabled={(isProcessing && !isConfirmingBlockchain) || !canConfirmBlockchain}
+        class="flex items-center gap-2 px-4 py-2 text-sm text-blue-300 hover:text-white hover:bg-blue-500/10 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Confirm selected documents on blockchain"
+      >
+        {#if isConfirmingBlockchain}
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span class="hidden sm:inline">Confirming...</span>
+        {:else}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          <span class="hidden sm:inline">Confirm On-chain ({confirmBlockchainCount})</span>
+        {/if}
+      </button>
+    {/if}
+
     <div class="w-px h-6 bg-white/10"></div>
-    
+
     <!-- ✅ Delete Button (Soft Delete Only) -->
     <button 
       onclick={() => onDelete?.()}  // ✅ No param needed

@@ -3,6 +3,7 @@
   import { fade, scale, fly } from 'svelte/transition';
   
   import { storageService } from '$lib/services/storage/storage';
+  import { tryBatchWithSingleFallback } from '$lib/services/web3/blockchain';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
 
@@ -73,6 +74,17 @@
   let bulkDeleteItems = $state<Array<{ id: string; type: 'folder' | 'document'; name: string }>>([]);
   let deleteError = $state("");
 
+  let showMoveModal = $state(false);
+  let moveTargetFolderId = $state<string | null>(null);
+  let moveError = $state("");
+  let moveSuccess = $state("");
+  let moveNotice = $state("");
+  let moveTargets = $state<Array<{ id: string; type: 'folder' | 'document'; name: string; parentId?: string | null }>>([]);
+  let isMoveProcessing = $state(false);
+  let moveFolderTree = $state<Record<string, Folder[]>>({});
+  let moveExpandedFolders = $state<string[]>([]);
+  let moveLoadingFolders = $state<string[]>([]);
+
   let showShareModal = $state(false);
   let shareTarget = $state<{
     id: string;
@@ -95,9 +107,14 @@
   });
   let showSortDropdown = $state(false);
 
+  let isBulkConfirmingBlockchain = $state(false);
+  let bulkConfirmStatus = $state('');
+  let bulkConfirmSuccess = $state('');
+  let bulkConfirmError = $state('');
+
   // Combined processing state
-  const isProcessing = $derived(isDeleteProcessing || isRenameProcessing || isLoading);
-  
+  const isProcessing = $derived(isDeleteProcessing || isRenameProcessing || isBulkConfirmingBlockchain || isMoveProcessing || isLoading);
+
   // ✅ Helper: Check if item is selected (reactive karena selectedItems adalah $state)
   const isSelected = (id: string): boolean => selectedItems.includes(id);
 
@@ -110,6 +127,23 @@
     return items.filter(d => selectedItems.includes(d.id));
   }
 
+  type DocumentWithTxFallbacks = Document & {
+    blockchain_tx?: string | null;
+    txHash?: string | null;
+    transactionHash?: string | null;
+    tx_id?: string | null;
+  };
+
+  function getBlockchainTx(item: Document): string | null {
+    const document = item as DocumentWithTxFallbacks;
+    const alternatives = [document.blockchainTx, document.blockchain_tx, document.txHash, document.transactionHash, document.tx_id];
+    return alternatives.find(tx => typeof tx === 'string' && tx.length > 10) || null;
+  }
+
+  function getSelectedUnconfirmedDocuments(items: Document[]) {
+    return getSelectedDocuments(items).filter(d => !getBlockchainTx(d));
+  }
+
   function getSelectedType(folders: Folder[], items: Document[]): 'folders' | 'documents' | 'mixed' | 'items' {
     const selectedFolders = getSelectedFolders(folders);
     const selectedDocuments = getSelectedDocuments(items);
@@ -119,8 +153,109 @@
     return 'items';
   }
 
+  const moveTreeKey = (folderId: string | null) => folderId ?? 'root';
+
+  function isMoveFolderExpanded(folderId: string): boolean {
+    return moveExpandedFolders.includes(folderId);
+  }
+
+  function isMoveFolderLoading(folderId: string): boolean {
+    return moveLoadingFolders.includes(folderId);
+  }
+
+  function getMoveChildren(folderId: string | null): Folder[] {
+    return moveFolderTree[moveTreeKey(folderId)] ?? [];
+  }
+
+  async function loadMoveFolderChildren(folderId: string | null) {
+    const key = moveTreeKey(folderId);
+    if (moveFolderTree[key]) return;
+
+    try {
+      if (folderId) moveLoadingFolders = [...moveLoadingFolders, folderId];
+      const response = await storageService.getFolders(folderId);
+      moveFolderTree = {
+        ...moveFolderTree,
+        [key]: response.success ? response.data : []
+      };
+    } catch (error) {
+      console.error('Failed to load move destination folders:', error);
+      moveFolderTree = { ...moveFolderTree, [key]: [] };
+    } finally {
+      if (folderId) moveLoadingFolders = moveLoadingFolders.filter(id => id !== folderId);
+    }
+  }
+
+  async function toggleMoveFolder(folderId: string) {
+    if (isMoveFolderExpanded(folderId)) {
+      moveExpandedFolders = moveExpandedFolders.filter(id => id !== folderId);
+      return;
+    }
+
+    moveExpandedFolders = [...moveExpandedFolders, folderId];
+    await loadMoveFolderChildren(folderId);
+  }
+
+  function folderExistsInMoveTree(folderId: string): boolean {
+    return Object.values(moveFolderTree).some(children => children.some(folder => folder.id === folderId));
+  }
+
+  function getLoadedDescendantFolderIds(folderId: string): string[] {
+    const descendants: string[] = [];
+
+    function walk(parentId: string) {
+      for (const child of getMoveChildren(parentId)) {
+        descendants.push(child.id);
+        walk(child.id);
+      }
+    }
+
+    walk(folderId);
+    return descendants;
+  }
+
+  function isInvalidMoveDestination(folderId: string | null): boolean {
+    if (!folderId) return false;
+    return moveTargets.some(target => {
+      if (target.type !== 'folder') return false;
+      return target.id === folderId || getLoadedDescendantFolderIds(target.id).includes(folderId);
+    });
+  }
+
+  function getMoveTargetLabel(): string {
+    if (moveTargets.length === 0) return 'No items selected';
+    if (moveTargets.length === 1) return moveTargets[0].name;
+    const folderCount = moveTargets.filter(target => target.type === 'folder').length;
+    const documentCount = moveTargets.filter(target => target.type === 'document').length;
+    return `${moveTargets.length} items (${folderCount} folder, ${documentCount} dokumen)`;
+  }
+
+  function getMoveDestinationLabel(): string {
+    if (!moveTargetFolderId) return 'Root';
+    return Object.values(moveFolderTree).flat().find(folder => folder.id === moveTargetFolderId)?.name ?? 'Selected folder';
+  }
+
+  function getVisibleMoveFolders() {
+    const rows: Array<{ folder: Folder; depth: number }> = [];
+
+    function walk(parentId: string | null, depth: number) {
+      for (const folder of getMoveChildren(parentId)) {
+        if (isInvalidMoveDestination(folder.id)) continue;
+        rows.push({ folder, depth });
+        if (isMoveFolderExpanded(folder.id)) {
+          walk(folder.id, depth + 1);
+        }
+      }
+    }
+
+    walk(null, 0);
+    return rows;
+  }
+
   // ✅ Derived values
-  const selectedTypeValue = $derived(getSelectedType(folders, items, selectedItems));
+  const selectedTypeValue = $derived(getSelectedType(folders, items));
+  const selectedUnconfirmedDocuments = $derived(getSelectedUnconfirmedDocuments(items));
+  const visibleMoveFolders = $derived(getVisibleMoveFolders());
 
   // ✅ Debug effect
   $effect(() => {
@@ -366,6 +501,67 @@
     cancelBulkDelete();
   }
 
+  async function handleBulkConfirmBlockchain() {
+    const documentsToConfirm = selectedUnconfirmedDocuments;
+
+    bulkConfirmSuccess = '';
+    bulkConfirmError = '';
+
+    if (documentsToConfirm.length === 0) {
+      bulkConfirmError = 'Tidak ada file terpilih yang perlu dikonfirmasi on-chain.';
+      return;
+    }
+
+    const documentIds = documentsToConfirm.map(document => document.id);
+
+    try {
+      isBulkConfirmingBlockchain = true;
+      bulkConfirmStatus = `Preparing ${documentIds.length} file${documentIds.length > 1 ? 's' : ''}...`;
+
+      const response = await storageService.triggerBatchBlockchainConfirmation(documentIds);
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to prepare batch blockchain data');
+      }
+
+      const confirmedIds = response.data.docIds?.length ? response.data.docIds : documentIds;
+
+      const txResult = await tryBatchWithSingleFallback(response.data, {
+        onStatus: (status) => {
+          bulkConfirmStatus = status.replace('✅', '').trim();
+        }
+      });
+
+      bulkConfirmStatus = 'Updating database...';
+      await storageService.confirmBatchComplete(txResult.txHash, confirmedIds);
+      await loadStorageData();
+
+      bulkConfirmSuccess = `${confirmedIds.length} file berhasil dikonfirmasi on-chain.`;
+      bulkConfirmStatus = '';
+      clearSelection();
+
+      setTimeout(() => {
+        bulkConfirmSuccess = '';
+      }, 4000);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to confirm selected files on-chain';
+
+      if (message === 'TRANSACTION_REJECTED') {
+        bulkConfirmError = 'Konfirmasi wallet dibatalkan.';
+      } else if (message === 'INSUFFICIENT_FUNDS') {
+        bulkConfirmError = 'Saldo ETH tidak cukup untuk gas.';
+      } else if (message === 'WRONG_NETWORK') {
+        bulkConfirmError = 'Pindahkan wallet ke jaringan Sepolia.';
+      } else if (message === 'TX_CONFIRMATION_TIMEOUT') {
+        bulkConfirmError = 'Transaksi belum terkonfirmasi. Silakan refresh beberapa saat lagi.';
+      } else {
+        bulkConfirmError = message;
+      }
+    } finally {
+      isBulkConfirmingBlockchain = false;
+      bulkConfirmStatus = '';
+    }
+  }
+
   // ── Rename Handlers ─────────────────────────────────────
 
   const handleRename = (id: string, type: 'folder' | 'document', name: string) => {
@@ -443,7 +639,119 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     }
   }
 
-  const handleBulkMove = () => alert('Move feature coming soon!');
+  function openMoveModal(targets: Array<{ id: string; type: 'folder' | 'document'; name: string; parentId?: string | null }>) {
+    moveTargets = targets;
+    moveTargetFolderId = null;
+    moveError = "";
+    moveSuccess = "";
+    moveNotice = "";
+    showMoveModal = true;
+    void loadMoveFolderChildren(null);
+  }
+
+  function handleSingleMove(id: string, type: 'folder' | 'document') {
+    const item = type === 'document' ? items.find(document => document.id === id) : folders.find(folder => folder.id === id);
+    if (!item) {
+      moveError = 'Item tidak ditemukan.';
+      return;
+    }
+
+    openMoveModal([{
+      id: item.id,
+      type,
+      name: type === 'document' ? (item as Document).title : (item as Folder).name,
+      parentId: type === 'document' ? (item as Document).folderId : (item as Folder).parentId
+    }]);
+  }
+
+  function handleBulkMove() {
+    const targets = [
+      ...getSelectedFolders(folders).map(folder => ({ id: folder.id, type: 'folder' as const, name: folder.name, parentId: folder.parentId })),
+      ...getSelectedDocuments(items).map(document => ({ id: document.id, type: 'document' as const, name: document.title, parentId: document.folderId }))
+    ];
+
+    if (targets.length === 0) {
+      moveError = "Pilih minimal satu item untuk dipindahkan.";
+      return;
+    }
+
+    openMoveModal(targets);
+  }
+
+  async function handleExecuteMove() {
+    const documentIds = moveTargets.filter(target => target.type === 'document').map(target => target.id);
+    const folderTargets = moveTargets.filter(target => target.type === 'folder');
+
+    if (moveTargets.length === 0) {
+      moveError = "Pilih minimal satu item untuk dipindahkan.";
+      return;
+    }
+
+    if (moveTargetFolderId && !folderExistsInMoveTree(moveTargetFolderId)) {
+      moveError = "Folder tujuan tidak valid atau belum dimuat.";
+      return;
+    }
+
+    if (isInvalidMoveDestination(moveTargetFolderId)) {
+      moveError = "Folder tidak bisa dipindahkan ke dirinya sendiri atau subfoldernya.";
+      return;
+    }
+
+    try {
+      isMoveProcessing = true;
+      moveError = "";
+      moveSuccess = "";
+
+      let movedDocuments = 0;
+      let movedFolders = 0;
+      let appliedPrivacy = '';
+
+      if (documentIds.length > 0) {
+        const documentResponse = await storageService.moveDocuments(documentIds, moveTargetFolderId);
+        if (!documentResponse.success) {
+          throw new Error(documentResponse.message || 'Gagal memindahkan dokumen.');
+        }
+        movedDocuments = documentResponse.data?.count ?? documentIds.length;
+        appliedPrivacy = documentResponse.data?.appliedPrivacy ?? appliedPrivacy;
+      }
+
+      for (const folder of folderTargets) {
+        const folderResponse = await storageService.moveFolder(folder.id, moveTargetFolderId);
+        if (!folderResponse.success) {
+          throw new Error(folderResponse.message || `Gagal memindahkan folder ${folder.name}.`);
+        }
+        movedFolders += 1;
+        appliedPrivacy = folderResponse.data?.appliedPrivacy ?? appliedPrivacy;
+      }
+
+      const parts = [];
+      if (movedFolders > 0) parts.push(`${movedFolders} folder`);
+      if (movedDocuments > 0) parts.push(`${movedDocuments} dokumen`);
+
+      moveSuccess = `${parts.join(' dan ')} dipindahkan ke ${getMoveDestinationLabel()}. ${appliedPrivacy ? `Privacy disesuaikan menjadi ${appliedPrivacy}.` : ''}`;
+      showMoveModal = false;
+      await loadStorageData();
+      clearSelection();
+      selectionMode = false;
+
+      setTimeout(() => {
+        moveSuccess = "";
+      }, 4000);
+    } catch (error: unknown) {
+      moveError = error instanceof Error ? error.message : "Gagal memindahkan item.";
+    } finally {
+      isMoveProcessing = false;
+    }
+  }
+
+  function handleCancelMove() {
+    showMoveModal = false;
+    moveTargetFolderId = null;
+    moveTargets = [];
+    moveError = "";
+    moveNotice = "";
+  }
+
   const handleBulkManageAccess = () => alert('Share feature coming soon!');
 
   const handleFolderCreated = () => loadStorageData();
@@ -623,6 +931,98 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   </div>
 {/if}
 
+{#if showMoveModal}
+  <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+    <div class="bg-[#111115] rounded-[32px] border border-white/10 shadow-2xl shadow-black/60 w-full max-w-2xl max-h-[86vh] overflow-hidden" in:scale>
+      <div class="p-6 border-b border-white/10 bg-gradient-to-br from-blue-600/15 via-white/[0.03] to-transparent">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center shrink-0">
+              <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-white font-black text-xl tracking-tight">Move Item</h3>
+              <p class="text-sm text-gray-400 truncate">{getMoveTargetLabel()}</p>
+            </div>
+          </div>
+          <button onclick={handleCancelMove} class="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-colors" disabled={isMoveProcessing} aria-label="Close move modal">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Items</p><p class="text-white font-semibold mt-1">{moveTargets.length}</p></div>
+          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Destination</p><p class="text-white font-semibold mt-1 truncate">{getMoveDestinationLabel()}</p></div>
+          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Privacy</p><p class="text-blue-300 font-semibold mt-1">Auto sync</p></div>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4 overflow-y-auto max-h-[calc(86vh-220px)]">
+
+      {#if moveNotice}
+        <p class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-3" role="status">{moveNotice}</p>
+      {/if}
+
+      <div class="space-y-2 max-h-72 overflow-y-auto mb-4 pr-1">
+        <button onclick={() => moveTargetFolderId = null} class="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-colors {moveTargetFolderId === null ? 'bg-blue-600/20 border-blue-500/50 text-white' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing}>
+          <span>
+            <span class="block font-medium">Root</span>
+            <span class="block text-xs text-gray-500">Privacy akan menjadi PRIVATE</span>
+          </span>
+          {#if moveTargetFolderId === null}<span class="text-blue-400">Selected</span>{/if}
+        </button>
+
+        {#if visibleMoveFolders.length === 0}
+          <div class="px-4 py-6 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
+            <p class="text-sm text-gray-400">Belum ada folder tujuan.</p>
+            <p class="text-xs text-gray-600 mt-1">Pilih Root atau buat folder baru terlebih dahulu.</p>
+          </div>
+        {/if}
+
+        {#each visibleMoveFolders as row (row.folder.id)}
+          {@const invalidDestination = isInvalidMoveDestination(row.folder.id)}
+          <div class="flex items-stretch gap-2" style={`margin-left: ${row.depth * 1.25}rem`}>
+            <button onclick={() => toggleMoveFolder(row.folder.id)} class="w-11 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center" disabled={isMoveProcessing} title="Show subfolders">
+              {#if isMoveFolderLoading(row.folder.id)}
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              {:else}
+                <svg class="w-4 h-4 transition-transform {isMoveFolderExpanded(row.folder.id) ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              {/if}
+            </button>
+            <button onclick={() => { if (!invalidDestination) moveTargetFolderId = row.folder.id; }} class="flex-1 flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all {invalidDestination ? 'bg-red-500/5 border-red-500/20 text-gray-600 cursor-not-allowed' : moveTargetFolderId === row.folder.id ? 'bg-blue-600/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing || invalidDestination}>
+              <span class="min-w-0">
+                <span class="flex items-center gap-2 font-medium truncate"><svg class="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>{row.folder.name}</span>
+                <span class="block text-xs text-gray-500">Level {row.depth + 1} · {invalidDestination ? 'Invalid destination' : `Privacy tujuan: ${row.folder.privacy}`}</span>
+              </span>
+              {#if moveTargetFolderId === row.folder.id}<span class="text-blue-400 text-xs font-semibold">Selected</span>{/if}
+            </button>
+          </div>
+
+          {#if isMoveFolderExpanded(row.folder.id) && getMoveChildren(row.folder.id).length === 0 && !isMoveFolderLoading(row.folder.id)}
+            <p class="py-1 text-xs text-gray-600 italic" style={`margin-left: ${(row.depth + 1) * 1.25 + 3.5}rem`}>Tidak ada subfolder</p>
+          {/if}
+        {/each}
+      </div>
+
+      {#if moveError}
+        <p class="text-xs text-red-400 ml-1 mb-4 flex items-center gap-1" role="alert" aria-live="polite">
+          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>{moveError}</span>
+        </p>
+      {/if}
+
+      <div class="flex gap-3">
+        <button onclick={handleCancelMove} class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50" disabled={isMoveProcessing}>Cancel</button>
+        <button onclick={handleExecuteMove} class="flex-1 h-10 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-bold" disabled={isMoveProcessing || isInvalidMoveDestination(moveTargetFolderId)}>
+          {#if isMoveProcessing}<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{:else}Move Here{/if}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{/if}
+
   <!-- Share Modal Placeholder -->
 
 
@@ -698,6 +1098,53 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     </div>
   </header>
 
+  {#if moveSuccess || (moveError && !showMoveModal)}
+    <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {moveError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}" role="status" aria-live="polite">
+      {#if moveError}
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      {:else}
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+      {/if}
+      <p class="text-sm flex-1">{moveError || moveSuccess}</p>
+      <button onclick={() => { moveError = ''; moveSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss move status">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  {/if}
+
+  {#if bulkConfirmStatus || bulkConfirmSuccess || bulkConfirmError}
+    <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {bulkConfirmError ? 'bg-red-500/10 border-red-500/20 text-red-400' : bulkConfirmSuccess ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}" role="status" aria-live="polite">
+      {#if bulkConfirmStatus}
+        <svg class="w-5 h-5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+      {:else if bulkConfirmSuccess}
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+      {:else}
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      {/if}
+      <p class="text-sm flex-1">{bulkConfirmStatus || bulkConfirmSuccess || bulkConfirmError}</p>
+      {#if bulkConfirmError || bulkConfirmSuccess}
+        <button onclick={() => { bulkConfirmError = ''; bulkConfirmSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss blockchain confirmation status">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      {/if}
+    </div>
+  {/if}
+
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- CONTENT -->
   <!-- ═══════════════════════════════════════════════════ -->
@@ -717,7 +1164,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
               folders={sortedFolders} items={[]} {openFolder}
               handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
               onRename={(id, name) => handleRename(id, 'folder', name)}
-              onShare={handleShare} onDownload={handleDownload}
+              onShare={handleShare} onDownload={handleDownload} onMove={handleSingleMove}
               onDeleteConfirm={(id, type, name) => {
                 deletingItem = { id, type, name };  
                 confirmDelete({ id, type, name });   
@@ -741,7 +1188,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
               folders={[]} items={sortedItems} viewMode={1} {openFolder}
               handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
               onRename={(id, name) => handleRename(id, 'document', name)}
-              onShare={handleShare} onDownload={handleDownload}
+              onShare={handleShare} onDownload={handleDownload} onMove={handleSingleMove}
               onDeleteConfirm={(id, type, name) => {
                 deletingItem = { id, type, name };  
                 confirmDelete({ id, type, name });   
@@ -812,9 +1259,14 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   {#if selectionMode}
     <BulkActionBar
       selectedCount={selectedItems.length}
-      selectedType={selectedTypeValue} 
+      selectedType={selectedTypeValue}
       onMove={handleBulkMove}
       onManageAccess={handleBulkManageAccess}
+      onConfirmBlockchain={handleBulkConfirmBlockchain}
+      canConfirmBlockchain={selectedUnconfirmedDocuments.length > 0}
+      confirmBlockchainCount={selectedUnconfirmedDocuments.length}
+      isConfirmingBlockchain={isBulkConfirmingBlockchain}
+      isProcessing={isProcessing}
       onDelete={handleConfirmBulkDelete}
       onCancel={clearSelection}
     />

@@ -22,6 +22,7 @@
     onDeleteConfirm,
     onShare,
     onDownload,
+    onMove,
     selectedItems = [],
     onToggleSelect,
     selectionMode = false,
@@ -39,6 +40,7 @@
     onDeleteConfirm?: (id: string, type: 'folder' | 'document', name: string) => void;
     onShare?: (id: string, type: 'folder' | 'document') => void;
     onDownload?: (id: string) => void;
+    onMove?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
     selectedItems?: string[];
     onToggleSelect?: (id: string) => void;
     selectionMode?: boolean;
@@ -544,7 +546,7 @@ $effect(() => {
 
       {#if !selectionMode}
         <div class="absolute top-2 right-2 z-30 {isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-200" data-item-menu onclick={(e) => e.stopPropagation()}>
-          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={true} onRename={onRename} onShare={onShare} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={undefined} />
+          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={true} onRename={onRename} onShare={onShare} onMove={onMove} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={undefined} />
         </div>
       {/if}
     </div>
@@ -639,6 +641,7 @@ $effect(() => {
               openEditModal({ id, title, description });
             }}
             onShare={onShare}
+            onMove={onMove}
             onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
             onDownload={onDownload}
           />

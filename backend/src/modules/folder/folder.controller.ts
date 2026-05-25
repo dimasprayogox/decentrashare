@@ -81,41 +81,101 @@ export const handleRenameFolder = async (req: AuthRequest, res: Response) => {
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-    
+
     if (!name?.trim()) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         message: 'New folder name is required',
         errorCode: 'MISSING_NAME'
       });
     }
 
     const folder = await folderService.renameFolder(id, userId, name);
-    
-    return res.status(200).json({ 
-      success: true, 
+
+    return res.status(200).json({
+      success: true,
       data: folder,
       message: 'Folder renamed successfully'
     });
-    
+
   } catch (error: any) {
     if (error.message?.toLowerCase().includes('already exists')) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         success: false,
         message: error.message,
-        errorCode: 'FOLDER_EXISTS' 
+        errorCode: 'FOLDER_EXISTS'
       });
     }
-    
+
     if (error.message?.includes('not found') || error.message?.includes('unauthorized')) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: error.message,
         errorCode: 'FOLDER_NOT_FOUND'
       });
     }
-    
+
     return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const handleMoveFolder = async (req: AuthRequest, res: Response) => {
+  try {
+    const { folderId, targetFolderId } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!folderId || typeof folderId !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'folderId is required',
+        errorCode: 'INVALID_INPUT'
+      });
+    }
+
+    if (targetFolderId !== null && targetFolderId !== undefined && typeof targetFolderId !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'targetFolderId must be a string or null',
+        errorCode: 'INVALID_INPUT'
+      });
+    }
+
+    const result = await folderService.moveFolder(folderId, userId, targetFolderId ?? null);
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully moved folder to ${result.location}.`,
+      details: `Privacy level synchronized to ${result.appliedPrivacy}.`,
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('❌ Move folder failed:', error);
+
+    if (error.message?.toLowerCase().includes('already exists')) {
+      return res.status(409).json({
+        success: false,
+        message: error.message,
+        errorCode: 'FOLDER_EXISTS'
+      });
+    }
+
+    if (error.message?.includes('not found') || error.message?.includes('unauthorized')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        errorCode: 'FOLDER_NOT_FOUND'
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to move folder',
+      errorCode: 'MOVE_FOLDER_FAILED'
+    });
   }
 };
 

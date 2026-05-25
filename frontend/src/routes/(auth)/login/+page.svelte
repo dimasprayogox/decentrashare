@@ -1,7 +1,16 @@
 <script lang="ts">
   import { fade, fly, scale } from 'svelte/transition';
   import { authService } from '$lib/services';
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+
+  type EthereumProvider = {
+    request<T = unknown>(args: { method: string; params?: unknown[] }): Promise<T>;
+    on?(event: 'accountsChanged', handler: (accounts: string[]) => void): void;
+    removeListener?(event: 'accountsChanged', handler: (accounts: string[]) => void): void;
+  };
+
+  const getEthereum = () => (window as typeof window & { ethereum?: EthereumProvider }).ethereum;
 
   // State
   let isLoading = $state(false);
@@ -34,16 +43,57 @@
     }
   }
 
+  async function clearCurrentSession() {
+    localStorage.removeItem('session_token');
+    authService.clearClientStorage();
+
+    try {
+      await authService.logout();
+    } catch (err) {
+      console.warn('[Login] session clear skipped:', err);
+    }
+  }
+
+  function handleAccountsChanged(accounts: string[]) {
+    connectedAddress = accounts[0] || null;
+    showErrorBanner = false;
+    statusMessage = connectedAddress
+      ? `Wallet switched to ${formatAddress(connectedAddress)}. Please login again.`
+      : 'Wallet disconnected. Please connect your wallet to continue.';
+    void clearCurrentSession();
+  }
+
+  onMount(() => {
+    const ethereum = getEthereum();
+    ethereum?.on?.('accountsChanged', handleAccountsChanged);
+
+    return () => {
+      ethereum?.removeListener?.('accountsChanged', handleAccountsChanged);
+    };
+  });
+
   async function connectWallet() {
     isLoading = true;
     statusMessage = "Connecting wallet...";
     showErrorBanner = false;
 
     try {
-      if (!window.ethereum) throw new Error("MetaMask not detected!");
-      
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      connectedAddress = accounts[0];
+      const ethereum = getEthereum();
+      if (!ethereum) throw new Error("MetaMask not detected!");
+
+      await clearCurrentSession();
+
+      const accounts = await ethereum.request<string[]>({ method: 'eth_requestAccounts' });
+      const activeAccounts = await ethereum.request<string[]>({ method: 'eth_accounts' });
+      connectedAddress = activeAccounts[0] || accounts[0];
+
+      if (!connectedAddress) throw new Error('No wallet account selected.');
+
+      console.debug('[Login] selected wallet payload:', {
+        walletAddress: connectedAddress.toLowerCase(),
+        accounts,
+        activeAccounts
+      });
 
       statusMessage = "Fetching security nonce...";
       const result = await authService.fetchNonce(connectedAddress);
@@ -56,17 +106,30 @@
       const loginMessage = result.data.loginMessage; 
 
       statusMessage = "Please sign the message in your wallet...";
-      const signature = await window.ethereum.request({
+      const signingAddress = connectedAddress;
+      const signature = await ethereum.request<string>({
         method: 'personal_sign',
-        params: [loginMessage, connectedAddress],
+        params: [loginMessage, signingAddress],
       });
 
+      const latestAccounts = await ethereum.request<string[]>({ method: 'eth_accounts' });
+      const latestAddress = latestAccounts[0];
+      if (!latestAddress || latestAddress.toLowerCase() !== signingAddress.toLowerCase()) {
+        throw new Error('Wallet changed during login. Please try again with the selected wallet.');
+      }
+
       statusMessage = "Verifying identity...";
-      const loginData = await authService.verifyLogin({ 
-          walletAddress: connectedAddress, 
-          signature: signature, 
-          nonce: nonce 
+      const loginPayload = {
+          walletAddress: signingAddress.toLowerCase(),
+          signature: signature,
+          nonce: nonce
+      };
+      console.debug('[Login] verify payload:', {
+        walletAddress: loginPayload.walletAddress,
+        nonce: loginPayload.nonce,
+        hasSignature: Boolean(loginPayload.signature)
       });
+      const loginData = await authService.verifyLogin(loginPayload);
 
       if (loginData?.success) {
         const token = loginData.data?.token; 
@@ -78,14 +141,16 @@
         throw new Error(loginData?.message || "Signature verification failed!");
       }
 
-    } catch (err: any) {
-      const userMessage = err.message || 'An unknown error occurred';
-      const statusCode = err.status ? ` (Status: ${err.status})` : '';
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('An unknown error occurred');
+      const errorData = err as { status?: number; data?: unknown };
+      const userMessage = error.message || 'An unknown error occurred';
+      const statusCode = errorData.status ? ` (Status: ${errorData.status})` : '';
       statusMessage = `Error: ${userMessage}${statusCode}`;
       showErrorBanner = true;
-      
+
       console.error('🔴 [Login Error]', {
-        message: err.message, status: err.status, data: err.data
+        message: error.message, status: errorData.status, data: errorData.data
       });
     } finally {
       isLoading = false;

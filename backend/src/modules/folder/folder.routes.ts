@@ -15,7 +15,8 @@ import {
   handleRevokeFolderAccess,
   handleGetSharedWithMe,
   handleGetPublicFolder,
-  handleUpdatePrivacy
+  handleUpdatePrivacy,
+  handleMoveFolder
 } from "./folder.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 
@@ -38,6 +39,7 @@ router.post("/shared", handleShareFolder);
 router.delete('/shared', handleRevokeFolderAccess);
 
 router.patch("/privacy", handleUpdatePrivacy);
+router.patch("/move", handleMoveFolder);
 
 router.get("/archived", handleGetArchivedFolders);
 router.patch("/archive", handleArchiveFolders);    
