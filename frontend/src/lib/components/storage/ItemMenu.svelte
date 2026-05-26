@@ -15,7 +15,9 @@
     onMove,
     onShare,
     onDelete,
-    onDownload
+    onDownload,
+    onRestore,
+    trashMode = false
   }: {
     itemId: string;
     itemType: 'folder' | 'document';
@@ -28,6 +30,8 @@
     onShare?: (id: string, itemType: 'folder' | 'document') => Promise<void> | void;
     onDelete?: (id: string, type: 'folder' | 'document', name: string) => Promise<void> | void;
     onDownload?: (id: string) => Promise<void> | void;
+    onRestore?: (id: string, type: 'folder' | 'document', name: string) => Promise<void> | void;
+    trashMode?: boolean;
   } = $props();
 
   // ── State ──
@@ -212,18 +216,27 @@ function updateMenuPosition() {
     try {
       isOpen = false;
       await onDownload?.(itemId);
-      window.dispatchEvent(new CustomEvent('download-success', { 
-        detail: { itemId, itemName } 
+      window.dispatchEvent(new CustomEvent('download-success', {
+        detail: { itemId, itemName }
       }));
     } catch (err: any) {
       const message = err.message || 'Failed to download file';
-      window.dispatchEvent(new CustomEvent('download-error', { 
-        detail: { message, itemName } 
+      window.dispatchEvent(new CustomEvent('download-error', {
+        detail: { message, itemName }
       }));
       console.error('❌ Download error:', { itemId, itemName, error: err.message });
     }
   }
-  
+
+  async function handleRestore() {
+    try {
+      await onRestore?.(itemId, itemType, itemName);
+      isOpen = false;
+    } catch (err: any) {
+      setError(err.message || `Failed to restore ${itemType}`);
+    }
+  }
+
   function toggleMenu(e: Event) {
     e.stopPropagation();
     isOpen = !isOpen;
@@ -291,6 +304,44 @@ function updateMenuPosition() {
       </div>
     {/if}
     
+    {#if trashMode}
+      {#if itemType === 'document' && onDownload}
+        <button
+          onclick={handleDownload}
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+          role="menuitem"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          <span class="truncate">Download</span>
+        </button>
+      {/if}
+
+      <button
+        onclick={handleRestore}
+        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-green-400 hover:bg-green-500/10 active:bg-green-500/20 hover:text-green-300 transition-colors min-h-[44px]"
+        role="menuitem"
+      >
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a4 4 0 010 8H7m-4-8l4-4m-4 4l4 4"/>
+        </svg>
+        <span class="truncate">Restore</span>
+      </button>
+
+      <div class="my-1 h-px bg-white/10"></div>
+
+      <button
+        onclick={handleDelete}
+        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-300 transition-colors min-h-[44px]"
+        role="menuitem"
+      >
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        <span class="truncate">Delete Permanently</span>
+      </button>
+    {:else}
     <!-- ✅ CONDITIONAL: Folder → Rename, Document → Edit -->
     {#if itemType === 'folder'}
       <button 
@@ -372,5 +423,6 @@ function updateMenuPosition() {
       </svg>
       <span class="truncate">Move to Trash</span>
     </button>
+    {/if}
   </div>
 {/if}

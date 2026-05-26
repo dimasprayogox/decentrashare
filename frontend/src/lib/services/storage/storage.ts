@@ -95,6 +95,13 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
     return blobUrl;
   },
 
+  fetchDocumentPreviewBlob: async (documentId: string, accept = '*/*'): Promise<Blob> => {
+    return apiClient<Blob>(`/documents/${documentId}/preview`, {
+      method: 'GET',
+      headers: { 'Accept': accept }
+    }, 'blob');
+  },
+
   // ✅ Cleanup method (opsional tapi recommended)
   cleanupPreviewCache: (documentId?: string) => {
     if (documentId) {
@@ -169,9 +176,9 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
       method: 'GET',
       headers: { 'Accept': '*/*' }
     }, 'blob');
-    
-    const fileName = `download-${documentId}`; // Can be enhanced with header parsing
-    
+
+    const fileName = `decentrashare-download-${documentId}`;
+
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -329,7 +336,7 @@ confirmBatchComplete: async (txHash: string, documentIds: string[]) => {
     const response = await apiClient<{ success: boolean; count: number }>(
       '/documents/restore',
       {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentIds })
       }

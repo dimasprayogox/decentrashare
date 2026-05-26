@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger';
 import { PrivacyLevel } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
 import { createUserPinGroup } from '../pinata/pinata.service';
@@ -246,8 +247,8 @@ export const bulkDownloadDocuments = async (documentIds: string[], userId: strin
         .replace(/[\/\\:*?"<>|]/g, '_')
         .slice(0, 200);
 
-      // Append file stream to ZIP
-      archive.append(response.body, { name: safeFileName });
+      const fileStream = Readable.fromWeb(response.body);
+      archive.append(fileStream, { name: safeFileName });
       
     } catch (error: any) {
       logger.warn('⚠️ Error adding file to ZIP', {
@@ -643,10 +644,54 @@ export const moveMultipleDocuments = async (
       targetPrivacy = folder.privacy;
     }
 
-    // LOG 2: Cek apakah file-file ini sebenarnya ada di DB dan milik Bos
-    const checkDocs = await tx.document.findMany({
-      where: { id: { in: documentIds }, ownerId: userId }
+    const documents: Array<{ id: string; title: string; folderId: string | null }> = await tx.document.findMany({
+      where: {
+        id: { in: documentIds },
+        ownerId: userId,
+        isArchived: false
+      },
+      select: { id: true, title: true, folderId: true }
     });
+
+    if (documents.length === 0) {
+      return {
+        count: 0,
+        appliedPrivacy: targetPrivacy,
+        location: targetFolderId ? "Folder" : "Root"
+      };
+    }
+
+    const duplicateSelectedTitle = documents.find((document, index) =>
+      documents.some((otherDocument, otherIndex) =>
+        otherIndex !== index && otherDocument.title.toLowerCase() === document.title.toLowerCase()
+      )
+    );
+
+    if (duplicateSelectedTitle) {
+      throw new Error(`Document "${duplicateSelectedTitle.title}" already exists in this location`);
+    }
+
+    const duplicateDocument = await tx.document.findFirst({
+      where: {
+        id: { notIn: documents.map((document) => document.id) },
+        ownerId: userId,
+        folderId: targetFolderId ?? null,
+        isArchived: false,
+        deletedAt: null,
+        OR: documents.map((document) => ({
+          title: {
+            equals: document.title,
+            mode: 'insensitive'
+          }
+        }))
+      },
+      select: { title: true }
+    });
+
+    if (duplicateDocument) {
+      throw new Error(`Document "${duplicateDocument.title}" already exists in this location`);
+    }
+
     const result = await tx.document.updateMany({
       where: {
         id: { in: documentIds },

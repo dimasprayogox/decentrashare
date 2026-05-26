@@ -23,6 +23,8 @@
     onShare,
     onDownload,
     onMove,
+    onRestore,
+    trashMode = false,
     selectedItems = [],
     onToggleSelect,
     selectionMode = false,
@@ -41,6 +43,8 @@
     onShare?: (id: string, type: 'folder' | 'document') => void;
     onDownload?: (id: string) => void;
     onMove?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
+    onRestore?: (id: string, type: 'folder' | 'document', name: string) => void | Promise<void>;
+    trashMode?: boolean;
     selectedItems?: string[];
     onToggleSelect?: (id: string) => void;
     selectionMode?: boolean;
@@ -572,7 +576,7 @@ $effect(() => {
 
       {#if !selectionMode}
         <div class="absolute top-2 right-2 z-30 {isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-200" data-item-menu onclick={(e) => e.stopPropagation()}>
-          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={true} onRename={onRename} onShare={onShare} onMove={onMove} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={undefined} />
+          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={true} onRename={onRename} onShare={onShare} onMove={onMove} onRestore={onRestore} trashMode={trashMode} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={undefined} />
         </div>
       {/if}
     </div>
@@ -668,6 +672,8 @@ $effect(() => {
             }}
             onShare={onShare}
             onMove={onMove}
+            onRestore={onRestore}
+            trashMode={trashMode}
             onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
             onDownload={onDownload}
           />

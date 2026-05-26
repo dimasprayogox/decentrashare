@@ -21,6 +21,8 @@
     onShare,
     onDownload,
     onMove,
+    onRestore,
+    trashMode = false,
     selectedItems = [],
     onToggleSelect,
     selectionMode = false,
@@ -39,6 +41,8 @@
     onShare?: (id: string, type: 'folder' | 'document') => void;
     onDownload?: (id: string) => void;
     onMove?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
+    onRestore?: (id: string, type: 'folder' | 'document', name: string) => void | Promise<void>;
+    trashMode?: boolean;
     selectedItems?: string[];
     onToggleSelect?: (id: string) => void;
     selectionMode?: boolean;
@@ -874,6 +878,8 @@ async function handleConfirmBlockchain(item: Document) {
                     onRename={onRename}
                     onShare={onShare}
                     onMove={onMove}
+                    onRestore={onRestore}
+                    trashMode={trashMode}
                     onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
                     onDownload={undefined}
                   />
@@ -1169,6 +1175,8 @@ async function handleConfirmBlockchain(item: Document) {
                 onEdit={(id, title, description) => openEditModal({ id, title, description })}
                 onShare={onShare}
                 onMove={onMove}
+                onRestore={onRestore}
+                trashMode={trashMode}
                 onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
                 onDownload={onDownload}
               />

@@ -63,6 +63,7 @@ router.post("/batch/confirm-complete", confirmBatchComplete);
 router.post("/batch/trigger-blockchain", triggerBatchBlockchainConfirmation);
 
 router.get('/logs', handleGetActivityLogs);
+router.post('/bulk-download', handleBulkDownloadDocuments);
 
 router.patch("/:id/confirm-onchain", confirmDocumentOnChain);
 router.post("/:id/trigger-blockchain", triggerBlockchainConfirmation); 
@@ -73,8 +74,6 @@ router.get('/:id/preview',handlePreviewDocument);
 
 router.get('/:id/download',handleDownloadDocument);
 router.get("/:id", handleGetDocumentDetail);
-
-router.post('/bulk-download', handleBulkDownloadDocuments);
 
 // Ambil file di root saja
 router.get("/root", handleGetRootDocuments);

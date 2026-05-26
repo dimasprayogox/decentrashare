@@ -692,16 +692,28 @@ export const handleMoveDocuments = async (req: AuthRequest, res: Response) => {
     const { documentIds, targetFolderId } = req.body;
     const userId = req.user?.userId;
 
-    if (!documentIds || !Array.isArray(documentIds)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid document selection. Please provide an array of IDs." 
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document selection. Please provide an array of IDs.",
+        errorCode: 'INVALID_INPUT'
       });
     }
 
-    const result = await documentService.moveMultipleDocuments(documentIds, userId!, targetFolderId);
+    if (targetFolderId !== null && targetFolderId !== undefined && typeof targetFolderId !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'targetFolderId must be a string or null',
+        errorCode: 'INVALID_INPUT'
+      });
+    }
 
-    // Kalo count 0, berarti ada yang gak beres (bukan owner atau ID typo)
+    const result = await documentService.moveMultipleDocuments(documentIds, userId, targetFolderId ?? null);
+
     if (result.count === 0) {
       return res.status(403).json({
         success: false,
@@ -710,13 +722,32 @@ export const handleMoveDocuments = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       message: `Successfully moved ${result.count} documents to ${result.location}.`,
-      details: `Privacy level synchronized to ${result.appliedPrivacy}.`
+      details: `Privacy level synchronized to ${result.appliedPrivacy}.`,
+      data: result
     });
   } catch (error: any) {
-    res.status(400).json({ success: false, message: error.message });
+    logger.error('❌ Move documents failed:', error);
+
+    if (error.message?.toLowerCase().includes('already exists')) {
+      return res.status(409).json({
+        success: false,
+        message: error.message,
+        errorCode: 'DOCUMENT_EXISTS'
+      });
+    }
+
+    if (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('permission')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        errorCode: 'DOCUMENT_NOT_FOUND'
+      });
+    }
+
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
