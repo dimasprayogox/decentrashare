@@ -3,6 +3,7 @@ import cors from 'cors'
 import cron from 'node-cron';
 import { CRON_SCHEDULES } from './config/cron';
 import { runOrphanedPinCleanup } from './jobs/cleanup-orphaned-pins';
+import { runExpiredTrashCleanup } from './jobs/cleanup-expired-trash';
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
@@ -97,8 +98,18 @@ if (process.env.ENABLE_JOBS === 'true' || process.env.NODE_ENV === 'production')
       logger.error('Cleanup job crashed', { error });
     }
   });
-  
-  logger.info(`Scheduled cleanup job: ${CRON_SCHEDULES.CLEANUP_ORPHANED_PINS}`);
+
+  cron.schedule(CRON_SCHEDULES.CLEANUP_EXPIRED_TRASH, async () => {
+    logger.info('Starting expired trash cleanup job...');
+    try {
+      await runExpiredTrashCleanup();
+    } catch (error) {
+      logger.error('Expired trash cleanup job crashed', { error });
+    }
+  });
+
+  logger.info(`Scheduled orphaned pin cleanup job: ${CRON_SCHEDULES.CLEANUP_ORPHANED_PINS}`);
+  logger.info(`Scheduled expired trash cleanup job: ${CRON_SCHEDULES.CLEANUP_EXPIRED_TRASH}`);
 }
 
 // 404 handler

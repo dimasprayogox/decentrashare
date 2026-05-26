@@ -145,13 +145,8 @@
     return { type: 'initial', value: initial };
   }
 
-  // ✅ Get blockchain TX with fallback
   function getBlockchainTx(item: Document): string | null {
-    if (item.blockchainTx) return item.blockchainTx;
-    // @ts-ignore - handle dynamic keys safely
-    const alternatives = [item.blockchain_tx, item.txHash, item.transactionHash, item.tx_id, item.ipfsHash];
-    const found = alternatives.find(tx => tx && typeof tx === 'string' && tx.length > 10);
-    return found || null;
+    return item.blockchainTx || null;
   }
 
 
@@ -1111,46 +1106,50 @@ async function handleConfirmBlockchain(item: Document) {
     
 
   {:else if isPendingOnChain(item)}
-    <!-- ⏳ Belum ada TX hash: Show Confirm button -->
     <div class="flex flex-col items-center gap-1">
-      <button
-        class="inline-flex items-center gap-1.5 text-xs font-medium
-               text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600
-               px-3 py-1.5 rounded-lg transition-all duration-150 ease-out
-               active:scale-[0.98] disabled:cursor-not-allowed"
-        title="Confirm this file on blockchain"
-        disabled={confirmingTx?.has(item.id)}
-        onclick={async (e) => {
-          e.stopPropagation();
-          await handleConfirmBlockchain(item);
-        }}
-      >
-        {#if confirmingTx?.has(item.id)}
-          <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          Confirming...
-        {:else}
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-          </svg>
-          Confirm
-        {/if}
-      </button>
+      {#if !trashMode}
+        <button
+          class="inline-flex items-center gap-1.5 text-xs font-medium
+                 text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600
+                 px-3 py-1.5 rounded-lg transition-all duration-150 ease-out
+                 active:scale-[0.98] disabled:cursor-not-allowed"
+          title="Confirm this file on blockchain"
+          disabled={confirmingTx?.has(item.id)}
+          onclick={async (e) => {
+            e.stopPropagation();
+            await handleConfirmBlockchain(item);
+          }}
+        >
+          {#if confirmingTx?.has(item.id)}
+            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Confirming...
+          {:else}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a8 8 0 11-16 0 8 8 0 0116 0z"/>
+            </svg>
+            Confirm
+          {/if}
+        </button>
+      {/if}
 
       <span class="text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" title="File akan otomatis dihapus dari IPFS dan database jika tidak dikonfirmasi dalam 24 jam">
-        Sisa waktu: {formatPendingCountdown(item)}
+        Need confirmation: {formatPendingCountdown(item)}
       </span>
 
-      {#if txStatus.has(item.id)}
-    <span class="text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap
-                 {txStatus.get(item.id).success
-                   ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                   : 'bg-red-500/10 text-red-400 border border-red-500/20'}">
-      {txStatus.get(item.id).message}
-    </span>
-  {/if}
+      {#if !trashMode && txStatus.has(item.id)}
+        {@const status = txStatus.get(item.id)}
+        {#if status}
+          <span class="text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap
+                       {status.success
+                         ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                         : 'bg-red-500/10 text-red-400 border border-red-500/20'}">
+            {status.message}
+          </span>
+        {/if}
+      {/if}
     </div>
   {:else if isPendingExpired(item)}
     <span class="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20" title="Batas konfirmasi 24 jam sudah habis. File akan dihapus otomatis.">

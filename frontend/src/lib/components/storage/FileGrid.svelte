@@ -747,7 +747,7 @@ $effect(() => {
     {#if isPendingOnChain(item)}
       <div class="px-2 pb-2">
         <span class="inline-flex w-full items-center justify-center text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" title="File akan otomatis dihapus dari IPFS dan database jika tidak dikonfirmasi dalam 24 jam">
-          Sisa waktu: {formatPendingCountdown(item)}
+          Need confirmation: {formatPendingCountdown(item)}
         </span>
       </div>
     {:else if isPendingExpired(item)}

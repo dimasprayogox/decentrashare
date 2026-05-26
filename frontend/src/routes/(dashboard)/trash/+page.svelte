@@ -30,6 +30,7 @@
   let errorMessage = $state('');
   let successMessage = $state('');
   let showDestroyConfirm = $state(false);
+  let showRestoreConfirm = $state(false);
   let viewMode = $state(1);
   let showSortDropdown = $state(false);
   let sortOption = $state<{ field: SortField; direction: SortDirection }>({
@@ -156,6 +157,16 @@
     return sortPresets.find(isActiveSort)?.label ?? 'Custom sort';
   }
 
+  function getTrashRetentionText(deletedAt: string | null | undefined): string {
+    if (!deletedAt) return 'Auto-delete in 60 days';
+    const expiresAt = new Date(deletedAt);
+    expiresAt.setDate(expiresAt.getDate() + 60);
+    const remainingMs = expiresAt.getTime() - Date.now();
+    if (remainingMs <= 0) return 'Scheduled for automatic deletion';
+    const days = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+    return `Auto-delete in ${days} day${days > 1 ? 's' : ''}`;
+  }
+
   async function loadTrashItems() {
     try {
       isLoading = true;
@@ -223,24 +234,15 @@
     }
   }
 
-  async function restoreSingleItem(id: string, type: 'folder' | 'document', name: string) {
-    if (isProcessing) return;
+  function confirmSingleRestore(id: string) {
+    selectedItems = [id];
+    selectionMode = false;
+    showRestoreConfirm = true;
+  }
 
-    try {
-      isProcessing = true;
-      errorMessage = '';
-      if (type === 'folder') {
-        await storageService.restoreFolders([id]);
-      } else {
-        await storageService.restoreDocuments([id]);
-      }
-      showStatus(`${name} restored.`, 'success');
-      await loadTrashItems();
-    } catch (error) {
-      showStatus(error instanceof Error ? error.message : `Failed to restore ${name}.`, 'error');
-    } finally {
-      isProcessing = false;
-    }
+  function confirmSelectedRestore() {
+    if (selectedCount === 0 || isProcessing) return;
+    showRestoreConfirm = true;
   }
 
   function confirmSingleDestroy(id: string, type: 'folder' | 'document', name: string) {
@@ -262,6 +264,7 @@
       ]);
 
       showStatus(`${selectedCount} item${selectedCount > 1 ? 's' : ''} restored.`, 'success');
+      showRestoreConfirm = false;
       exitSelectionMode();
       await loadTrashItems();
     } catch (error) {
@@ -341,6 +344,51 @@
     </div>
   {/if}
 
+  {#if showRestoreConfirm}
+    <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" transition:fade>
+      <div class="bg-[#1a1a1e] p-6 rounded-2xl border border-white/10 shadow-2xl w-full max-w-md" in:scale>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10a9 9 0 0114.31-7.28L21 6m0 0h-6m6 0v-6M21 14a9 9 0 01-14.31 7.28L3 18m0 0h6m-6 0v6" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-white font-bold">Restore Items</h3>
+            <p class="text-xs text-gray-500">Items will return to storage.</p>
+          </div>
+        </div>
+
+        <p class="text-sm text-gray-300 mb-4">
+          Restore {selectedCount} selected item{selectedCount > 1 ? 's' : ''} from trash?
+        </p>
+
+        <div class="max-h-40 overflow-y-auto mb-5 pr-2 space-y-2">
+          {#each selectedFolders.slice(0, 5) as folder (folder.id)}
+            <div class="text-sm text-gray-400">
+              <p class="truncate">{folder.name}</p>
+              <p class="text-[10px] text-gray-600">{getTrashRetentionText(folder.deletedAt)}</p>
+            </div>
+          {/each}
+          {#each selectedDocuments.slice(0, Math.max(0, 5 - selectedFolders.length)) as item (item.id)}
+            <div class="text-sm text-gray-400">
+              <p class="truncate">{item.title}</p>
+              <p class="text-[10px] text-gray-600">{getTrashRetentionText(item.deletedAt)}</p>
+            </div>
+          {/each}
+          {#if selectedCount > 5}
+            <p class="text-xs text-gray-600 italic">+ {selectedCount - 5} more item{selectedCount - 5 > 1 ? 's' : ''}</p>
+          {/if}
+        </div>
+
+        <div class="flex gap-3">
+          <button onclick={() => showRestoreConfirm = false} class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50" disabled={isProcessing}>Cancel</button>
+          <button onclick={restoreSelectedItems} class="flex-1 h-10 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed font-bold" disabled={isProcessing}>Restore</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if showDestroyConfirm}
     <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4" transition:fade>
       <div class="bg-[#1a1a1e] p-6 rounded-2xl border border-white/10 shadow-2xl w-full max-w-md" in:scale>
@@ -362,10 +410,16 @@
 
         <div class="max-h-40 overflow-y-auto mb-5 pr-2 space-y-2">
           {#each selectedFolders.slice(0, 5) as folder (folder.id)}
-            <p class="text-sm text-gray-400 truncate">{folder.name}</p>
+            <div class="text-sm text-gray-400">
+              <p class="truncate">{folder.name}</p>
+              <p class="text-[10px] text-gray-600">{getTrashRetentionText(folder.deletedAt)}</p>
+            </div>
           {/each}
           {#each selectedDocuments.slice(0, Math.max(0, 5 - selectedFolders.length)) as item (item.id)}
-            <p class="text-sm text-gray-400 truncate">{item.title}</p>
+            <div class="text-sm text-gray-400">
+              <p class="truncate">{item.title}</p>
+              <p class="text-[10px] text-gray-600">{getTrashRetentionText(item.deletedAt)}</p>
+            </div>
           {/each}
           {#if selectedCount > 5}
             <p class="text-xs text-gray-600 italic">+ {selectedCount - 5} more item{selectedCount - 5 > 1 ? 's' : ''}</p>
@@ -395,7 +449,7 @@
           <ViewSwitcher bind:viewMode />
         </div>
         <p class="text-sm text-gray-500 mt-2 max-w-2xl">
-          Review deleted folders and documents from your account. Restore items back to storage or permanently delete them.
+          Review deleted folders and documents from your account. Restore items within 60 days or they will be permanently deleted automatically.
         </p>
       </div>
     </div>
@@ -476,7 +530,7 @@
             <span class="text-[10px] text-gray-600">{sortedFolders.length} item{sortedFolders.length === 1 ? '' : 's'}</span>
           </div>
           {#if sortedFolders.length > 0}
-            <FileGrid folders={sortedFolders} items={[]} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={restoreSingleItem} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+            <FileGrid folders={sortedFolders} items={[]} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
           {:else}
             <p class="text-gray-600 text-sm italic pl-2">No folders in trash</p>
           {/if}
@@ -488,20 +542,20 @@
             <span class="text-[10px] text-gray-600">{sortedItems.length} item{sortedItems.length === 1 ? '' : 's'}</span>
           </div>
           {#if sortedItems.length > 0}
-            <FileTable folders={[]} items={sortedItems} viewMode={1} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={restoreSingleItem} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+            <FileTable folders={[]} items={sortedItems} viewMode={1} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
           {:else}
             <p class="text-gray-600 text-sm italic pl-2">No documents in trash</p>
           {/if}
         </section>
       {:else if viewMode === 2}
         {#if sortedFolders.length > 0 || sortedItems.length > 0}
-          <FileTable folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={restoreSingleItem} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+          <FileTable folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">Trash is empty</p></div>
         {/if}
       {:else}
         {#if sortedFolders.length > 0 || sortedItems.length > 0}
-          <FileGrid folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={restoreSingleItem} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+          <FileGrid folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">Trash is empty</p></div>
         {/if}
@@ -517,7 +571,7 @@
           <p class="text-xs text-gray-500">Restore selected trash items or delete them permanently.</p>
         </div>
         <button onclick={downloadSelectedDocuments} class="px-5 py-3 rounded-2xl bg-white/5 text-white font-bold hover:bg-white/10 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedDocuments.length === 0 || isProcessing}>Download</button>
-        <button onclick={restoreSelectedItems} class="px-5 py-3 rounded-2xl bg-green-600 text-white font-bold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Restore</button>
+        <button onclick={confirmSelectedRestore} class="px-5 py-3 rounded-2xl bg-green-600 text-white font-bold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Restore</button>
         <button onclick={() => showDestroyConfirm = true} class="px-5 py-3 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Delete Permanently</button>
         <button onclick={exitSelectionMode} class="px-5 py-3 rounded-2xl bg-white/5 text-white font-bold hover:bg-white/10 transition-colors" disabled={isProcessing}>Cancel</button>
       </div>
