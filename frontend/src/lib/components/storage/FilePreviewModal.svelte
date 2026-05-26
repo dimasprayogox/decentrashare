@@ -33,6 +33,9 @@
   let imageBlobUrl = $state<string | null>(null);
   let currentFileId = $state<string | null>(null);
   let publicImageLoaded = $state(false);
+  let textContent = $state('');
+  let textLoading = $state(false);
+  let textError = $state<string | null>(null);
 
   // ✅ Effect: Fetch image preview via service for private files
   $effect(() => {
@@ -46,7 +49,7 @@
       return;
     }
 
-    if (getFileCategory(file.mimeType) !== 'image') return;
+    if (getFileCategory(file.mimeType, file.fileName) !== 'image') return;
 
     if (file.requiresAuth) {
       if (currentFileId !== file.id) {
@@ -98,16 +101,27 @@
   }
 
   // ✅ Helper: Get file type category
-  function getFileCategory(mimeType: string): 'image' | 'video' | 'pdf' | 'audio' | 'document' | 'other' {
-    if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType.startsWith('video/')) return 'video';
-    if (mimeType === 'application/pdf') return 'pdf';
-    if (mimeType.startsWith('audio/')) return 'audio';
-    if (['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+  function getFileCategory(mimeType: string, fileName = ''): 'image' | 'video' | 'pdf' | 'audio' | 'text' | 'document' | 'other' {
+    const mime = mimeType.toLowerCase();
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    if (mime.startsWith('image/')) return 'image';
+    if (mime.startsWith('video/')) return 'video';
+    if (mime === 'application/pdf' || extension === 'pdf') return 'pdf';
+    if (mime.startsWith('audio/')) return 'audio';
+    if (
+      mime.startsWith('text/') ||
+      ['application/json', 'application/xml', 'application/javascript', 'application/typescript', 'text/csv'].includes(mime) ||
+      ['txt', 'md', 'json', 'csv', 'xml', 'html', 'css', 'js', 'ts', 'jsx', 'tsx', 'py', 'go', 'rs', 'java', 'php', 'rb', 'sol'].includes(extension)
+    ) return 'text';
+    if (['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
          'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
          'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
-         .includes(mimeType)) return 'document';
+         .includes(mime)) return 'document';
     return 'other';
+  }
+
+  function getPreviewUrl(file: { id: string; fileUrl?: string; downloadUrl: string }): string {
+    return file.fileUrl || `/api/documents/${file.id}/preview` || file.downloadUrl;
   }
 
   // ✅ Helper: Get file extension
@@ -146,11 +160,45 @@
     }
   }
 
+  $effect(() => {
+    if (!isOpen || !file || getFileCategory(file.mimeType, file.fileName) !== 'text') {
+      textContent = '';
+      textLoading = false;
+      textError = null;
+      return;
+    }
+
+    const loadingFileId = file.id;
+    textLoading = true;
+    textError = null;
+    textContent = '';
+
+    fetch(getPreviewUrl(file), { credentials: 'include' })
+      .then(async response => {
+        if (!response.ok) throw new Error('Failed to load text preview');
+        const contentLength = Number(response.headers.get('content-length') || 0);
+        if (contentLength > 1_000_000) throw new Error('File is too large to preview inline');
+        return response.text();
+      })
+      .then(content => {
+        if (file?.id === loadingFileId) {
+          textContent = content.slice(0, 1_000_000);
+          textLoading = false;
+        }
+      })
+      .catch(error => {
+        if (file?.id === loadingFileId) {
+          textError = error instanceof Error ? error.message : 'Failed to load text preview';
+          textLoading = false;
+        }
+      });
+  });
+
   // ✅ Keyboard shortcuts
   function handleKeydown(e: KeyboardEvent) {
     if (!isOpen) return;
     if (e.key === 'Escape') onClose();
-    if (file && getFileCategory(file.mimeType) === 'image') {
+    if (file && getFileCategory(file.mimeType, file.fileName) === 'image') {
       if (e.key === '+' || e.key === '=') zoomLevel = Math.min(zoomLevel + 0.25, 3);
       if (e.key === '-' || e.key === '_') zoomLevel = Math.max(zoomLevel - 0.25, 0.5);
       if (e.key === '0') zoomLevel = 1;
@@ -169,6 +217,9 @@
       loadError = null;
       zoomLevel = 1;
       publicImageLoaded = false;
+      textContent = '';
+      textLoading = false;
+      textError = null;
     }
   });
 </script>
@@ -199,18 +250,18 @@
         <div class="flex items-center gap-3 min-w-0">
           <!-- File Icon -->
           <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-                      {getFileCategory(file.mimeType) === 'image' ? 'bg-purple-500/20 text-purple-400' : 
-                       getFileCategory(file.mimeType) === 'video' ? 'bg-red-500/20 text-red-400' :
-                       getFileCategory(file.mimeType) === 'pdf' ? 'bg-orange-500/20 text-orange-400' :
-                       getFileCategory(file.mimeType) === 'audio' ? 'bg-green-500/20 text-green-400' :
+                      {getFileCategory(file.mimeType, file.fileName) === 'image' ? 'bg-purple-500/20 text-purple-400' : 
+                       getFileCategory(file.mimeType, file.fileName) === 'video' ? 'bg-red-500/20 text-red-400' :
+                       getFileCategory(file.mimeType, file.fileName) === 'pdf' ? 'bg-orange-500/20 text-orange-400' :
+                       getFileCategory(file.mimeType, file.fileName) === 'audio' ? 'bg-green-500/20 text-green-400' :
                        'bg-blue-500/20 text-blue-400'}">
-            {#if getFileCategory(file.mimeType) === 'image'}
+            {#if getFileCategory(file.mimeType, file.fileName) === 'image'}
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            {:else if getFileCategory(file.mimeType) === 'video'}
+            {:else if getFileCategory(file.mimeType, file.fileName) === 'video'}
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            {:else if getFileCategory(file.mimeType) === 'pdf'}
+            {:else if getFileCategory(file.mimeType, file.fileName) === 'pdf'}
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-            {:else if getFileCategory(file.mimeType) === 'audio'}
+            {:else if getFileCategory(file.mimeType, file.fileName) === 'audio'}
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
             {:else}
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -243,7 +294,7 @@
       <!-- ✅ Content Area (Scrollable) -->
       <div class="flex-1 overflow-y-auto p-4">
         
-        {#if getFileCategory(file.mimeType) === 'image'}
+        {#if getFileCategory(file.mimeType, file.fileName) === 'image'}
           <!-- ✅ IMAGE Preview -->
           <div class="flex flex-col items-center">
             <div class="relative max-w-full overflow-hidden rounded-xl bg-black/20">
@@ -271,10 +322,10 @@
               {:else}
                 {#if file.requiresAuth}
                   {#if imageBlobUrl}
-                    <img src={imageBlobUrl} alt={file.title} class="max-w-full max-h-[60vh] object-contain transition-transform duration-200" style="transform: scale({zoomLevel})" key={file.id} />
+                    <img src={imageBlobUrl} alt={file.title} class="max-w-full max-h-[60vh] object-contain transition-transform duration-200" style="transform: scale({zoomLevel})" />
                   {/if}
                 {:else}
-                  <img src={file.fileUrl} alt={file.title} class="max-w-full max-h-[60vh] object-contain transition-transform duration-200" style="transform: scale({zoomLevel})" key={file.id} onload={() => { isLoading = false; publicImageLoaded = true; }} onerror={(e) => { loadError = 'Failed to load image from source'; isLoading = false; }} />
+                  <img src={file.fileUrl} alt={file.title} class="max-w-full max-h-[60vh] object-contain transition-transform duration-200" style="transform: scale({zoomLevel})" onload={() => { isLoading = false; publicImageLoaded = true; }} onerror={(e) => { loadError = 'Failed to load image from source'; isLoading = false; }} />
                 {/if}
               {/if}
             </div>
@@ -290,39 +341,55 @@
             {/if}
           </div>
         
-        {:else if getFileCategory(file.mimeType) === 'video'}
+        {:else if getFileCategory(file.mimeType, file.fileName) === 'video'}
           <div class="flex flex-col items-center">
             <video controls class="max-w-full max-h-[60vh] rounded-xl bg-black" onerror={() => { loadError = 'Video preview not available'; }}>
-              <source src={file.fileUrl} type={file.mimeType} />
+              <source src={getPreviewUrl(file)} type={file.mimeType} />
               Your browser does not support the video tag.
             </video>
             {#if loadError}
               <p class="text-red-400 text-sm mt-2">{loadError}</p>
-              <button onclick={() => window.location.href = file.downloadUrl} class="mt-2 text-blue-400 hover:underline">Download instead</button>
+              <button onclick={downloadFile} class="mt-2 text-blue-400 hover:underline">Download instead</button>
             {/if}
           </div>
 
-        {:else if getFileCategory(file.mimeType) === 'pdf'}
+        {:else if getFileCategory(file.mimeType, file.fileName) === 'pdf'}
           <div class="flex flex-col items-center">
-            <div class="w-full max-h-[60vh] rounded-xl overflow-hidden bg-black/30">
-              <iframe src={`https://docs.google.com/gview?url=${encodeURIComponent(file.fileUrl)}&embedded=true`} class="w-full h-full min-h-[400px] border-0" title={file.title}></iframe>
+            <div class="w-full h-[65vh] rounded-xl overflow-hidden bg-black/30 border border-white/10">
+              <iframe src={getPreviewUrl(file)} class="w-full h-full border-0" title={file.title}></iframe>
             </div>
-            {#if loadError}
-              <p class="text-xs text-gray-500 mt-2">Preview failed. <button class="text-blue-400 hover:underline" onclick={() => window.location.href = file.downloadUrl}>Download file</button></p>
-            {/if}
+            <p class="text-xs text-gray-500 mt-2">If the PDF does not render in your browser, use Download or Open in New Tab.</p>
           </div>
-            
-        {:else if getFileCategory(file.mimeType) === 'audio'}
+
+        {:else if getFileCategory(file.mimeType, file.fileName) === 'audio'}
           <div class="flex flex-col items-center py-8">
             <div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mb-6">
               <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
             </div>
             <audio controls class="w-full max-w-md">
-              <source src={file.fileUrl || file.downloadUrl} type={file.mimeType} />
+              <source src={getPreviewUrl(file)} type={file.mimeType} />
               Your browser does not support the audio element.
             </audio>
           </div>
-            
+
+        {:else if getFileCategory(file.mimeType, file.fileName) === 'text'}
+          <div class="rounded-xl overflow-hidden border border-white/10 bg-black/30">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/[0.03]">
+              <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Text Preview</span>
+              <span class="text-xs text-gray-600">{getFileExtension(file.fileName)}</span>
+            </div>
+            {#if textLoading}
+              <div class="min-h-[320px] flex items-center justify-center text-gray-400">Loading text preview...</div>
+            {:else if textError}
+              <div class="min-h-[320px] flex flex-col items-center justify-center text-center p-6">
+                <p class="text-red-400 text-sm mb-2">{textError}</p>
+                <button onclick={downloadFile} class="text-blue-400 hover:underline text-sm">Download instead</button>
+              </div>
+            {:else}
+              <pre class="max-h-[60vh] overflow-auto p-4 text-sm text-gray-200 leading-relaxed whitespace-pre-wrap font-mono">{textContent}</pre>
+            {/if}
+          </div>
+
         {:else}
           <div class="flex flex-col items-center py-8 text-center">
             <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-6">
@@ -330,7 +397,7 @@
             </div>
             <h3 class="text-white font-semibold text-lg mb-2">{file.title}</h3>
             <p class="text-gray-400 text-sm mb-6">{getFileExtension(file.fileName)} file • {formatFileSize(file.fileSize)}</p>
-            <p class="text-gray-500 text-sm mb-6 max-w-md">This file type cannot be previewed directly. Download to view in your preferred application.</p>
+            <p class="text-gray-500 text-sm mb-6 max-w-md">This file type cannot be previewed directly in the browser. Download it to view in your preferred application.</p>
           </div>
         {/if}
 
@@ -350,7 +417,7 @@
 
       <!-- ✅ Footer Actions -->
       <div class="flex items-center justify-end gap-3 p-4 border-t border-white/10">
-        <button onclick={() => openInNewTab(file.fileUrl || file.downloadUrl)} class="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-colors text-sm flex items-center gap-2">
+        <button onclick={() => openInNewTab(getPreviewUrl(file))} class="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-colors text-sm flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
           Open in New Tab
         </button>

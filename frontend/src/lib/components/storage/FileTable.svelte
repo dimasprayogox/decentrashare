@@ -238,11 +238,7 @@
       mimeType: item.mimeType,
       fileSize: item.fileSize,
       ipfsHash: item.ipfsHash,
-      fileUrl: isPrivate
-        ? `/api/documents/${item.id}/preview`
-        : item.ipfsHash 
-          ? `https://gateway.pinata.cloud/ipfs/${item.ipfsHash}`
-          : '',
+      fileUrl: `/api/documents/${item.id}/preview`,
       downloadUrl: `/api/documents/${item.id}/download`,
       requiresAuth: isPrivate,
       privacy: item.privacy,

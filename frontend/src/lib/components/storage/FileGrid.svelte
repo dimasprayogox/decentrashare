@@ -311,11 +311,7 @@ function openFilePreview(item: Document) {
     mimeType: item.mimeType,
     fileSize: item.fileSize,
     ipfsHash: item.ipfsHash,
-    fileUrl: isPrivate
-      ? `/api/documents/${item.id}/preview`
-      : item.ipfsHash 
-        ? `https://gateway.pinata.cloud/ipfs/${item.ipfsHash}`
-        : `/api/documents/${item.id}/preview`,
+    fileUrl: `/api/documents/${item.id}/preview`,
     downloadUrl: `/api/documents/${item.id}/download`,
     requiresAuth: isPrivate,
     privacy: item.privacy,
@@ -571,9 +567,6 @@ $effect(() => {
           {folder.name}
         </h4>
         {#if folder._count?.documents}
-          <span class="text-[9px] text-gray-400 font-medium bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
-            {folder._count.documents} files
-          </span>
         {/if}
       </div>
 

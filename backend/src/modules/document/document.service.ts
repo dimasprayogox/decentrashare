@@ -85,13 +85,13 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
     throw new Error("Document not found.");
   }
 
-  if (document.isArchived) { 
-    throw new Error("Document is in trash.");
-  }
-
-  // 1. Owner Access: The creator always has full access
+  // 1. Owner Access: The creator always has full access, including files in Trash
   if (document.ownerId === userId) {
     return document;
+  }
+
+  if (document.isArchived) {
+    throw new Error("Document is in trash.");
   }
 
   // 2. Folder Inheritance: Check if the parent folder grants access
