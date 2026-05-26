@@ -34,6 +34,9 @@ export const sanitizeDocument = (doc: any, currentUserId?: string) => {
     ipfsHash: undefined, 
 
     blockchainTx: (isOwner || !isPrivate) ? doc.blockchainTx : undefined,
+    isOnChain: doc.isOnChain,
+    pendingOnChainUntil: isOwner ? doc.pendingOnChainUntil : undefined,
+    cleanupStatus: isOwner ? doc.cleanupStatus : undefined,
 
     owner: doc.owner ? {
       id: doc.owner.id,

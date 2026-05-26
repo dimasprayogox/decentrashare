@@ -13,19 +13,19 @@ interface CleanupConfig {
 const DEFAULT_CONFIG: CleanupConfig = {
   ttlHours: parseInt(process.env.CLEANUP_TTL_HOURS || '24'),
   batchSize: 10,
-  dryRun: process.env.NODE_ENV === 'production'
+  dryRun: process.env.CLEANUP_DRY_RUN === 'true'
 };
 
 export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONFIG) => {
-  const cutoffDate = new Date(Date.now() - config.ttlHours * 60 * 60 * 1000);
-  
+  const now = new Date();
+
   logger.info(`🔍 Searching for orphaned pins (TTL: ${config.ttlHours}h, dryRun: ${config.dryRun})`);
 
   // 1. Cari dokumen yang expired dan masih PENDING
   const orphanedDocs = await prisma.document.findMany({
     where: {
       isOnChain: false,
-      pendingOnChainUntil: { lt: cutoffDate },
+      pendingOnChainUntil: { lt: now },
       cleanupStatus: 'PENDING',
       ipfsHash: { not: null }
     },
@@ -69,20 +69,28 @@ export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONF
 
       // 3. Unpin dari Pinata
       const unpinResult = await PinataCleanupService.unpin(doc.ipfsHash);
-      
-      // 4. Update database
-      await prisma.document.update({
-        where: { id: doc.id },
-        data: {
-          cleanupStatus: unpinResult.success ? 'DELETED' : 'FAILED',
-          cleanedAt: new Date()
-        }
-      });
 
       if (unpinResult.success) {
+        await prisma.$transaction(async (tx) => {
+          await tx.documentAccess.deleteMany({
+            where: { documentId: doc.id }
+          });
+
+          await tx.document.delete({
+            where: { id: doc.id }
+          });
+        });
+
         results.cleaned++;
         logger.info(`✅ Cleaned: ${doc.ipfsHash} | ${doc.fileName}`);
       } else {
+        await prisma.document.update({
+          where: { id: doc.id },
+          data: {
+            cleanupStatus: 'FAILED'
+          }
+        });
+
         results.failed++;
         logger.error(`❌ Failed: ${doc.ipfsHash} | ${unpinResult.error}`);
       }

@@ -160,6 +160,8 @@ export interface Document {
   fileHash?: string;
   blockchainTx?: string;
   isOnChain?: boolean;
+  pendingOnChainUntil?: string | null;
+  cleanupStatus?: 'PENDING' | 'ARCHIVED' | 'DELETED' | 'FAILED';
   folderId: string | null;
   ownerId: string;
   privacy: PrivacyLevel;

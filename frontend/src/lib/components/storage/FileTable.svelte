@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy, onMount } from 'svelte';
   import ItemMenu from './ItemMenu.svelte';
   import type { Folder, Document } from '$lib/types/storage';
   import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
@@ -92,6 +93,18 @@
   let confirmingTx = $state(new Set<string>());
   let txStatus = $state(new Map<string, { success: boolean; message: string }>());
   let duplicateFiles = $state(new Set<string>());
+  let now = $state(Date.now());
+  let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+  onMount(() => {
+    countdownTimer = setInterval(() => {
+      now = Date.now();
+    }, 60_000);
+  });
+
+  onDestroy(() => {
+    if (countdownTimer) clearInterval(countdownTimer);
+  });
 
   // ─────────────────────────────────────────────────────────────
   // ✅ HELPER FUNCTIONS (LENGKAP!)
@@ -143,6 +156,27 @@
     if (!tx) return '—';
     if (tx.startsWith('ipfs:')) return tx.replace('ipfs:', '').slice(0, 6) + '...';
     return tx.slice(0, 6) + '...' + tx.slice(-4);
+  }
+
+  function getPendingRemainingMs(item: Document): number {
+    if (!item.pendingOnChainUntil || item.isOnChain) return 0;
+    return new Date(item.pendingOnChainUntil).getTime() - now;
+  }
+
+  function isPendingOnChain(item: Document): boolean {
+    return getPendingRemainingMs(item) > 0;
+  }
+
+  function isPendingExpired(item: Document): boolean {
+    return Boolean(item.pendingOnChainUntil && !item.isOnChain && getPendingRemainingMs(item) <= 0);
+  }
+
+  function formatPendingCountdown(item: Document): string {
+    const remaining = getPendingRemainingMs(item);
+    if (remaining <= 0) return 'Expired';
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
   }
 
   // ✅ Get owner profile URL
@@ -1074,11 +1108,11 @@ async function handleConfirmBlockchain(item: Document) {
     </a>
     
 
-  {:else}
+  {:else if isPendingOnChain(item)}
     <!-- ⏳ Belum ada TX hash: Show Confirm button -->
     <div class="flex flex-col items-center gap-1">
       <button
-        class="inline-flex items-center gap-1.5 text-xs font-medium 
+        class="inline-flex items-center gap-1.5 text-xs font-medium
                text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600
                px-3 py-1.5 rounded-lg transition-all duration-150 ease-out
                active:scale-[0.98] disabled:cursor-not-allowed"
@@ -1103,15 +1137,25 @@ async function handleConfirmBlockchain(item: Document) {
         {/if}
       </button>
 
+      <span class="text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" title="File akan otomatis dihapus dari IPFS dan database jika tidak dikonfirmasi dalam 24 jam">
+        Sisa waktu: {formatPendingCountdown(item)}
+      </span>
+
       {#if txStatus.has(item.id)}
     <span class="text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap
-                 {txStatus.get(item.id).success 
-                   ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                 {txStatus.get(item.id).success
+                   ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                    : 'bg-red-500/10 text-red-400 border border-red-500/20'}">
       {txStatus.get(item.id).message}
     </span>
   {/if}
     </div>
+  {:else if isPendingExpired(item)}
+    <span class="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20" title="Batas konfirmasi 24 jam sudah habis. File akan dihapus otomatis.">
+      Expired - menunggu cleanup
+    </span>
+  {:else}
+    <span class="text-xs text-gray-600">—</span>
   {/if}
 </td>
           

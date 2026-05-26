@@ -99,6 +99,7 @@
   let bulkShareSearchQuery = $state('');
   let bulkShareSearchResults = $state<ShareableUser[]>([]);
   let bulkShareSelectedUsers = $state<ShareableUser[]>([]);
+  let bulkSharePrivacy = $state<PrivacyLevel>('SPECIFIC_USER');
   let bulkShareRole = $state<'VIEWER' | 'EDITOR'>('VIEWER');
   let bulkShareError = $state('');
   let bulkShareSuccess = $state('');
@@ -646,6 +647,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     bulkShareSearchQuery = '';
     bulkShareSearchResults = [];
     bulkShareSelectedUsers = [];
+    bulkSharePrivacy = 'SPECIFIC_USER';
     bulkShareRole = 'VIEWER';
     bulkShareError = '';
   }
@@ -701,6 +703,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     bulkShareSearchQuery = '';
     bulkShareSearchResults = [];
     bulkShareSelectedUsers = [];
+    bulkSharePrivacy = 'SPECIFIC_USER';
     bulkShareRole = 'VIEWER';
     bulkShareError = '';
     bulkShareSuccess = '';
@@ -708,8 +711,8 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   }
 
   async function handleExecuteBulkShare() {
-    if (bulkShareSelectedUsers.length === 0) {
-      bulkShareError = 'Pilih minimal satu user tujuan.';
+    if (bulkSharePrivacy === 'SPECIFIC_USER' && bulkShareSelectedUsers.length === 0) {
+      bulkShareError = 'Pilih minimal satu user tujuan untuk Specific User.';
       return;
     }
 
@@ -722,21 +725,39 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       bulkShareError = '';
 
       if (documentTargets.length > 0) {
-        await storageService.shareDocuments(documentTargets.map(target => ({
+        await storageService.updateDocumentsPrivacy(documentTargets.map(target => ({
           documentId: target.id,
-          targetUsers: selectedUserIds
+          newPrivacy: bulkSharePrivacy
         })));
       }
 
       if (folderTargets.length > 0) {
-        await storageService.shareFolders(folderTargets.map(target => ({
-          itemId: target.id,
-          itemType: 'folder',
-          targetUsers: selectedUserIds.map(userId => ({ userId, role: bulkShareRole }))
-        })));
+        await Promise.all(folderTargets.map(target =>
+          storageService.updateFolderPrivacy(target.id, { newPrivacy: bulkSharePrivacy })
+        ));
       }
 
-      bulkShareSuccess = `${bulkShareTargets.length} item berhasil dibagikan.`;
+      if (bulkSharePrivacy === 'SPECIFIC_USER') {
+        if (documentTargets.length > 0) {
+          await storageService.shareDocuments(documentTargets.map(target => ({
+            documentId: target.id,
+            targetUsers: selectedUserIds
+          })));
+        }
+
+        if (folderTargets.length > 0) {
+          await storageService.shareFolders(folderTargets.map(target => ({
+            itemId: target.id,
+            itemType: 'folder',
+            targetUsers: selectedUserIds.map(userId => ({ userId, role: bulkShareRole }))
+          })));
+        }
+      }
+
+      const parts = [];
+      if (folderTargets.length > 0) parts.push(`${folderTargets.length} folder`);
+      if (documentTargets.length > 0) parts.push(`${documentTargets.length} dokumen`);
+      bulkShareSuccess = `${parts.join(' dan ')} berhasil diupdate ke ${bulkSharePrivacy}.`;
       showBulkShareModal = false;
       clearSelection();
       selectionMode = false;
@@ -746,7 +767,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
         bulkShareSuccess = '';
       }, 4000);
     } catch (error: unknown) {
-      bulkShareError = error instanceof Error ? error.message : 'Gagal membagikan item.';
+      bulkShareError = error instanceof Error ? error.message : 'Gagal mengupdate share item.';
     } finally {
       isBulkShareProcessing = false;
     }
@@ -1182,7 +1203,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
           <div class="flex items-start justify-between gap-4">
             <div>
               <h3 class="text-white font-black text-xl">Bulk Share</h3>
-              <p class="text-sm text-gray-400">Bagikan {bulkShareTargets.length} item ke user terpilih.</p>
+              <p class="text-sm text-gray-400">
+                {bulkShareTargets.filter(target => target.type === 'folder').length} folder · {bulkShareTargets.filter(target => target.type === 'document').length} dokumen
+              </p>
             </div>
             <button onclick={resetBulkShareState} class="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-colors" disabled={isBulkShareProcessing} aria-label="Close bulk share modal">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1192,44 +1215,68 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
 
         <div class="p-6 space-y-4">
           <div>
-            <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Cari user</label>
-            <input bind:value={bulkShareSearchQuery} oninput={handleBulkShareSearchInput} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500" placeholder="Username atau wallet address" disabled={isBulkShareProcessing} />
+            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Privacy Level</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {#each ['PRIVATE', 'PUBLIC', 'SPECIFIC_USER'] as level (level)}
+                <button onclick={() => bulkSharePrivacy = level as PrivacyLevel} class="px-4 py-3 rounded-2xl border text-left transition-all {bulkSharePrivacy === level ? 'bg-violet-600/20 border-violet-500/60 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}" disabled={isBulkShareProcessing}>
+                  <span class="block text-sm font-bold">{level === 'SPECIFIC_USER' ? 'Specific User' : level.charAt(0) + level.slice(1).toLowerCase()}</span>
+                  <span class="block text-xs text-gray-500 mt-1">{level === 'SPECIFIC_USER' ? 'Pilih user tertentu' : level === 'PUBLIC' ? 'Semua orang bisa akses' : 'Hanya owner'}</span>
+                </button>
+              {/each}
+            </div>
           </div>
 
-          {#if isBulkShareSearching}
-            <p class="text-sm text-gray-500">Searching...</p>
-          {:else if bulkShareSearchResults.length > 0}
-            <div class="max-h-44 overflow-y-auto rounded-2xl border border-white/10 bg-black/20">
-              {#each bulkShareSearchResults as user (user.id)}
-                <button onclick={() => toggleBulkShareUser(user)} class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors">
-                  <span class="min-w-0">
-                    <span class="block text-sm text-white font-medium truncate">{user.username}</span>
-                    <span class="block text-xs text-gray-500 truncate">{user.walletAddress}</span>
-                  </span>
-                  <span class="text-violet-300 text-xs font-bold">Add</span>
-                </button>
-              {/each}
-            </div>
+          {#if bulkShareTargets.some(target => target.type === 'folder') && bulkShareTargets.some(target => target.type === 'document')}
+            <p class="text-xs text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-2xl px-4 py-3">
+              Mixed selection: privacy diterapkan ke folder dan dokumen. Role hanya berlaku untuk folder; dokumen hanya menerima user.
+            </p>
           {/if}
 
-          {#if bulkShareSelectedUsers.length > 0}
-            <div class="flex flex-wrap gap-2">
-              {#each bulkShareSelectedUsers as user (user.id)}
-                <button onclick={() => toggleBulkShareUser(user)} class="px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-200 text-xs hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-300 transition-colors">
-                  {user.username} ×
-                </button>
-              {/each}
-            </div>
-          {/if}
-
-          {#if bulkShareTargets.some(target => target.type === 'folder')}
+          {#if bulkSharePrivacy === 'SPECIFIC_USER'}
             <div>
-              <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Folder role</label>
-              <select bind:value={bulkShareRole} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-violet-500" disabled={isBulkShareProcessing}>
-                <option value="VIEWER" class="bg-[#111115]">Viewer</option>
-                <option value="EDITOR" class="bg-[#111115]">Editor</option>
-              </select>
+              <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Cari user</label>
+              <input bind:value={bulkShareSearchQuery} oninput={handleBulkShareSearchInput} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500" placeholder="Username atau wallet address" disabled={isBulkShareProcessing} />
             </div>
+
+            {#if isBulkShareSearching}
+              <p class="text-sm text-gray-500">Searching...</p>
+            {:else if bulkShareSearchResults.length > 0}
+              <div class="max-h-44 overflow-y-auto rounded-2xl border border-white/10 bg-black/20">
+                {#each bulkShareSearchResults as user (user.id)}
+                  <button onclick={() => toggleBulkShareUser(user)} class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors">
+                    <span class="min-w-0">
+                      <span class="block text-sm text-white font-medium truncate">{user.username}</span>
+                      <span class="block text-xs text-gray-500 truncate">{user.walletAddress}</span>
+                    </span>
+                    <span class="text-violet-300 text-xs font-bold">Add</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+
+            {#if bulkShareSelectedUsers.length > 0}
+              <div class="flex flex-wrap gap-2">
+                {#each bulkShareSelectedUsers as user (user.id)}
+                  <button onclick={() => toggleBulkShareUser(user)} class="px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-200 text-xs hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-300 transition-colors">
+                    {user.username} ×
+                  </button>
+                {/each}
+              </div>
+            {/if}
+
+            {#if bulkShareTargets.some(target => target.type === 'folder')}
+              <div>
+                <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Folder role</label>
+                <select bind:value={bulkShareRole} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-violet-500" disabled={isBulkShareProcessing}>
+                  <option value="VIEWER" class="bg-[#111115]">Viewer</option>
+                  <option value="EDITOR" class="bg-[#111115]">Editor</option>
+                </select>
+              </div>
+            {/if}
+          {:else}
+            <p class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3">
+              User selection tidak diperlukan. Jika privacy bukan Specific User, akses user spesifik akan dibersihkan oleh backend.
+            </p>
           {/if}
 
           {#if bulkShareError}
@@ -1239,8 +1286,8 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
 
         <div class="p-5 border-t border-white/10 flex gap-3">
           <button onclick={resetBulkShareState} class="flex-1 h-11 rounded-2xl bg-white/5 text-white hover:bg-white/10 transition-colors" disabled={isBulkShareProcessing}>Cancel</button>
-          <button onclick={handleExecuteBulkShare} class="flex-1 h-11 rounded-2xl bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={isBulkShareProcessing || bulkShareSelectedUsers.length === 0}>
-            {isBulkShareProcessing ? 'Sharing...' : 'Share'}
+          <button onclick={handleExecuteBulkShare} class="flex-1 h-11 rounded-2xl bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={isBulkShareProcessing || (bulkSharePrivacy === 'SPECIFIC_USER' && bulkShareSelectedUsers.length === 0)}>
+            {isBulkShareProcessing ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>

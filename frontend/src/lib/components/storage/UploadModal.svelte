@@ -35,6 +35,7 @@
   let uploadError = $state("");
   let uploadSuccess = $state("");
   let fileErrors = $state<Record<number, string>>({});
+  let fileStatuses = $state<Record<number, 'ready' | 'uploaded' | 'duplicate' | 'error'>>({});
   let uploadStatus = $state("");
   
   // ✅ NEW: Batch confirmation state
@@ -80,19 +81,24 @@
   function setUploadError(message: string) {
     uploadError = message;
     uploadSuccess = "";
-    setTimeout(() => { if (uploadError === message) uploadError = ""; }, 5000);
   }
 
   function setUploadSuccess(message: string) {
     uploadSuccess = message;
     uploadError = "";
-    setTimeout(() => { if (uploadSuccess === message) uploadSuccess = ""; }, 4000);
+  }
+
+  function getDuplicateMessage(count: number): string {
+    return count === 1
+      ? 'File ini sudah dimiliki/upload oleh pengguna lain di sistem. Karena DecentraShare melindungi karya digital dari duplikasi, file tidak bisa diupload ulang.'
+      : `${count} file sudah dimiliki/upload oleh pengguna lain di sistem. Karena DecentraShare melindungi karya digital dari duplikasi, file-file tersebut tidak bisa diupload ulang.`;
   }
 
   function clearFeedback() {
     uploadError = "";
     uploadSuccess = "";
     fileErrors = {};
+    fileStatuses = {};
   }
 
   function formatSize(bytes: number): string {
@@ -161,7 +167,11 @@
     const newErrors = { ...fileErrors };
     delete newErrors[index];
     fileErrors = newErrors;
-    
+
+    const newStatuses = { ...fileStatuses };
+    delete newStatuses[index];
+    fileStatuses = newStatuses;
+
     if (uploadError?.includes('Maximum') || uploadError?.includes('allowed') || uploadError?.includes('Limit')) {
       clearFeedback();
     }
@@ -171,6 +181,7 @@
     files = [];
     fileMetadata = {};
     fileErrors = {};
+    fileStatuses = {};
     clearFeedback();
   }
 
@@ -207,41 +218,38 @@
       }
 
       const { results, summary, blockchainPayload, folderId: returnedFolderId } = uploadResult;
-      
-      // ✅ Tampilkan feedback berdasarkan summary
+      fileStatuses = results.reduce<Record<number, 'ready' | 'uploaded' | 'duplicate' | 'error'>>((statuses, result, index) => {
+        statuses[index] = result.status;
+        return statuses;
+      }, {});
+
       if (summary.duplicate > 0 && summary.uploaded === 0) {
-        setUploadSuccess(`⚠️ All ${summary.duplicate} file(s) already exist in system`);
-      } else if (summary.duplicate > 0 && summary.uploaded > 0) {
-        let msg = `✅ ${summary.uploaded} uploaded`;
-        if (summary.duplicate > 0) msg += ` • ⚠️ ${summary.duplicate} already existed`;
-        if (summary.error > 0) msg += ` • ❌ ${summary.error} failed`;
+        setUploadError(getDuplicateMessage(summary.duplicate));
+        return;
+      }
+
+      if (summary.duplicate > 0 && summary.uploaded > 0) {
+        let msg = `${summary.uploaded} file baru berhasil diupload.`;
+        msg += ` ${summary.duplicate} file duplikat ditolak karena karya digital tersebut sudah ada di sistem.`;
+        if (summary.error > 0) msg += ` ${summary.error} file gagal diproses.`;
         setUploadSuccess(msg);
       } else if (summary.uploaded > 0) {
-        setUploadSuccess(`✅ ${summary.uploaded} file(s) uploaded successfully!`);
+        setUploadSuccess(`${summary.uploaded} file berhasil diupload.`);
       }
-      
-      // ✅ Highlight status per-file di UI
-      results.forEach((result, index) => {
-        if (result.status === 'duplicate') {
-          fileErrors[index] = `⚠️ Exists: ${result.existingDocument?.title}`;
-        } else if (result.status === 'error') {
-          fileErrors[index] = `❌ ${result.error}`;
-        }
-      });
-      
+
       // ── PHASE 2: Batch Blockchain Confirmation (JIKA ADA FILE BARU) ─────
       if (summary.uploaded > 0 && blockchainPayload?.length > 0) {
         await handleBatchBlockchainConfirmation(blockchainPayload, returnedFolderId);
       }
-      
-      // Reset state & refresh parent
-      files = [];
-      fileMetadata = {};
-      fileErrors = {};
-      onUploaded?.();
-      
-      // Tutup modal otomatis setelah 3 detik
-      setTimeout(() => { if (uploadSuccess) onClose?.(); }, 3000);
+
+      // Reset state & refresh parent hanya untuk upload yang benar-benar masuk
+      if (summary.uploaded > 0) {
+        files = [];
+        fileMetadata = {};
+        fileErrors = {};
+        onUploaded?.();
+        // setTimeout(() => { if (uploadSuccess) onClose?.(); }, 5000);
+      }
       
     } catch (error: any) {
       console.error("Upload Error:", error);
@@ -434,8 +442,7 @@ if (payload.length === 1) {
       <div class="p-6 md:p-8 border-b border-white/5">
         <div class="flex justify-between items-start">
           <div>
-            <h3 id="upload-modal-title" class="text-xl font-bold text-white">Upload to IPFS</h3>
-            <p class="text-xs text-gray-500 mt-1">Files will be permanently decentralized.</p>
+            <h3 id="upload-modal-title" class="text-xl font-bold text-white">Upload to DecentraShare</h3>
           </div>
           <button onclick={onClose} 
                   disabled={isUploading || isConfirmingBatch} 
@@ -566,7 +573,7 @@ if (payload.length === 1) {
                 {@const meta = fileMetadata[metaKey] || { title: '', description: '' }}
                  
                 <div transition:slide={{ axis: 'y', duration: 150, easing: cubicOut }}
-                     class="flex flex-col p-3 bg-white/[0.03] border {fileErrors[i] ? (fileErrors[i].includes('Exists') ? 'border-yellow-500/30' : 'border-red-500/30') : 'border-white/5'} rounded-xl">
+                     class="flex flex-col p-3 bg-white/[0.03] border {fileStatuses[i] === 'duplicate' ? 'border-yellow-500/30' : fileStatuses[i] === 'error' ? 'border-red-500/30' : 'border-white/5'} rounded-xl">
                   
                   <!-- Header: File Info + Remove + Status Badge -->
                   <div class="flex items-center justify-between gap-3">
@@ -596,16 +603,18 @@ if (payload.length === 1) {
                       <div class="truncate min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                           <p class="text-sm text-gray-200 truncate">{file.name}</p>
-                          {#if fileErrors[i]?.includes('Exists')}
+                          {#if fileStatuses[i] === 'duplicate'}
                             <span class="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[8px] rounded border border-yellow-500/30">Duplicate</span>
-                          {:else if fileErrors[i]}
+                          {:else if fileStatuses[i] === 'error'}
                             <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] rounded border border-red-500/30">Error</span>
+                          {:else if fileStatuses[i] === 'uploaded'}
+                            <span class="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[8px] rounded border border-blue-500/30">Uploaded</span>
                           {:else if !isUploading && !isConfirmingBatch}
                             <span class="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[8px] rounded border border-green-500/30">Ready</span>
                           {/if}
                         </div>
-                        <p class="text-[10px] {fileErrors[i] ? (fileErrors[i].includes('Exists') ? 'text-yellow-400' : 'text-red-400') : 'text-gray-500'} font-mono">
-                          {fileErrors[i] || formatSize(file.size)}
+                        <p class="text-[10px] text-gray-500 font-mono">
+                          {formatSize(file.size)}
                         </p>
                       </div>
                     </div>
