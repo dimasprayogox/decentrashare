@@ -6,6 +6,7 @@ import {
   handleFolderPath,
   handleRenameFolder,
   handleDestroyFolders,
+  handleGetArchivedFolderContents,
   handleGetArchivedFolders,
   handleArchiveFolders,
   handleRestoreFolders,
@@ -41,6 +42,7 @@ router.delete('/shared', handleRevokeFolderAccess);
 router.patch("/privacy", handleUpdatePrivacy);
 router.patch("/move", handleMoveFolder);
 
+router.get("/archived/contents", handleGetArchivedFolderContents);
 router.get("/archived", handleGetArchivedFolders);
 router.patch("/archive", handleArchiveFolders);    
 router.patch("/restore", handleRestoreFolders);      

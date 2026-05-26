@@ -255,17 +255,18 @@ export const getFolderPath = async (folderId: string) => {
  */
 async function getAllDescendantFolderIds(
   tx: any, // Prisma.TransactionClient
-  rootFolderIds: string[]
+  rootFolderIds: string[],
+  archivedState: boolean | null = false
 ): Promise<string[]> {
   const allIds = new Set<string>(rootFolderIds);
   let currentLevelIds = [...rootFolderIds];
-  
+
   // Breadth-First Search: traverse folder tree level by level
   while (currentLevelIds.length > 0) {
     const children = await tx.folder.findMany({
       where: {
         parentId: { in: currentLevelIds },
-        isArchived: false  // ← Only traverse active folders
+        ...(archivedState === null ? {} : { isArchived: archivedState })
       },
       select: { id: true }
     });
@@ -309,15 +310,94 @@ export const getArchivedFolders = async (userId: string) => {
       },
       // ✅ Include count of documents inside (untuk UI: "5 items in trash")
       _count: {
-        select: { 
+        select: {
           documents: { where: { isArchived: true } }  // Hanya hitung docs yang juga di-archive
         }
       }
     },
-    orderBy: { 
+    orderBy: {
       deletedAt: 'desc'  // ← Most recently archived first
     }
   });
+};
+
+export const getArchivedFolderContents = async (userId: string, folderId: string | null = null) => {
+  let currentFolder = null;
+  let breadcrumbs: Array<{ id: string; name: string }> = [];
+
+  if (folderId) {
+    currentFolder = await prisma.folder.findFirst({
+      where: {
+        id: folderId,
+        ownerId: userId,
+        isArchived: true
+      },
+      select: { id: true, name: true, parentId: true }
+    });
+
+    if (!currentFolder) {
+      throw new Error('Trash folder not found.');
+    }
+
+    breadcrumbs = await getFolderPath(folderId);
+  }
+
+  const [folders, documents] = await Promise.all([
+    prisma.folder.findMany({
+      where: {
+        ownerId: userId,
+        parentId: folderId,
+        isArchived: true
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            walletAddress: true,
+            avatarUrl: true
+          }
+        },
+        parent: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        _count: {
+          select: {
+            documents: { where: { isArchived: true } }
+          }
+        }
+      },
+      orderBy: { deletedAt: 'desc' }
+    }),
+    prisma.document.findMany({
+      where: {
+        ownerId: userId,
+        folderId,
+        isArchived: true
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true
+          }
+        },
+        folder: { select: { id: true, name: true } }
+      },
+      orderBy: { deletedAt: 'desc' }
+    })
+  ]);
+
+  return {
+    folders,
+    documents,
+    currentFolder,
+    breadcrumbs
+  };
 };
 
 // ✅ SOFT DELETE: Archive folders + ALL descendants (recursive cascade)
@@ -389,7 +469,7 @@ export const restoreFolders = async (folderIds: string[], userId: string) => {
     const validRootFolderIds = folders.map((f: any) => f.id);
     
     // 2. 🔄 Get ALL descendant folder IDs (recursive)
-    const allFolderIdsToRestore = await getAllDescendantFolderIds(tx, validRootFolderIds);
+    const allFolderIdsToRestore = await getAllDescendantFolderIds(tx, validRootFolderIds, true);
     
     // 3. Restore ALL folders
     await tx.folder.updateMany({
@@ -437,7 +517,7 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
     const validRootFolderIds = folders.map((f: any) => f.id);
     
     // 2. 🔄 Get ALL descendant folder IDs (recursive)
-    const allFolderIdsToDestroy = await getAllDescendantFolderIds(tx, validRootFolderIds);
+    const allFolderIdsToDestroy = await getAllDescendantFolderIds(tx, validRootFolderIds, true);
     
     // 3. Delete all folderAccess relations first (foreign key constraint)
     await tx.folderAccess.deleteMany({

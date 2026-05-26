@@ -189,6 +189,32 @@ export const handleGetFolderDetail = async (req: AuthRequest, res: Response) => 
   }
 };
 
+export const handleGetArchivedFolderContents = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.userId;
+    const folderId = typeof req.query.folderId === 'string' && req.query.folderId.length > 0 ? req.query.folderId : null;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const contents = await folderService.getArchivedFolderContents(userId, folderId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Trash contents retrieved successfully',
+      data: contents
+    });
+  } catch (error: any) {
+    logger.error('❌ Get trash contents failed:', error);
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to retrieve trash contents',
+      errorCode: 'GET_TRASH_CONTENTS_FAILED'
+    });
+  }
+};
+
 export const handleGetArchivedFolders = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;

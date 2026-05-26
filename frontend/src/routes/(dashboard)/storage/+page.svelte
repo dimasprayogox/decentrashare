@@ -22,7 +22,16 @@
   import { useDelete } from '$lib/composables/useDelete.svelte';
   import { useRename } from '$lib/composables/useRename.svelte';
 
-  import type { Folder, Document, SortField, SortDirection, PrivacyLevel, ShareableUser } from '$lib/types/storage';
+  import type { Folder, Document, PrivacyLevel, ShareableUser } from '$lib/types/storage';
+
+  type SortField = 'name' | 'createdAt' | 'updatedAt' | 'fileSize' | 'type';
+  type SortDirection = 'asc' | 'desc';
+  type SortPreset = {
+    id: string;
+    label: string;
+    field: SortField;
+    direction: SortDirection;
+  };
 
   // ── Composables ──────────────────────────────────────────
   // ✅ Hanya ambil functions yang tidak butuh state management
@@ -114,10 +123,21 @@
     walletAddress: string;
   } | null>(null);
   
+  const sortPresets: SortPreset[] = [
+    { id: 'updated-desc', label: 'Last modified', field: 'updatedAt', direction: 'desc' },
+    { id: 'created-desc', label: 'Newest upload', field: 'createdAt', direction: 'desc' },
+    { id: 'created-asc', label: 'Oldest upload', field: 'createdAt', direction: 'asc' },
+    { id: 'name-asc', label: 'Name A-Z', field: 'name', direction: 'asc' },
+    { id: 'name-desc', label: 'Name Z-A', field: 'name', direction: 'desc' },
+    { id: 'size-desc', label: 'Largest first', field: 'fileSize', direction: 'desc' },
+    { id: 'size-asc', label: 'Smallest first', field: 'fileSize', direction: 'asc' },
+    { id: 'type-asc', label: 'File type', field: 'type', direction: 'asc' }
+  ];
+
   // Sort state
-  let sortOption = $state<{ field: SortField; direction: SortDirection }>({ 
-    field: 'name', 
-    direction: 'asc' 
+  let sortOption = $state<{ field: SortField; direction: SortDirection }>({
+    field: 'updatedAt',
+    direction: 'desc'
   });
   let showSortDropdown = $state(false);
 
@@ -313,36 +333,54 @@
   }
 
   // ── Sorting ──────────────────────────────────────────────
-  function sortItems<T extends { name?: string; title?: string; createdAt?: string; fileSize?: number; mimeType?: string }>(
-    array: T[], 
+  function getSortableName(item: { name?: string; title?: string; fileName?: string }): string {
+    return (item.name || item.title || item.fileName || '').trim();
+  }
+
+  function getSortableType(item: { mimeType?: string; name?: string; title?: string; fileName?: string }): string {
+    if (item.mimeType) return item.mimeType.toLowerCase();
+    const name = getSortableName(item);
+    const extension = name.includes('.') ? name.split('.').pop() : '';
+    return extension?.toLowerCase() || 'folder';
+  }
+
+  function compareValues(aValue: string | number, bValue: string | number, direction: SortDirection): number {
+    const result = typeof aValue === 'string' && typeof bValue === 'string'
+      ? aValue.localeCompare(bValue, 'id', { numeric: true, sensitivity: 'base' })
+      : Number(aValue) - Number(bValue);
+
+    return direction === 'asc' ? result : -result;
+  }
+
+  function sortItems<T extends { name?: string; title?: string; fileName?: string; createdAt?: string; updatedAt?: string; fileSize?: number; mimeType?: string }>(
+    array: T[],
     { field, direction }: { field: SortField; direction: SortDirection }
   ): T[] {
     return [...array].sort((a, b) => {
-      let aValue: string | number = '';
-      let bValue: string | number = '';
-      
+      let comparison = 0;
+
       switch (field) {
         case 'name':
-          aValue = (a.name || a.title || '').toLowerCase();
-          bValue = (b.name || b.title || '').toLowerCase();
+          comparison = compareValues(getSortableName(a), getSortableName(b), direction);
           break;
         case 'createdAt':
-          aValue = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          bValue = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        case 'updatedAt':
+          comparison = compareValues(
+            a[field] ? new Date(a[field]!).getTime() : 0,
+            b[field] ? new Date(b[field]!).getTime() : 0,
+            direction
+          );
           break;
         case 'fileSize':
-          aValue = a.fileSize || 0;
-          bValue = b.fileSize || 0;
+          comparison = compareValues(a.fileSize ?? 0, b.fileSize ?? 0, direction);
           break;
         case 'type':
-          aValue = a.mimeType?.split('/')[0] || 'unknown';
-          bValue = b.mimeType?.split('/')[0] || 'unknown';
+          comparison = compareValues(getSortableType(a), getSortableType(b), direction);
           break;
       }
-      
-      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-      return 0;
+
+      if (comparison !== 0) return comparison;
+      return getSortableName(a).localeCompare(getSortableName(b), 'id', { numeric: true, sensitivity: 'base' });
     });
   }
 
@@ -426,24 +464,17 @@
     showSortDropdown = !showSortDropdown;
   }
 
-  function applySort(field: SortField) {
-    if (sortOption.field === field) {
-      sortOption = { field, direction: sortOption.direction === 'asc' ? 'desc' : 'asc' };
-    } else {
-      sortOption = { field, direction: 'asc' };
-    }
+  function applySort(preset: SortPreset) {
+    sortOption = { field: preset.field, direction: preset.direction };
     showSortDropdown = false;
   }
 
+  function isActiveSort(preset: SortPreset): boolean {
+    return sortOption.field === preset.field && sortOption.direction === preset.direction;
+  }
+
   function getSortLabel(): string {
-    const labels: Record<SortField, string> = {
-      name: 'Name',
-      createdAt: 'Date',
-      fileSize: 'Size',
-      type: 'Type'
-    };
-    const arrow = sortOption.direction === 'asc' ? '↑' : '↓';
-    return `${labels[sortOption.field]} ${arrow}`;
+    return sortPresets.find(isActiveSort)?.label ?? 'Custom sort';
   }
 
   $effect(() => {
@@ -1324,11 +1355,15 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
         </button>
         
         {#if showSortDropdown}
-          <div transition:fly={{ y: -8, duration: 150 }} class="absolute right-0 mt-2 w-48 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-1 z-50">
-            {#each ['name', 'createdAt', 'fileSize', 'type'] as field}
-              <button onclick={() => applySort(field as SortField)} class="w-full flex items-center justify-between px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
-                <span>{field === 'createdAt' ? 'Date' : field === 'fileSize' ? 'Size' : field.charAt(0).toUpperCase() + field.slice(1)}</span>
-                {#if sortOption.field === field}<span class="text-blue-400">{sortOption.direction === 'asc' ? '↑' : '↓'}</span>{/if}
+          <div transition:fly={{ y: -8, duration: 150 }} class="absolute right-0 mt-2 w-56 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-1 z-50 overflow-hidden">
+            {#each sortPresets as preset (preset.id)}
+              <button onclick={() => applySort(preset)} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {isActiveSort(preset) ? 'bg-blue-500/10 text-blue-300' : ''}">
+                <span>{preset.label}</span>
+                {#if isActiveSort(preset)}
+                  <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                {/if}
               </button>
             {/each}
           </div>
@@ -1477,7 +1512,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
             folders={sortedFolders} items={sortedItems} viewMode={2} {openFolder}
             handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
             onRename={(id, name) => handleRename(id, folders.some(f => f.id === id) ? 'folder' : 'document', name)}
-            onShare={handleShare} onDownload={handleDownload}
+            onShare={handleShare} onDownload={handleDownload} onMove={handleSingleMove}
             onDeleteConfirm={(id, type, name) => {
                 deletingItem = { id, type, name };  
                 confirmDelete({ id, type, name });   
@@ -1499,7 +1534,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
             folders={sortedFolders} items={sortedItems} {openFolder}
             handleDeleteFolder={handleDeleteFolder} handleDelete={handleDelete} {getFileTheme}
             onRename={(id, name) => handleRename(id, folders.some(f => f.id === id) ? 'folder' : 'document', name)}
-            onShare={handleShare} onDownload={handleDownload}
+            onShare={handleShare} onDownload={handleDownload} onMove={handleSingleMove}
             onDeleteConfirm={(id, type, name) => {
               deletingItem = { id, type, name };
               confirmDelete({ id, type, name });

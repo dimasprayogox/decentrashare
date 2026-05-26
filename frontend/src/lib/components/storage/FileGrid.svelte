@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'; 
+  import { onDestroy, onMount } from 'svelte';
   import ItemMenu from './ItemMenu.svelte';
   import type { Folder, Document } from '$lib/types/storage';
   import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
@@ -104,6 +104,18 @@ $effect(() => {
   let previewUrls = $state<Record<string, string>>({});
   let previewLoading = $state<Record<string, boolean>>({});
   let previewErrors = $state<Record<string, string>>({});
+  let now = $state(Date.now());
+  let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+  onMount(() => {
+    countdownTimer = setInterval(() => {
+      now = Date.now();
+    }, 60_000);
+  });
+
+  onDestroy(() => {
+    if (countdownTimer) clearInterval(countdownTimer);
+  });
 
   // Mobile detection (dari kode Anda)
   const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
@@ -144,6 +156,27 @@ $effect(() => {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+
+  function getPendingRemainingMs(item: Document): number {
+    if (!item.pendingOnChainUntil || item.isOnChain) return 0;
+    return new Date(item.pendingOnChainUntil).getTime() - now;
+  }
+
+  function isPendingOnChain(item: Document): boolean {
+    return getPendingRemainingMs(item) > 0;
+  }
+
+  function isPendingExpired(item: Document): boolean {
+    return Boolean(item.pendingOnChainUntil && !item.isOnChain && getPendingRemainingMs(item) <= 0);
+  }
+
+  function formatPendingCountdown(item: Document): string {
+    const remaining = getPendingRemainingMs(item);
+    if (remaining <= 0) return 'Expired';
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
   }
 
  // ─────────────────────────────────────────────────────────────
@@ -704,13 +737,27 @@ $effect(() => {
         {/if}
         
         {#if isImageMimeType(item.mimeType)}
-          <span class="absolute top-2 right-2 z-20 text-[8px] font-bold 
+          <span class="absolute top-2 right-2 z-20 text-[8px] font-bold
                        bg-black/60 backdrop-blur-sm text-white px-2 py-0.5 rounded-full">
             IMG
           </span>
         {/if}
       </div>
     </div>
+
+    {#if isPendingOnChain(item)}
+      <div class="px-2 pb-2">
+        <span class="inline-flex w-full items-center justify-center text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" title="File akan otomatis dihapus dari IPFS dan database jika tidak dikonfirmasi dalam 24 jam">
+          Sisa waktu: {formatPendingCountdown(item)}
+        </span>
+      </div>
+    {:else if isPendingExpired(item)}
+      <div class="px-2 pb-2">
+        <span class="inline-flex w-full items-center justify-center text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20" title="Batas konfirmasi 24 jam sudah habis. File akan dihapus otomatis.">
+          Expired - cleanup
+        </span>
+      </div>
+    {/if}
 
   </div>
 {/each}

@@ -342,7 +342,7 @@ confirmBatchComplete: async (txHash: string, documentIds: string[]) => {
     const response = await apiClient<{ success: boolean; count: number }>(
       '/folders/restore',
       {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ folderIds })
       }
@@ -368,12 +368,25 @@ confirmBatchComplete: async (txHash: string, documentIds: string[]) => {
     const response = await apiClient<{ success: boolean; count: number }>(
       '/folders/destroy',
       {
-        method: 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ folderIds })
       }
     );
     return response.data;
+  },
+
+  getArchivedFolders: () => {
+    return apiClient<GetFoldersResponse>('/folders/archived', { method: 'GET' });
+  },
+
+  getArchivedFolderContents: (folderId: string | null = null) => {
+    return apiClient<StorageApiResponse<{
+      folders: Folder[];
+      documents: Document[];
+      currentFolder: { id: string; name: string; parentId: string | null } | null;
+      breadcrumbs: Array<{ id: string; name: string }>;
+    }>>(`/folders/archived/contents${buildQueryString({ folderId })}`, { method: 'GET' });
   },
 
 
