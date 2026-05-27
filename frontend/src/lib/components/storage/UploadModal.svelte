@@ -205,7 +205,7 @@
     try {
       isUploading = true;
       clearFeedback();
-      setUploadStatus('📤 Uploading files to IPFS...');
+      setUploadStatus('Uploading files to IPFS...');
       
       const rawFiles = $state.snapshot(files);
       const rawMetadata = $state.snapshot(fileMetadata);
@@ -281,7 +281,7 @@ async function handleBatchBlockchainConfirmation(
   try {
     isConfirmingBatch = true;
     confirmationProgress = 25;
-    setUploadStatus('🔐 Preparing blockchain confirmation...');
+    setUploadStatus('Preparing blockchain confirmation...');
     
     // ✅ 1. Trigger backend untuk prepare batch data
     const documentIds = payload.map(p => p.documentId);
@@ -293,7 +293,7 @@ async function handleBatchBlockchainConfirmation(
     
     // ✅ Handle case: all files already on-chain
     if (triggerResponse.data?.skipConfirmation) {
-      setUploadSuccess(prev => `${prev} • ✅ All files already on-chain!`);
+      setUploadSuccess(`${uploadSuccess} • All files already on-chain.`);
       return;
     }
     
@@ -312,11 +312,11 @@ async function handleBatchBlockchainConfirmation(
     };
     
     confirmationProgress = 75;
-    setUploadStatus('⏳ Confirm in wallet...');
+    setUploadStatus('Confirm in wallet...');
     
     // 🎯 EARLY RETURN FOR SINGLE FILE - FIXED ARG EXTRACTION
 if (payload.length === 1) {
-  console.log('[Web3] 🎯 Single file detected, using direct recordFileOnChain...');
+  console.log('[Web3] Single file detected, using direct recordFileOnChain...');
   
   // ✅ Unwrap ABI
   const rawAbi = Array.isArray(batchPayload.abi) 
@@ -346,22 +346,22 @@ if (payload.length === 1) {
   }, {
     onStatus: (status) => setUploadStatus(status),
     onTxHash: (txHash) => {
-      console.log('✅ Single TX hash:', txHash);
+      console.log('Single TX hash:', txHash);
       confirmationProgress = 90;
     }
   });
   
   confirmationProgress = 100;
-  setUploadStatus('✅ Confirmed on-chain!');
+  setUploadStatus('Confirmed on-chain.');
   
   // ✅ Update DB
   await storageService.confirmBatchComplete(singleTxResult.txHash, docIds);
-  setUploadSuccess(prev => `${prev} • 🔗 1/1 confirmed!`);
+  setUploadSuccess(`${uploadSuccess} • 1/1 confirmed.`);
   
   return; // ← ✅ EXIT EARLY
 }
     // ✅ Jika >1 file, pakai batch + fallback - SATU-SATUNYA deklarasi 'txResult' di sini
-    console.log('[Web3] 📦 Multiple files detected, using batch with fallback...');
+    console.log('[Web3] Multiple files detected, using batch with fallback...');
     
     const txResult = await tryBatchWithSingleFallback(batchPayload, {
       onStatus: (status) => setUploadStatus(status),
@@ -372,7 +372,7 @@ if (payload.length === 1) {
     });
     
     confirmationProgress = 100;
-    setUploadStatus('✅ Confirmed on-chain!');
+    setUploadStatus('Confirmed on-chain.');
     
     // ✅ Handle fallback result
     const confirmedCount = txResult.fallback ? txResult.fileCount : docIds.length;
@@ -383,23 +383,23 @@ if (payload.length === 1) {
     
     // ✅ Update success message
     const totalProcessed = confirmedCount + (skippedCount || 0);
-    setUploadSuccess(prev => `${prev} • 🔗 ${confirmedCount}/${totalProcessed} confirmed${fallbackNote}!`);
+    setUploadSuccess(`${uploadSuccess} • ${confirmedCount}/${totalProcessed} confirmed${fallbackNote}.`);
     
   } catch (error: any) {
     console.error('Batch confirmation error:', error);
     
     if (error.message?.includes('CONTRACT_ERROR: DuplicateContent')) {
-      setUploadError('⚠️ File content already registered');
+      setUploadError('File content already registered');
     } else if (error.message?.includes('CONTRACT_ERROR: DuplicateCID')) {
-      setUploadError('⚠️ IPFS CID already registered');
+      setUploadError('IPFS CID already registered');
     } else if (error.message === 'TRANSACTION_REJECTED') {
-      setUploadSuccess(prev => `${prev} • ⚠️ Skipped by user`);
+      setUploadSuccess(`${uploadSuccess} • Skipped by user`);
     } else if (error.message === 'INSUFFICIENT_FUNDS') {
-      setUploadError('⚠️ Insufficient ETH for gas');
+      setUploadError('Insufficient ETH for gas');
     } else if (error.message === 'WRONG_NETWORK') {
-      setUploadError('⚠️ Switch to Sepolia');
+      setUploadError('Switch to Sepolia');
     } else {
-      setUploadSuccess(prev => `${prev} • ⚠️ Pending`);
+      setUploadSuccess(`${uploadSuccess} • Pending`);
     }
   } finally {
     isConfirmingBatch = false;
@@ -409,7 +409,7 @@ if (payload.length === 1) {
   
   // Helper untuk status progress
   function setUploadStatus(status: string) {
-    if (status && !status.startsWith('✅') && !status.startsWith('⚠️')) {
+    if (status) {
       uploadError = status;
       uploadSuccess = "";
     }
@@ -469,7 +469,7 @@ if (payload.length === 1) {
 
       <div class="p-6 md:p-8">
         <!-- Status Progress -->
-        {#if uploadStatus && !uploadStatus.startsWith('✅') && !uploadStatus.startsWith('⚠️')}
+        {#if uploadStatus}
           <div class="mb-4 px-4 py-3 rounded-xl border bg-blue-500/10 border-blue-500/20 text-blue-400 flex items-center gap-3" role="status">
             <svg class="w-5 h-5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -547,7 +547,7 @@ if (payload.length === 1) {
           {:else}
             <p class="text-white font-medium">Click or drag files here</p>
             <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">
-              Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB each • PDF, images, MP4/WebM, MP3/WAV/OGG, text/CSV/JSON
+              Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB
             </p>
             {#if files.length > 0}
               <p class="text-[9px] text-blue-400 mt-1">
@@ -647,7 +647,7 @@ if (payload.length === 1) {
                     <!-- Title Input -->
                     <div class="mb-2">
                       <label class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">
-                        Title <span class="text-gray-600">(optional)</span>
+                        Title
                       </label>
                       <input 
                         type="text" 
@@ -662,17 +662,12 @@ if (payload.length === 1) {
                         disabled={isUploading || isConfirmingBatch}
                         class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 disabled:opacity-50 transition-colors"
                       />
-                      {#if !meta.title.trim() && !fileErrors[i]?.includes('Exists')}
-                        <p class="text-[10px] text-gray-600 mt-1 italic">
-                          Preview: {formatTitle(file.name)}
-                        </p>
-                      {/if}
                     </div>
                     
                     <!-- Description Input -->
                     <div>
                       <label class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">
-                        Description <span class="text-gray-600">(optional)</span>
+                        Description
                       </label>
                       <textarea 
                         value={meta.description}
@@ -726,13 +721,9 @@ if (payload.length === 1) {
           {/if}
         </button>
         
-        <p class="text-[10px] text-gray-600 text-center mt-4">
-          Supported: PDF, DOC, Images, Videos • Max {MAX_FILE_SIZE / 1024 / 1024}MB each
-        </p>
-        
         {#if isConfirmingBatch}
           <p class="text-[9px] text-purple-400/80 text-center mt-2">
-            🔐 Single wallet signature for all files
+            Single wallet signature for all files
           </p>
         {/if}
       </div>

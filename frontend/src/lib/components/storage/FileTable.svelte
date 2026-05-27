@@ -661,7 +661,7 @@ async function handleConfirmBlockchain(item: Document) {
             </div>
           {/if}
         </th>
-        <th class="px-4 py-4 font-semibold">Name</th>
+        <th class="pl-4 pr-2 py-4 text-left font-semibold w-[450px] max-w-[450px]">Name</th>
         <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">Owner</th>
         <th class="hidden md:table-cell px-4 py-4 text-center font-semibold">Size</th>
         <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">{trashMode ? 'Deleted at' : 'Modified'}</th>
@@ -734,8 +734,8 @@ async function handleConfirmBlockchain(item: Document) {
             
             <!-- Name -->
             <!-- Name Column - Updated with Complex Folder Icon -->
-<td class="px-4 py-4">
-  <div class="flex items-center gap-4">
+<td class="pl-4 pr-2 py-4 w-[360px] max-w-[360px]">
+  <div class="flex items-center gap-3 min-w-0">
     
     <!-- 📁 Complex Folder Icon Container (Scaled for Table) -->
     <div class="relative w-10 h-10 flex-shrink-0">
@@ -783,8 +783,8 @@ async function handleConfirmBlockchain(item: Document) {
     </div>
 
     <!-- Folder Name Text -->
-    <div class="min-w-0">
-      <span class="block text-sm font-semibold text-white/90 uppercase tracking-wide truncate max-w-[180px]">
+    <div class="min-w-0 flex-1">
+      <span class="block text-sm font-semibold text-white/90 uppercase tracking-wide truncate" title={folder.name}>
         {folder.name}
       </span>
     </div>
@@ -965,7 +965,7 @@ async function handleConfirmBlockchain(item: Document) {
                 >
                   {#if selectedItems.includes(item.id)}
                     <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                     </svg>
                   {/if}
                 </span>
@@ -974,7 +974,7 @@ async function handleConfirmBlockchain(item: Document) {
           </td>
           
           <!-- Name -->
-        <td class="px-4 py-4 min-w-[200px]">
+        <td class="pl-4 pr-2 py-4 w-[360px] max-w-[360px]">
           {#if true}
             {@const fileInfo = getFileTypeInfo(item.mimeType, item.fileName)}
             
@@ -1007,9 +1007,12 @@ async function handleConfirmBlockchain(item: Document) {
 
               <!-- File Info Text -->
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-gray-200 truncate 
-                          group-hover/file-row:text-white group-hover/file-row:underline decoration-blue-400/50 underline-offset-4
-                          transition-all duration-200">
+                <p
+                  class="text-sm font-medium text-gray-200 truncate
+                         group-hover/file-row:text-white group-hover/file-row:underline decoration-blue-400/50 underline-offset-4
+                         transition-all duration-200"
+                  title={item.title}
+                >
                   {item.title}
                 </p>
                 <p class="text-[10px] text-gray-500 uppercase font-medium tracking-wide
