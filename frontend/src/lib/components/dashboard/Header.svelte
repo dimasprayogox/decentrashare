@@ -1,10 +1,18 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { page } from '$app/state'; // ✅ Svelte 5
-  import { userService } from '$lib/services/settings/profile'; 
+  import { userService } from '$lib/services/settings/profile';
 
   let { userAddress = "0x00...000" } = $props();
   let searchQuery = $state("");
+  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+  let showSortDropdown = $state(false);
+
+  type SortField = 'name' | 'updatedAt' | 'deletedAt';
+  type SortDirection = 'asc' | 'desc';
+
+  let activeSortField = $state<SortField>('updatedAt');
+  let activeSortDirection = $state<SortDirection>('desc');
 
   // ── User Profile State ──
   let profile = $state({ username: '', avatarUrl: '', email: '' });
@@ -26,7 +34,13 @@
   // ✅ CORRECT: Extract path first, then derive pageTitle
   // Step 1: Derived path (normalize trailing slash)
   const currentPath = $derived(page.url.pathname.replace(/\/$/, '') || '/dashboard');
-  
+  const showSortControl = $derived(currentPath.startsWith('/storage') || currentPath.startsWith('/trash'));
+  const modifiedDateField = $derived<SortField>(currentPath.startsWith('/trash') ? 'deletedAt' : 'updatedAt');
+  const sortFields = $derived([
+    { field: 'name' as const, label: 'Title' },
+    { field: modifiedDateField, label: 'Date modified' }
+  ]);
+
   // Step 2: Derived pageTitle based on currentPath
   const pageTitle = $derived(
     PAGE_TITLES[currentPath] || 
@@ -56,6 +70,55 @@
     const name = profile.username || profile.email || userAddress || 'U';
     return name.charAt(0).toUpperCase();
   }
+
+  onDestroy(() => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+  });
+
+  function emitSearchQuery(query: string) {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('decentrashare:search', { detail: { query } }));
+  }
+
+  function emitSort() {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('decentrashare:sort', {
+      detail: { field: activeSortField, direction: activeSortDirection }
+    }));
+  }
+
+  function applySortField(field: SortField) {
+    activeSortField = field;
+    emitSort();
+  }
+
+  function applySortDirection(direction: SortDirection) {
+    activeSortDirection = direction;
+    emitSort();
+  }
+
+  function updateSearchQuery() {
+    if (searchTimeout) clearTimeout(searchTimeout);
+
+    const query = searchQuery.trim();
+    if (query.length === 1) return;
+
+    searchTimeout = setTimeout(() => {
+      emitSearchQuery(query);
+    }, 300);
+  }
+
+  $effect(() => {
+    if (!showSortDropdown) return;
+    function handleClick(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest?.('[data-header-sort-container]')) {
+        showSortDropdown = false;
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  });
 </script>
 
 <header class="h-20 border-b border-white/5 bg-[#0a0a0c]/80 backdrop-blur-xl sticky top-0 z-[60] flex items-center justify-between px-4 md:px-8 w-full gap-4">
@@ -72,16 +135,61 @@
           {/if}
         </h2>
         
-        <div class="relative w-full max-w-md hidden sm:block">
-            <span class="absolute inset-y-0 left-4 flex items-center text-gray-500">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </span>
-            <input 
-                type="text" 
-                bind:value={searchQuery}
-                placeholder="Cari file atau folder..."
-                class="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-11 pr-4 text-sm text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all"
-            />
+        <div class="hidden sm:flex items-center gap-2 w-full max-w-md">
+            <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-4 flex items-center text-gray-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </span>
+                <input
+                    type="search"
+                    bind:value={searchQuery}
+                    oninput={updateSearchQuery}
+                    placeholder="Cari file atau folder..."
+                    class="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-11 pr-4 text-sm text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all"
+                />
+            </div>
+
+            {#if showSortControl}
+                <div class="relative" data-header-sort-container>
+                    <button
+                        onclick={() => showSortDropdown = !showSortDropdown}
+                        class="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 text-white rounded-2xl hover:bg-white/10 transition-all"
+                        title="Sort"
+                        aria-label="Sort files"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
+                    </button>
+
+                    {#if showSortDropdown}
+                        <div class="absolute right-0 mt-2 w-64 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-2 z-[70] overflow-hidden">
+                            <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Sort by</div>
+                            {#each sortFields as option (option.field)}
+                                <button onclick={() => applySortField(option.field)} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activeSortField === option.field ? 'bg-blue-500/10 text-blue-300' : ''}">
+                                    <span>{option.label}</span>
+                                    {#if activeSortField === option.field}
+                                        <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    {/if}
+                                </button>
+                            {/each}
+
+                            <div class="my-2 border-t border-white/10"></div>
+                            <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Order</div>
+                            <button onclick={() => applySortDirection('asc')} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activeSortDirection === 'asc' ? 'bg-blue-500/10 text-blue-300' : ''}">
+                                <span>{activeSortField === 'name' ? 'A - Z' : 'Ascending'}</span>
+                                {#if activeSortDirection === 'asc'}
+                                    <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                {/if}
+                            </button>
+                            <button onclick={() => applySortDirection('desc')} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activeSortDirection === 'desc' ? 'bg-blue-500/10 text-blue-300' : ''}">
+                                <span>{activeSortField === 'name' ? 'Z - A' : 'Descending'}</span>
+                                {#if activeSortDirection === 'desc'}
+                                    <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                {/if}
+                            </button>
+                        </div>
+                    {/if}
+                </div>
+            {/if}
         </div>
     </div>
 

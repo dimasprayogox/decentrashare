@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { fade, scale, fly } from 'svelte/transition';
+  import { onMount } from 'svelte';
+  import { fade, scale } from 'svelte/transition';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
 
@@ -7,6 +8,7 @@
   import ViewSwitcher from '$lib/components/storage/ViewSwitcher.svelte';
   import FileTable from '$lib/components/storage/FileTable.svelte';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
+  import BulkActionBar from '$lib/components/storage/BulkActionBar.svelte';
   import { storageService } from '$lib/services/storage/storage';
   import type { Document, Folder } from '$lib/types/storage';
 
@@ -32,7 +34,6 @@
   let showDestroyConfirm = $state(false);
   let showRestoreConfirm = $state(false);
   let viewMode = $state(1);
-  let showSortDropdown = $state(false);
   let sortOption = $state<{ field: SortField; direction: SortDirection }>({
     field: 'deletedAt',
     direction: 'desc'
@@ -52,9 +53,20 @@
   const selectedFolders = $derived(folders.filter(folder => selectedItems.includes(folder.id)));
   const selectedDocuments = $derived(items.filter(item => selectedItems.includes(item.id)));
   const selectedCount = $derived(selectedFolders.length + selectedDocuments.length);
+  const selectedTypeValue = $derived(selectedFolders.length > 0 && selectedDocuments.length > 0 ? 'mixed' : selectedFolders.length > 0 ? 'folders' : selectedDocuments.length > 0 ? 'documents' : 'items');
   const totalCount = $derived(folders.length + items.length);
-  const sortedFolders = $derived(sortItems(folders, sortOption));
-  const sortedItems = $derived(sortItems(items, sortOption));
+  let searchQuery = $state('');
+  const normalizedSearchQuery = $derived(searchQuery.trim().toLowerCase());
+  const visibleFolders = $derived(normalizedSearchQuery
+    ? folders.filter(folder => folder.name.toLowerCase().includes(normalizedSearchQuery))
+    : folders
+  );
+  const visibleItems = $derived(normalizedSearchQuery
+    ? items.filter(item => [item.title, item.fileName, item.mimeType].some(value => value?.toLowerCase().includes(normalizedSearchQuery)))
+    : items
+  );
+  const sortedFolders = $derived(sortItems(visibleFolders, sortOption));
+  const sortedItems = $derived(sortItems(visibleItems, sortOption));
 
   function getFileTheme(mimeType: string) {
     if (mimeType.includes('image')) return { color: 'text-purple-500 bg-purple-500/10' };
@@ -138,23 +150,6 @@
   function showStatus(message: string, type: 'success' | 'error') {
     successMessage = type === 'success' ? message : '';
     errorMessage = type === 'error' ? message : '';
-  }
-
-  function toggleSortDropdown() {
-    showSortDropdown = !showSortDropdown;
-  }
-
-  function applySort(preset: SortPreset) {
-    sortOption = { field: preset.field, direction: preset.direction };
-    showSortDropdown = false;
-  }
-
-  function isActiveSort(preset: SortPreset): boolean {
-    return sortOption.field === preset.field && sortOption.direction === preset.direction;
-  }
-
-  function getSortLabel(): string {
-    return sortPresets.find(isActiveSort)?.label ?? 'Custom sort';
   }
 
   function getTrashRetentionText(deletedAt: string | null | undefined): string {
@@ -332,14 +327,23 @@
     void loadTrashItems();
   });
 
-  $effect(() => {
-    if (!showSortDropdown) return;
-    function handleClick(event: MouseEvent) {
-      const target = event.target as HTMLElement;
-      if (!target.closest?.('[data-sort-container]')) showSortDropdown = false;
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+  onMount(() => {
+    const handleSearch = (event: Event) => {
+      const customEvent = event as CustomEvent<{ query?: string }>;
+      searchQuery = customEvent.detail?.query ?? '';
+    };
+    const handleSort = (event: Event) => {
+      const customEvent = event as CustomEvent<{ field?: SortField; direction?: SortDirection }>;
+      if (!customEvent.detail?.field || !customEvent.detail?.direction) return;
+      sortOption = { field: customEvent.detail.field, direction: customEvent.detail.direction };
+    };
+
+    window.addEventListener('decentrashare:search', handleSearch);
+    window.addEventListener('decentrashare:sort', handleSort);
+    return () => {
+      window.removeEventListener('decentrashare:search', handleSearch);
+      window.removeEventListener('decentrashare:sort', handleSort);
+    };
   });
 
 </script>
@@ -466,27 +470,6 @@
     </div>
 
     <div class="flex gap-3 w-full sm:w-auto">
-      <div class="relative" data-sort-container>
-        <button onclick={toggleSortDropdown} class="flex items-center gap-2 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all disabled:opacity-50" disabled={isLoading || totalCount === 0}>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
-          <span class="hidden sm:inline">Sort:</span> {getSortLabel()}
-          <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        {#if showSortDropdown}
-          <div transition:fly={{ y: -8, duration: 150 }} class="absolute right-0 mt-2 w-56 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-1 z-50 overflow-hidden">
-            {#each sortPresets as preset (preset.id)}
-              <button onclick={() => applySort(preset)} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {isActiveSort(preset) ? 'bg-blue-500/10 text-blue-300' : ''}">
-                <span>{preset.label}</span>
-                {#if isActiveSort(preset)}
-                  <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                {/if}
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </div>
-
       <button
         onclick={toggleSelectMode}
         class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center gap-2 disabled:opacity-50 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
@@ -575,17 +558,16 @@
   {/if}
 
   {#if selectionMode}
-    <div class="fixed left-1/2 bottom-6 z-[900] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 rounded-[28px] border border-white/10 bg-[#111115]/95 backdrop-blur-xl shadow-2xl shadow-black/50 p-4" transition:fade>
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div class="flex-1 min-w-0">
-          <p class="text-white font-bold">{selectedCount} selected</p>
-          <p class="text-xs text-gray-500">Restore selected trash items or delete them permanently.</p>
-        </div>
-        <button onclick={downloadSelectedItems} class="px-5 py-3 rounded-2xl bg-white/5 text-white font-bold hover:bg-white/10 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Download</button>
-        <button onclick={confirmSelectedRestore} class="px-5 py-3 rounded-2xl bg-green-600 text-white font-bold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Restore</button>
-        <button onclick={() => showDestroyConfirm = true} class="px-5 py-3 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Delete Permanently</button>
-        <button onclick={exitSelectionMode} class="px-5 py-3 rounded-2xl bg-white/5 text-white font-bold hover:bg-white/10 transition-colors" disabled={isProcessing}>Cancel</button>
-      </div>
-    </div>
+    <BulkActionBar
+      selectedCount={selectedCount}
+      selectedType={selectedTypeValue}
+      onDownload={downloadSelectedItems}
+      onRestore={confirmSelectedRestore}
+      onDelete={() => showDestroyConfirm = true}
+      deleteLabel="Delete Permanently"
+      deleteTitle="Delete selected items permanently"
+      onCancel={exitSelectionMode}
+      isProcessing={isProcessing}
+    />
   {/if}
 </main>

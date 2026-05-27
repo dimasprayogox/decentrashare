@@ -600,7 +600,7 @@ async function handleConfirmBlockchain(item: Document) {
 </script>
 
 <!-- ✅ TEMPLATE (sama seperti sebelumnya, hanya pastikan ItemMenu pass onEdit) -->
-<div class="bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/10 rounded-[40px] overflow-hidden shadow-2xl">
+<div>
   <table class="w-full text-left border-collapse">
     
     <!-- THEAD -->

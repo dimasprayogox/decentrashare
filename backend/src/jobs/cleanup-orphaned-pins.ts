@@ -25,9 +25,9 @@ export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONF
   const orphanedDocs = await prisma.document.findMany({
     where: {
       isOnChain: false,
+      isArchived: false,
       pendingOnChainUntil: { lt: now },
-      cleanupStatus: 'PENDING',
-      ipfsHash: { not: null }
+      cleanupStatus: 'PENDING'
     },
     select: {
       id: true,
