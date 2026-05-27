@@ -21,8 +21,6 @@ const storage = multer.diskStorage({
 // ✅ Allowed types sesuai frontend
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'image/jpeg',
   'image/png',
   'image/gif',
@@ -59,7 +57,7 @@ export const uploadMiddleware = multer({
       cb(null, true);
     } else {
       const extensionLabel = ext || 'unknown extension';
-      cb(new Error(`Unsupported file type: ${file.originalname} (${extensionLabel}). Supported previewable formats: PDF, DOCX, images (JPG/PNG/GIF/WebP), video (MP4/WebM), audio (MP3/WAV/OGG), text, CSV, and JSON.`), false);
+      cb(new Error(`Unsupported file type: ${file.originalname} (${extensionLabel}). Supported previewable formats: PDF, images (JPG/PNG/GIF/WebP), video (MP4/WebM), audio (MP3/WAV/OGG), text, CSV, and JSON.`), false);
     }
   }
 });

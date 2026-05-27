@@ -46,8 +46,7 @@
   const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
   const MAX_FILES = 10;                     // ✅ Max 10 files per upload
   const ALLOWED_TYPES = [
-    'application/pdf', 'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/pdf',
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'video/mp4', 'video/webm',
     'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg',
@@ -70,8 +69,6 @@
       .join(' ')
       .slice(0, 50);
   }
-  
-  const SUPPORTED_FORMATS_MESSAGE = 'Supported previewable formats: PDF, DOCX, images (JPG/PNG/GIF/WebP), video (MP4/WebM), audio (MP3/WAV/OGG), text, CSV, and JSON.';
 
   function validateFile(file: File): string | null {
     if (file.size > MAX_FILE_SIZE) return `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`;
@@ -82,7 +79,7 @@
 
     if (!ALLOWED_TYPES.includes(file.type) && !isImageFile && !isVideoFile && !isAudioFile) {
       const extensionLabel = ext ? `.${ext}` : 'unknown extension';
-      return `${extensionLabel} files are not supported for upload. ${SUPPORTED_FORMATS_MESSAGE}`;
+      return `${extensionLabel} files are not supported for upload in DecentraShare.`;
     }
     return null;
   }
@@ -550,7 +547,7 @@ if (payload.length === 1) {
           {:else}
             <p class="text-white font-medium">Click or drag files here</p>
             <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">
-              Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB each • PDF, DOCX, images, MP4/WebM, MP3/WAV/OGG, text/CSV/JSON
+              Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB each • PDF, images, MP4/WebM, MP3/WAV/OGG, text/CSV/JSON
             </p>
             {#if files.length > 0}
               <p class="text-[9px] text-blue-400 mt-1">

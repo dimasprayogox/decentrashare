@@ -405,7 +405,7 @@
         </div>
 
         <p class="text-sm text-gray-300 mb-4">
-          Permanently delete {selectedCount} selected item{selectedCount > 1 ? 's' : ''} from trash?
+          Permanently delete {selectedCount} selected item{selectedCount > 1 ? 's' : ''} from trash? This includes {selectedFolders.length} folder{selectedFolders.length === 1 ? '' : 's'} and {selectedDocuments.length} document{selectedDocuments.length === 1 ? '' : 's'}.
         </p>
 
         <div class="max-h-40 overflow-y-auto mb-5 pr-2 space-y-2">

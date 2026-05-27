@@ -554,14 +554,29 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
       where: { folderId: { in: allFolderIdsToDestroy } }
     });
     
-    // 4. 🔄 Delete ALL documents in ALL those folders (cascade hard delete)
-    await tx.document.deleteMany({
-      where: { 
+    const documentsToDestroy = await tx.document.findMany({
+      where: {
         folderId: { in: allFolderIdsToDestroy },
-        ownerId: userId 
-      }
+        ownerId: userId
+      },
+      select: { id: true }
     });
-    
+
+    const documentIdsToDestroy = documentsToDestroy.map((document: { id: string }) => document.id);
+
+    if (documentIdsToDestroy.length > 0) {
+      await tx.documentAccess.deleteMany({
+        where: { documentId: { in: documentIdsToDestroy } }
+      });
+
+      await tx.document.deleteMany({
+        where: {
+          id: { in: documentIdsToDestroy },
+          ownerId: userId
+        }
+      });
+    }
+
     // 5. Delete ALL folders (cascade hard delete)
     await tx.folder.deleteMany({
       where: { id: { in: allFolderIdsToDestroy } }

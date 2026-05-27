@@ -371,9 +371,9 @@ confirmBatchComplete: async (txHash: string, documentIds: string[]) => {
   // ✅ PERMANENT DELETE: Hapus permanen dari Trash (hanya untuk archived items)
   destroyDocuments: async (documentIds: string[]) => {
     const response = await apiClient<{ success: boolean; count: number }>(
-      '/documents/destroy',  // ← Endpoint untuk hard delete
+      '/documents/destroy',
       {
-        method: 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentIds })
       }
