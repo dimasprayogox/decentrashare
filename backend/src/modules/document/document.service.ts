@@ -996,6 +996,29 @@ export const getArchivedDocuments = async (userId: string) => {
 /**
  * Restore banyak dokumen sekaligus dari Trash
  */
+function getRestoredTitle(title: string, existingTitles: Set<string>): string {
+  const normalizedTitle = title.trim().toLowerCase();
+  if (!existingTitles.has(normalizedTitle)) {
+    existingTitles.add(normalizedTitle);
+    return title;
+  }
+
+  const restoredTitle = `${title} (restore)`;
+  if (!existingTitles.has(restoredTitle.toLowerCase())) {
+    existingTitles.add(restoredTitle.toLowerCase());
+    return restoredTitle;
+  }
+
+  let counter = 2;
+  while (existingTitles.has(`${title} (duplicate ${counter})`.toLowerCase())) {
+    counter += 1;
+  }
+
+  const duplicateTitle = `${title} (duplicate ${counter})`;
+  existingTitles.add(duplicateTitle.toLowerCase());
+  return duplicateTitle;
+}
+
 export const restoreDocuments = async (documentIds: string[], userId: string) => {
   return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const documents = await tx.document.findMany({
@@ -1006,6 +1029,7 @@ export const restoreDocuments = async (documentIds: string[], userId: string) =>
       },
       select: {
         id: true,
+        title: true,
         folderId: true
       }
     });
@@ -1029,9 +1053,8 @@ export const restoreDocuments = async (documentIds: string[], userId: string) =>
     const restoreToOriginalFolderIds = documents
       .filter(document => document.folderId && activeFolderIds.has(document.folderId))
       .map(document => document.id);
-    const restoreToRootIds = documents
-      .filter(document => !document.folderId || !activeFolderIds.has(document.folderId))
-      .map(document => document.id);
+    const restoreToRootDocuments = documents
+      .filter(document => !document.folderId || !activeFolderIds.has(document.folderId));
 
     if (restoreToOriginalFolderIds.length > 0) {
       await tx.document.updateMany({
@@ -1043,18 +1066,42 @@ export const restoreDocuments = async (documentIds: string[], userId: string) =>
       });
     }
 
-    if (restoreToRootIds.length > 0) {
-      await tx.document.updateMany({
-        where: { id: { in: restoreToRootIds }, ownerId: userId },
-        data: {
-          isArchived: false,
-          deletedAt: null,
-          folderId: null
-        }
+    const rootRenamed: Array<{ id: string; originalTitle: string; restoredTitle: string }> = [];
+    if (restoreToRootDocuments.length > 0) {
+      const existingRootDocuments = await tx.document.findMany({
+        where: {
+          ownerId: userId,
+          folderId: null,
+          isArchived: false
+        },
+        select: { title: true }
       });
+      const rootTitles = new Set(existingRootDocuments.map(document => document.title.trim().toLowerCase()));
+
+      for (const document of restoreToRootDocuments) {
+        const restoredTitle = getRestoredTitle(document.title, rootTitles);
+        if (restoredTitle !== document.title) {
+          rootRenamed.push({ id: document.id, originalTitle: document.title, restoredTitle });
+        }
+
+        await tx.document.update({
+          where: { id: document.id },
+          data: {
+            title: restoredTitle,
+            isArchived: false,
+            deletedAt: null,
+            folderId: null
+          }
+        });
+      }
     }
 
-    return { count: documents.length };
+    return {
+      count: documents.length,
+      movedToRootCount: restoreToRootDocuments.length,
+      renamedCount: rootRenamed.length,
+      renamed: rootRenamed
+    };
   });
 };
 
