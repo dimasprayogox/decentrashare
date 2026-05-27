@@ -64,6 +64,8 @@ router.post("/batch/trigger-blockchain", triggerBatchBlockchainConfirmation);
 
 router.get('/logs', handleGetActivityLogs);
 router.post('/bulk-download', handleBulkDownloadDocuments);
+router.get("/root", handleGetRootDocuments);
+router.patch("/move", handleMoveDocuments);
 
 router.patch("/:id/confirm-onchain", confirmDocumentOnChain);
 router.post("/:id/trigger-blockchain", triggerBlockchainConfirmation); 
@@ -74,14 +76,6 @@ router.get('/:id/preview',handlePreviewDocument);
 
 router.get('/:id/download',handleDownloadDocument);
 router.get("/:id", handleGetDocumentDetail);
-
-// Ambil file di root saja
-router.get("/root", handleGetRootDocuments);
-
-// Pindahkan banyak file sekaligus
-router.patch("/move", handleMoveDocuments);
-
-
 
 // GET /api/documents/admin/all
 router.get("/admin/all", requireAdmin, handleGetAllDocumentsAdmin);

@@ -818,7 +818,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       downloadStatus = `Preparing ${type === 'document' ? 'file' : 'folder'} download...`;
 
       if (type === 'document') {
-        await storageService.downloadDocument(id, (item as Document | undefined)?.fileName || (item as Document | undefined)?.title);
+        await storageService.downloadDocument(id, (item as Document | undefined)?.title || (item as Document | undefined)?.fileName);
       } else {
         await storageService.downloadFolder(id, (item as Folder | undefined)?.name);
       }

@@ -52,6 +52,16 @@ function buildQueryString(params: Record<string, string | number | null | undefi
   return qs ? `?${qs}` : '';
 }
 
+function sanitizeDownloadName(value: string): string {
+  return value
+    .trim()
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 120) || 'download';
+}
+
 function formatSharePayload(shares: ShareItemRequest[]) {
   return shares.map(share => {
     if (share.itemType === 'document') {
@@ -188,7 +198,7 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
       headers: { 'Accept': '*/*' }
     }, 'blob');
 
-    const downloadName = fileName || `decentrashare-download-${documentId}`;
+    const downloadName = `decentrashare-${sanitizeDownloadName(fileName || documentId)}`;
     storageService.saveBlob(blob, downloadName);
 
     return { success: true, fileName: downloadName };
@@ -200,7 +210,7 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
       headers: { 'Accept': 'application/zip' }
     }, 'blob');
 
-    const downloadName = `${folderName || `folder-${folderId}`}.zip`;
+    const downloadName = `decentrashare-${sanitizeDownloadName(folderName || `folder-${folderId}`)}.zip`;
     storageService.saveBlob(blob, downloadName);
 
     return { success: true, fileName: downloadName };
@@ -220,7 +230,7 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
     const fileName = `decentrashare-export-${new Date().toISOString().slice(0, 10)}.zip`;
     storageService.saveBlob(blob, fileName);
 
-    return { success: true, fileName, documentCount: documentIds.length };
+    return { success: true, fileName, documentCount: documentIds.length + folderIds.length };
   },
 
 

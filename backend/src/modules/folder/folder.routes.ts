@@ -52,12 +52,12 @@ router.delete("/destroy", handleDestroyFolders);
 
 router.get("/path/:id", handleFolderPath);
 router.get("/:id/download", handleDownloadFolder);
+router.get("/:id/contents", handleGetFolderContents);
 
 router.patch("/:id", handleRenameFolder);
 router.get("/:id", handleGetFolderDetail);
 
 // 2. Rute dengan parameter :id di bawah
-router.get("/:id/contents", handleGetFolderContents);
 
 
 export default router;
