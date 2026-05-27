@@ -52,57 +52,44 @@ export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONF
   // 2. Proses satu per satu
   for (const doc of orphanedDocs) {
     try {
-      // (Opsional) Archive metadata dulu
+      if (config.dryRun) {
+        logger.info(`[DRY RUN] Would delete expired unconfirmed document: ${doc.ipfsHash} (${doc.fileName})`);
+        results.cleaned++;
+        continue;
+      }
+
       const archived = await PinataCleanupService.archiveMetadata(doc);
       if (!archived) {
-        logger.warn(`⚠️ Skipping ${doc.ipfsHash}: failed to archive metadata`);
-        results.skipped++;
-        continue;
+        logger.warn(`⚠️ Metadata archive failed for ${doc.ipfsHash}; deleting expired DB record anyway`);
       }
 
-      // Skip jika dryRun
-      if (config.dryRun) {
-        logger.info(`[DRY RUN] Would unpin: ${doc.ipfsHash} (${doc.fileName})`);
-        results.cleaned++;
-        continue;
-      }
-
-      // 3. Unpin dari Pinata
       const unpinResult = await PinataCleanupService.unpin(doc.ipfsHash);
-
-      if (unpinResult.success) {
-        await prisma.$transaction(async (tx) => {
-          await tx.documentAccess.deleteMany({
-            where: { documentId: doc.id }
-          });
-
-          await tx.document.delete({
-            where: { id: doc.id }
-          });
+      if (!unpinResult.success) {
+        logger.warn(`⚠️ Pinata unpin failed for ${doc.ipfsHash}; deleting expired DB record anyway`, {
+          error: unpinResult.error
         });
-
-        results.cleaned++;
-        logger.info(`✅ Cleaned: ${doc.ipfsHash} | ${doc.fileName}`);
-      } else {
-        await prisma.document.update({
-          where: { id: doc.id },
-          data: {
-            cleanupStatus: 'FAILED'
-          }
-        });
-
-        results.failed++;
-        logger.error(`❌ Failed: ${doc.ipfsHash} | ${unpinResult.error}`);
       }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.documentAccess.deleteMany({
+          where: { documentId: doc.id }
+        });
+
+        await tx.document.delete({
+          where: { id: doc.id }
+        });
+      });
+
+      results.cleaned++;
+      logger.info(`✅ Deleted expired unconfirmed document: ${doc.ipfsHash} | ${doc.fileName}`);
 
     } catch (error: any) {
       results.failed++;
-      logger.error(`💥 Unexpected error for ${doc.id}`, { 
-        error: error.message, 
-        stack: error.stack 
+      logger.error(`💥 Unexpected error for ${doc.id}`, {
+        error: error.message,
+        stack: error.stack
       });
-      
-      // Update status FAILED agar tidak diproses ulang terus
+
       await prisma.document.update({
         where: { id: doc.id },
         data: { cleanupStatus: 'FAILED' }
