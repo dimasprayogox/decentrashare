@@ -380,8 +380,15 @@ export const getArchivedFolderContents = async (userId: string, folderId: string
     prisma.document.findMany({
       where: {
         ownerId: userId,
-        folderId,
-        isArchived: true
+        isArchived: true,
+        ...(folderId
+          ? { folderId }
+          : {
+              OR: [
+                { folderId: null },
+                { folder: { isArchived: false } }
+              ]
+            })
       },
       select: {
         id: true,
