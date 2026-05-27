@@ -35,9 +35,6 @@ const ALLOWED_MIME_TYPES = [
   'audio/wave',
   'audio/x-wav',
   'audio/ogg',
-  'audio/mp4',
-  'audio/aac',
-  'audio/flac',
   'text/plain',
   'text/csv',
   'application/json'
@@ -55,13 +52,13 @@ export const uploadMiddleware = multer({
     const isAllowed = ALLOWED_MIME_TYPES.includes(file.mimetype) ||
                       (file.mimetype.startsWith('image/') && /\.(jpeg|jpg|png|gif|webp)$/.test(ext)) ||
                       (file.mimetype.startsWith('video/') && /\.(mp4|webm)$/.test(ext)) ||
-                      (file.mimetype.startsWith('audio/') && /\.(mp3|wav|ogg|m4a|aac|flac)$/.test(ext)) ||
-                      (/\.(mp3|wav|ogg|m4a|aac|flac)$/.test(ext) && ['application/octet-stream', ''].includes(file.mimetype));
+                      (file.mimetype.startsWith('audio/') && /\.(mp3|wav|ogg)$/.test(ext)) ||
+                      (/\.(mp3|wav|ogg)$/.test(ext) && ['application/octet-stream', ''].includes(file.mimetype));
 
     if (isAllowed) {
       cb(null, true);
     } else {
-      cb(new Error(`Unsupported file type: ${file.originalname}`), false);
+      cb(new Error(`Unsupported file type: ${file.originalname}. Supported previewable formats: PDF, DOCX, images (JPG/PNG/GIF/WebP), video (MP4/WebM), audio (MP3/WAV/OGG), text, CSV, and JSON.`), false);
     }
   }
 });

@@ -56,7 +56,7 @@
     const extension = fileName.split('.').pop()?.toLowerCase() || '';
     if (mime.startsWith('image/')) return 'image';
     if (mime.startsWith('video/')) return 'video';
-    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(extension)) return 'audio';
+    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg'].includes(extension)) return 'audio';
     if (mime === 'application/pdf' || extension === 'pdf') return 'pdf';
     if (extension === 'docx' || mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
     if (['xlsx', 'xls', 'csv'].includes(extension) || ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'].includes(mime)) return 'spreadsheet';

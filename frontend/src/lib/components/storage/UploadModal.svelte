@@ -50,8 +50,7 @@
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'video/mp4', 'video/webm',
-    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav',
-    'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/flac',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg',
     'text/plain', 'text/csv', 'application/json'
   ];
 
@@ -72,12 +71,17 @@
       .slice(0, 50);
   }
   
+  const SUPPORTED_FORMATS_MESSAGE = 'Supported previewable formats: PDF, DOCX, images (JPG/PNG/GIF/WebP), video (MP4/WebM), audio (MP3/WAV/OGG), text, CSV, and JSON.';
+
   function validateFile(file: File): string | null {
     if (file.size > MAX_FILE_SIZE) return `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`;
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    const isAudioFile = file.type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext);
-    if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/') && !file.type.startsWith('video/') && !isAudioFile) {
-      return 'Unsupported file type';
+    const isImageFile = file.type.startsWith('image/') && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+    const isVideoFile = file.type.startsWith('video/') && ['mp4', 'webm'].includes(ext);
+    const isAudioFile = (file.type.startsWith('audio/') || ['application/octet-stream', ''].includes(file.type)) && ['mp3', 'wav', 'ogg'].includes(ext);
+
+    if (!ALLOWED_TYPES.includes(file.type) && !isImageFile && !isVideoFile && !isAudioFile) {
+      return SUPPORTED_FORMATS_MESSAGE;
     }
     return null;
   }
@@ -539,7 +543,7 @@ if (payload.length === 1) {
           {:else}
             <p class="text-white font-medium">Click or drag files here</p>
             <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">
-              Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB each
+              Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB each • PDF, DOCX, images, MP4/WebM, MP3/WAV/OGG, text/CSV/JSON
             </p>
             {#if files.length > 0}
               <p class="text-[9px] text-blue-400 mt-1">
