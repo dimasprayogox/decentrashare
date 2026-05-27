@@ -29,6 +29,15 @@ const ALLOWED_MIME_TYPES = [
   'image/webp',
   'video/mp4',
   'video/webm',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/wave',
+  'audio/x-wav',
+  'audio/ogg',
+  'audio/mp4',
+  'audio/aac',
+  'audio/flac',
   'text/plain',
   'text/csv',
   'application/json'
@@ -45,7 +54,9 @@ export const uploadMiddleware = multer({
     const ext = path.extname(file.originalname).toLowerCase();
     const isAllowed = ALLOWED_MIME_TYPES.includes(file.mimetype) ||
                       (file.mimetype.startsWith('image/') && /\.(jpeg|jpg|png|gif|webp)$/.test(ext)) ||
-                      (file.mimetype.startsWith('video/') && /\.(mp4|webm)$/.test(ext));
+                      (file.mimetype.startsWith('video/') && /\.(mp4|webm)$/.test(ext)) ||
+                      (file.mimetype.startsWith('audio/') && /\.(mp3|wav|ogg|m4a|aac|flac)$/.test(ext)) ||
+                      (/\.(mp3|wav|ogg|m4a|aac|flac)$/.test(ext) && ['application/octet-stream', ''].includes(file.mimetype));
 
     if (isAllowed) {
       cb(null, true);

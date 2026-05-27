@@ -62,7 +62,7 @@
     const extension = fileName.split('.').pop()?.toLowerCase() || '';
     if (mime.startsWith('image/')) return 'image';
     if (mime.startsWith('video/')) return 'video';
-    if (mime.startsWith('audio/')) return 'audio';
+    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(extension)) return 'audio';
     if (mime === 'application/pdf' || extension === 'pdf') return 'pdf';
     if (['docx'].includes(extension) || mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
     if (['xlsx', 'xls', 'csv'].includes(extension) || ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'].includes(mime)) return 'spreadsheet';
@@ -318,7 +318,7 @@
             <div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mb-6">
               <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
             </div>
-            <audio controls class="w-full max-w-md"><source src={previewBlobUrl} type={file.mimeType} />Your browser does not support audio preview.</audio>
+            <audio controls class="w-full max-w-md"><source src={previewBlobUrl} type={file.mimeType || 'audio/mpeg'} />Your browser does not support audio preview.</audio>
           </div>
         {:else if category === 'text'}
           <div class="rounded-xl overflow-hidden border border-white/10 bg-black/30">

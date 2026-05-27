@@ -50,6 +50,8 @@
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'video/mp4', 'video/webm',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav',
+    'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/flac',
     'text/plain', 'text/csv', 'application/json'
   ];
 
@@ -72,7 +74,9 @@
   
   function validateFile(file: File): string | null {
     if (file.size > MAX_FILE_SIZE) return `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`;
-    if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const isAudioFile = file.type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext);
+    if (!ALLOWED_TYPES.includes(file.type) && !file.type.startsWith('image/') && !file.type.startsWith('video/') && !isAudioFile) {
       return 'Unsupported file type';
     }
     return null;
