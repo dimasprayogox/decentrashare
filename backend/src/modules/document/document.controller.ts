@@ -24,29 +24,12 @@ export const handleGetDocumentDetail = async (req: AuthRequest, res: Response) =
     }
 
     const document = await documentService.validateDocumentAccess(id, userId);
-
-    // ✅ SANITIZE: Jangan expose ipfsHash untuk private files
-    const isPrivate = document.privacy === 'PRIVATE' || document.privacy === 'SPECIFIC_USER';
-    
-    const sanitized = {
-      id: document.id,
-      title: document.title,
-      fileName: document.fileName,
-      fileSize: document.fileSize,
-      mimeType: document.mimeType,
-      createdAt: document.createdAt,
-      updatedAt: document.updatedAt,
-      privacy: document.privacy,  // ← Frontend butuh ini untuk conditional URL
-      ownerId: document.ownerId,
-      // ❌ JANGAN include ipfsHash untuk private files!
-      ipfsHash: isPrivate ? undefined : document.ipfsHash,  // ← ✅ Hide if private
-      // ❌ JANGAN include sensitive fields: fileHash, blockchainTx, description (if sensitive)
-    };
+    const sanitized = documentService.sanitizeDocument(document, userId);
 
     return res.status(200).json({
       success: true,
       message: 'Document details retrieved successfully.',
-      data: sanitized  
+      data: sanitized
     });
 
   } catch (error: any) {

@@ -73,6 +73,14 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
   const document = await prisma.document.findUnique({
     where: { id: documentId },
     include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      },
       folder: {
         include: {
           sharedWith: true // Check folder-level permissions

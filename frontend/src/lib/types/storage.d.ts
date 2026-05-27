@@ -158,7 +158,7 @@ export interface Document {
   mimeType: string;
   ipfsHash?: string | null;
   fileHash?: string;
-  blockchainTx?: string;
+  blockchainTx?: string | null;
   isOnChain?: boolean;
   pendingOnChainUntil?: string | null;
   cleanupStatus?: 'PENDING' | 'ARCHIVED' | 'DELETED' | 'FAILED';
@@ -171,7 +171,7 @@ export interface Document {
   updatedAt: string;
   
   // Optional computed fields (from Prisma includes)
-  owner?: Pick<AuthUser, 'id' | 'username' | 'avatarUrl'>;
+  owner?: Pick<AuthUser, 'id' | 'username' | 'walletAddress' | 'avatarUrl'>;
   folder?: Pick<Folder, 'id' | 'name'>;
   sharedWith?: DocumentAccess[];
 }

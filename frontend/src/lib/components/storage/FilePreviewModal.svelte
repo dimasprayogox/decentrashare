@@ -184,7 +184,7 @@
   }
 
   function openInNewTab() {
-    if (previewBlobUrl) window.open(previewBlobUrl, '_blank', 'noopener,noreferrer');
+    if (file?.id) window.open(`/storage/document/${file.id}`, '_blank', 'noopener,noreferrer');
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -345,7 +345,7 @@
       </div>
 
       <div class="flex items-center justify-end gap-3 p-4 border-t border-white/10">
-        <button onclick={openInNewTab} disabled={!previewBlobUrl} class="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white rounded-xl transition-colors text-sm flex items-center gap-2">
+        <button onclick={openInNewTab} disabled={!file?.id} class="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white rounded-xl transition-colors text-sm flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
           Open in New Tab
         </button>
