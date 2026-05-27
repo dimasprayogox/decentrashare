@@ -29,7 +29,7 @@
     onMove?: (id: string, type: 'folder' | 'document') => Promise<void> | void;
     onShare?: (id: string, itemType: 'folder' | 'document') => Promise<void> | void;
     onDelete?: (id: string, type: 'folder' | 'document', name: string) => Promise<void> | void;
-    onDownload?: (id: string) => Promise<void> | void;
+    onDownload?: (id: string, type: 'folder' | 'document') => Promise<void> | void;
     onRestore?: (id: string, type: 'folder' | 'document', name: string) => Promise<void> | void;
     trashMode?: boolean;
   } = $props();
@@ -215,7 +215,7 @@ function updateMenuPosition() {
   async function handleDownload() {
     try {
       isOpen = false;
-      await onDownload?.(itemId);
+      await onDownload?.(itemId, itemType);
       window.dispatchEvent(new CustomEvent('download-success', {
         detail: { itemId, itemName }
       }));
@@ -395,8 +395,8 @@ function updateMenuPosition() {
       </button>
     {/if}
 
-    <!-- Download (only for documents) -->
-    {#if itemType === 'document' && onDownload}
+    <!-- Download -->
+    {#if onDownload}
       <button 
         onclick={handleDownload} 
         class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]" 

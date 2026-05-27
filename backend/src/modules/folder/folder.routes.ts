@@ -17,7 +17,8 @@ import {
   handleGetSharedWithMe,
   handleGetPublicFolder,
   handleUpdatePrivacy,
-  handleMoveFolder
+  handleMoveFolder,
+  handleDownloadFolder
 } from "./folder.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 
@@ -50,6 +51,7 @@ router.delete("/destroy", handleDestroyFolders);
 
 
 router.get("/path/:id", handleFolderPath);
+router.get("/:id/download", handleDownloadFolder);
 
 router.patch("/:id", handleRenameFolder);
 router.get("/:id", handleGetFolderDetail);

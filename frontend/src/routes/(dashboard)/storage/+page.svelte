@@ -145,9 +145,13 @@
   let bulkConfirmStatus = $state('');
   let bulkConfirmSuccess = $state('');
   let bulkConfirmError = $state('');
+  let isDownloading = $state(false);
+  let downloadStatus = $state('');
+  let downloadSuccess = $state('');
+  let downloadError = $state('');
 
   // Combined processing state
-  const isProcessing = $derived(isDeleteProcessing || isRenameProcessing || isBulkConfirmingBlockchain || isMoveProcessing || isLoading);
+  const isProcessing = $derived(isDeleteProcessing || isRenameProcessing || isBulkConfirmingBlockchain || isMoveProcessing || isDownloading || isLoading);
 
   // ✅ Helper: Check if item is selected (reactive karena selectedItems adalah $state)
   const isSelected = (id: string): boolean => selectedItems.includes(id);
@@ -804,26 +808,64 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     }
   }
 
-  async function handleDownload(documentId: string) {
+  async function handleDownload(id: string, type: 'folder' | 'document' = 'document') {
+    const item = type === 'document' ? items.find(document => document.id === id) : folders.find(folder => folder.id === id);
+
     try {
-      const doc = items.find(d => d.id === documentId);
-      const filename = doc?.fileName || 'download';
-      
-      const res = await fetch(`/api/documents/${documentId}/download`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Download failed');
-      
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      isDownloading = true;
+      downloadError = '';
+      downloadSuccess = '';
+      downloadStatus = `Preparing ${type === 'document' ? 'file' : 'folder'} download...`;
+
+      if (type === 'document') {
+        await storageService.downloadDocument(id, (item as Document | undefined)?.fileName || (item as Document | undefined)?.title);
+      } else {
+        await storageService.downloadFolder(id, (item as Folder | undefined)?.name);
+      }
+
+      downloadSuccess = `${type === 'document' ? 'File' : 'Folder'} download started.`;
+      setTimeout(() => {
+        downloadSuccess = '';
+      }, 4000);
     } catch (err: any) {
       console.error('Download failed:', err);
-      throw new Error(err.message || 'Failed to download file');
+      downloadError = err.message || 'Failed to download item';
+      throw new Error(downloadError);
+    } finally {
+      isDownloading = false;
+      downloadStatus = '';
+    }
+  }
+
+  async function handleBulkDownload() {
+    const documentIds = getSelectedDocuments(items).map(document => document.id);
+    const folderIds = getSelectedFolders(folders).map(folder => folder.id);
+
+    if (documentIds.length === 0 && folderIds.length === 0) {
+      downloadError = 'Pilih minimal satu item untuk didownload.';
+      return;
+    }
+
+    try {
+      isDownloading = true;
+      downloadError = '';
+      downloadSuccess = '';
+      downloadStatus = `Preparing ${documentIds.length + folderIds.length} selected item(s)...`;
+
+      await storageService.bulkDownloadItems({ documentIds, folderIds });
+
+      downloadSuccess = 'Bulk download archive started.';
+      clearSelection();
+      selectionMode = false;
+      setTimeout(() => {
+        downloadSuccess = '';
+      }, 4000);
+    } catch (err: any) {
+      console.error('Bulk download failed:', err);
+      downloadError = err.message || 'Failed to download selected items';
+    } finally {
+      isDownloading = false;
+      downloadStatus = '';
     }
   }
 
@@ -1421,6 +1463,33 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     </div>
   {/if}
 
+  {#if downloadStatus || downloadSuccess || downloadError}
+    <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {downloadError ? 'bg-red-500/10 border-red-500/20 text-red-400' : downloadSuccess ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}" role="status" aria-live="polite">
+      {#if downloadStatus}
+        <svg class="w-5 h-5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+      {:else if downloadSuccess}
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+      {:else}
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      {/if}
+      <p class="text-sm flex-1">{downloadStatus || downloadSuccess || downloadError}</p>
+      {#if downloadError || downloadSuccess}
+        <button onclick={() => { downloadError = ''; downloadSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss download status">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      {/if}
+    </div>
+  {/if}
+
   {#if bulkConfirmStatus || bulkConfirmSuccess || bulkConfirmError}
     <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {bulkConfirmError ? 'bg-red-500/10 border-red-500/20 text-red-400' : bulkConfirmSuccess ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}" role="status" aria-live="polite">
       {#if bulkConfirmStatus}
@@ -1566,6 +1635,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       onMove={handleBulkMove}
       onManageAccess={handleBulkManageAccess}
       onConfirmBlockchain={handleBulkConfirmBlockchain}
+      onDownload={handleBulkDownload}
       canConfirmBlockchain={selectedUnconfirmedDocuments.length > 0}
       confirmBlockchainCount={selectedUnconfirmedDocuments.length}
       isConfirmingBlockchain={isBulkConfirmingBlockchain}

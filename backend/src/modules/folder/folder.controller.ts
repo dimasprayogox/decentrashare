@@ -189,6 +189,62 @@ export const handleGetFolderDetail = async (req: AuthRequest, res: Response) => 
   }
 };
 
+export const handleDownloadFolder = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { stream, metadata, summary, folderName } = await folderService.downloadFolderArchive(id, userId);
+    const safeFolderName = encodeURIComponent(`${folderName}.zip`);
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFolderName}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache');
+
+    stream.pipe(res);
+
+    stream.on('end', () => {
+      logger.info('✅ Folder download completed', {
+        userId,
+        folderId: id,
+        documentCount: metadata.length,
+        summary
+      });
+    });
+
+    stream.on('error', (err: any) => {
+      logger.error('❌ Folder ZIP stream error', {
+        userId,
+        folderId: id,
+        error: err.message
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: 'Failed to create folder archive' });
+      }
+    });
+  } catch (error: any) {
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.message?.includes('Access denied')) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    logger.error('❌ Folder download failed:', error);
+
+    if (res.headersSent) {
+      return next(error);
+    }
+
+    return res.status(500).json({ success: false, message: 'Failed to download folder' });
+  }
+};
+
 export const handleGetArchivedFolderContents = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.userId;

@@ -1,6 +1,7 @@
 import { prisma } from '../../config/db';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
+import { prepareFolderArchive } from '../document/document.service';
 import crypto from 'node:crypto';
 import { AccessRoleFolder } from '@prisma/client'; // Kuncinya di sini agar tidak undefined
 
@@ -200,6 +201,10 @@ export const moveFolder = async (
 /**
  * Mendapatkan detail satu folder (tanpa load semua isi filenya)
  */
+export const downloadFolderArchive = async (folderId: string, userId: string) => {
+  return prepareFolderArchive(folderId, userId);
+};
+
 export const getFolderDetail = async (folderId: string, userId: string) => {
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },
@@ -378,7 +383,25 @@ export const getArchivedFolderContents = async (userId: string, folderId: string
         folderId,
         isArchived: true
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        fileSize: true,
+        mimeType: true,
+        ipfsHash: true,
+        fileHash: true,
+        blockchainTx: true,
+        isOnChain: true,
+        pendingOnChainUntil: true,
+        cleanupStatus: true,
+        folderId: true,
+        ownerId: true,
+        privacy: true,
+        isArchived: true,
+        deletedAt: true,
+        createdAt: true,
+        updatedAt: true,
         owner: {
           select: {
             id: true,

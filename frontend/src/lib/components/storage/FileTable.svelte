@@ -39,7 +39,7 @@
     onRename?: (id: string, name: string) => void;
     onDeleteConfirm?: (id: string, type: 'folder' | 'document', name: string) => void;
     onShare?: (id: string, type: 'folder' | 'document') => void;
-    onDownload?: (id: string) => void;
+    onDownload?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
     onMove?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
     onRestore?: (id: string, type: 'folder' | 'document', name: string) => void | Promise<void>;
     trashMode?: boolean;
@@ -176,6 +176,19 @@
     const hours = Math.floor(remaining / (1000 * 60 * 60));
     const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
+  }
+
+  function formatTrashRetentionCountdown(deletedAt: string | null | undefined): string {
+    if (!deletedAt) return 'Auto-delete in 60d';
+    const expiresAt = new Date(deletedAt);
+    expiresAt.setDate(expiresAt.getDate() + 60);
+    const remaining = expiresAt.getTime() - now;
+    if (remaining <= 0) return 'Auto-delete pending';
+    const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return `Auto-delete in ${days}d ${hours}h`;
+    const minutes = Math.max(1, Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60)));
+    return `Auto-delete in ${hours}h ${minutes}m`;
   }
 
   // ✅ Get owner profile URL
@@ -651,7 +664,10 @@ async function handleConfirmBlockchain(item: Document) {
         <th class="px-4 py-4 font-semibold">Name</th>
         <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">Owner</th>
         <th class="hidden md:table-cell px-4 py-4 text-center font-semibold">Size</th>
-        <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">Modified</th>
+        <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">{trashMode ? 'Deleted at' : 'Modified'}</th>
+        {#if trashMode}
+          <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">Auto delete</th>
+        {/if}
         <th class="hidden lg:table-cell px-4 py-4 text-center font-semibold">Blockchain Tx</th>
         <th class="px-6 py-4 text-center font-semibold">Actions</th>
       </tr>
@@ -767,9 +783,11 @@ async function handleConfirmBlockchain(item: Document) {
     </div>
 
     <!-- Folder Name Text -->
-    <span class="text-sm font-semibold text-white/90 uppercase tracking-wide truncate max-w-[180px]">
-      {folder.name}
-    </span>
+    <div class="min-w-0">
+      <span class="block text-sm font-semibold text-white/90 uppercase tracking-wide truncate max-w-[180px]">
+        {folder.name}
+      </span>
+    </div>
   </div>
 </td>
 
@@ -850,12 +868,20 @@ async function handleConfirmBlockchain(item: Document) {
 
             <!-- Modified -->
             <td class="hidden xl:table-cell px-4 py-4 text-center">
-              <span class="text-xs text-gray-500 whitespace-nowrap" 
-                    title={folder.updatedAt?.toString() || folder.createdAt?.toString()}>
-                {formatDate(folder.updatedAt || folder.createdAt)}
+              <span class="text-xs text-gray-500 whitespace-nowrap"
+                    title={(trashMode ? folder.deletedAt : folder.updatedAt)?.toString() || folder.createdAt?.toString()}>
+                {formatDate((trashMode ? folder.deletedAt : folder.updatedAt) || folder.createdAt)}
               </span>
             </td>
             
+            {#if trashMode}
+              <td class="hidden xl:table-cell px-4 py-4 text-center">
+                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-300 border border-red-500/20" title="Item akan dihapus otomatis setelah 60 hari di Trash">
+                  {formatTrashRetentionCountdown(folder.deletedAt)}
+                </span>
+              </td>
+            {/if}
+
             <!-- IPFS -->
             <td class="hidden lg:table-cell px-4 py-4 text-center">
               <span class="text-xs text-gray-500 font-medium">—</span>
@@ -876,7 +902,7 @@ async function handleConfirmBlockchain(item: Document) {
                     onRestore={onRestore}
                     trashMode={trashMode}
                     onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
-                    onDownload={undefined}
+                    onDownload={onDownload}
                   />
                 </div>
               {/if}
@@ -1073,10 +1099,28 @@ async function handleConfirmBlockchain(item: Document) {
           
           <!-- Modified -->
           <td class="hidden xl:table-cell px-4 py-4 text-center">
-            <span class="text-xs text-gray-500 whitespace-nowrap" title={item.updatedAt?.toString()}>
-              {formatDate(item.updatedAt || item.createdAt)}
+            <span class="text-xs text-gray-500 whitespace-nowrap" title={(trashMode ? item.deletedAt : item.updatedAt)?.toString() || item.createdAt?.toString()}>
+              {formatDate((trashMode ? item.deletedAt : item.updatedAt) || item.createdAt)}
             </span>
           </td>
+
+          {#if trashMode}
+            <td class="hidden xl:table-cell px-4 py-4 text-center">
+              {#if isPendingOnChain(item)}
+                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20" title="File akan otomatis dihapus jika tidak dikonfirmasi sebelum waktu ini habis">
+                  Auto delete in: {formatPendingCountdown(item)}
+                </span>
+              {:else if isPendingExpired(item)}
+                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20" title="Batas konfirmasi sudah habis. File akan dihapus otomatis.">
+                  Confirmation expired
+                </span>
+              {:else}
+                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-300 border border-red-500/20" title="Item akan dihapus otomatis setelah 60 hari di Trash">
+                  {formatTrashRetentionCountdown(item.deletedAt)}
+                </span>
+              {/if}
+            </td>
+          {/if}
 
 <!-- Blockchain Tx Column - ROBUST: Cek blockchainTx langsung -->
 <td class="hidden lg:table-cell px-4 py-4 text-center">
@@ -1105,41 +1149,41 @@ async function handleConfirmBlockchain(item: Document) {
     </a>
     
 
+  {:else if trashMode}
+    <span class="text-xs text-gray-600">—</span>
   {:else if isPendingOnChain(item)}
     <div class="flex flex-col items-center gap-1">
-      {#if !trashMode}
-        <button
-          class="inline-flex items-center gap-1.5 text-xs font-medium
-                 text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600
-                 px-3 py-1.5 rounded-lg transition-all duration-150 ease-out
-                 active:scale-[0.98] disabled:cursor-not-allowed"
-          title="Confirm this file on blockchain"
-          disabled={confirmingTx?.has(item.id)}
-          onclick={async (e) => {
-            e.stopPropagation();
-            await handleConfirmBlockchain(item);
-          }}
-        >
-          {#if confirmingTx?.has(item.id)}
-            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            Confirming...
-          {:else}
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a8 8 0 11-16 0 8 8 0 0116 0z"/>
-            </svg>
-            Confirm
-          {/if}
-        </button>
-      {/if}
+      <button
+        class="inline-flex items-center gap-1.5 text-xs font-medium
+               text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600
+               px-3 py-1.5 rounded-lg transition-all duration-150 ease-out
+               active:scale-[0.98] disabled:cursor-not-allowed"
+        title="Confirm this file on blockchain"
+        disabled={confirmingTx?.has(item.id)}
+        onclick={async (e) => {
+          e.stopPropagation();
+          await handleConfirmBlockchain(item);
+        }}
+      >
+        {#if confirmingTx?.has(item.id)}
+          <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          Confirming...
+        {:else}
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a8 8 0 11-16 0 8 8 0 0116 0z"/>
+          </svg>
+          Confirm
+        {/if}
+      </button>
 
       <span class="text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" title="File akan otomatis dihapus dari IPFS dan database jika tidak dikonfirmasi dalam 24 jam">
         Need confirmation: {formatPendingCountdown(item)}
       </span>
 
-      {#if !trashMode && txStatus.has(item.id)}
+      {#if txStatus.has(item.id)}
         {@const status = txStatus.get(item.id)}
         {#if status}
           <span class="text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap

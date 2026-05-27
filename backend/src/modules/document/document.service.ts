@@ -186,84 +186,177 @@ export const logDownloadActivity = async (
   }
 };
 
-export const bulkDownloadDocuments = async (documentIds: string[], userId: string) => {
-  if (!documentIds || documentIds.length === 0) {
+type ArchiveDocument = {
+  id: string;
+  title: string;
+  fileName: string;
+  ipfsHash: string;
+  folderId?: string | null;
+  archivePath?: string;
+};
+
+type BulkDownloadInput = string[] | {
+  documentIds?: string[];
+  folderIds?: string[];
+};
+
+const sanitizeArchiveSegment = (value: string) =>
+  value.replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 200) || 'untitled';
+
+const ensureUniqueArchivePath = (filePath: string, usedPaths: Set<string>) => {
+  const normalized = filePath.replace(/\\/g, '/');
+  if (!usedPaths.has(normalized)) {
+    usedPaths.add(normalized);
+    return normalized;
+  }
+
+  const parts = normalized.split('/');
+  const fileName = parts.pop() || 'file';
+  const dotIndex = fileName.lastIndexOf('.');
+  const baseName = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+  const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+  let counter = 1;
+  let candidate = normalized;
+
+  do {
+    candidate = [...parts, `${baseName} (${counter})${extension}`].filter(Boolean).join('/');
+    counter += 1;
+  } while (usedPaths.has(candidate));
+
+  usedPaths.add(candidate);
+  return candidate;
+};
+
+const validateFolderAccess = async (folderId: string, userId: string) => {
+  const folder = await prisma.folder.findUnique({
+    where: { id: folderId },
+    include: { sharedWith: true }
+  });
+
+  if (!folder) {
+    throw new Error('Folder not found.');
+  }
+
+  if (folder.ownerId === userId) {
+    return folder;
+  }
+
+  if (folder.isArchived) {
+    throw new Error('Folder is in trash.');
+  }
+
+  const hasAccess = folder.sharedWith.some((access: any) => access.userId === userId);
+  if (hasAccess || folder.privacy === 'PUBLIC') {
+    return folder;
+  }
+
+  throw new Error('Access denied. You do not have permission to view this folder.');
+};
+
+const getDescendantFolders = async (rootFolderIds: string[]) => {
+  const allIds = new Set(rootFolderIds);
+  let currentLevelIds = [...rootFolderIds];
+
+  while (currentLevelIds.length > 0) {
+    const children = await prisma.folder.findMany({
+      where: {
+        parentId: { in: currentLevelIds },
+        isArchived: false
+      },
+      select: { id: true }
+    });
+
+    const newIds = children.map((child: any) => child.id).filter((id: string) => !allIds.has(id));
+    if (newIds.length === 0) break;
+
+    newIds.forEach((id: string) => allIds.add(id));
+    currentLevelIds = newIds;
+  }
+
+  return Array.from(allIds);
+};
+
+const buildFolderArchivePaths = (folders: any[], rootFolders: any[]) => {
+  const folderMap = new Map(folders.map((folder: any) => [folder.id, folder]));
+  const rootIds = new Set(rootFolders.map((folder: any) => folder.id));
+  const pathCache = new Map<string, string>();
+
+  const resolvePath = (folderId: string): string => {
+    if (pathCache.has(folderId)) return pathCache.get(folderId)!;
+
+    const folder = folderMap.get(folderId);
+    if (!folder) return '';
+
+    const name = sanitizeArchiveSegment(folder.name);
+    if (rootIds.has(folder.id) || !folder.parentId || !folderMap.has(folder.parentId)) {
+      pathCache.set(folderId, name);
+      return name;
+    }
+
+    const parentPath = resolvePath(folder.parentId);
+    const pathValue = parentPath ? `${parentPath}/${name}` : name;
+    pathCache.set(folderId, pathValue);
+    return pathValue;
+  };
+
+  folders.forEach((folder: any) => resolvePath(folder.id));
+  return pathCache;
+};
+
+export const createDocumentsArchive = async (documents: ArchiveDocument[], emptyFolderPaths: string[] = []) => {
+  if (documents.length === 0 && emptyFolderPaths.length === 0) {
     throw new Error('No documents specified for download');
   }
 
-  // ✅ 1. Validate access for EACH document individually
-  const accessibleDocs = [];
-  const deniedDocs = [];
-  
-  for (const docId of documentIds) {
-    try {
-      const doc = await validateDocumentAccess(docId, userId);
-      accessibleDocs.push(doc);
-    } catch (error: any) {
-      // Log denied access but continue with other docs
-      logger.warn('⚠️ Bulk download: Access denied for document', {
-        documentId: docId,
-        userId,
-        reason: error.message
-      });
-      deniedDocs.push({ id: docId, reason: error.message });
-    }
-  }
+  const archive = archiver('zip', { zlib: { level: 6 } });
+  const usedPaths = new Set<string>();
+  let successfullyAdded = 0;
+  let fetchFailed = 0;
 
-  // ✅ 2. If no documents are accessible, throw error
-  if (accessibleDocs.length === 0) {
-    throw new Error('Access denied for all selected documents');
-  }
-
-  // ✅ 3. Create ZIP archive stream (memory efficient)
-  const archive = archiver('zip', {
-    zlib: { level: 6 } // Compression level: 0-9
-  });
-
-  // ✅ 4. Handle archive errors
   archive.on('error', (err: any) => {
     logger.error('❌ ZIP archive error', { error: err.message });
     throw err;
   });
 
-  // ✅ 5. Add each accessible file to the ZIP
-  for (const doc of accessibleDocs) {
+  for (const folderPath of emptyFolderPaths) {
+    const safePath = folderPath.split('/').map(sanitizeArchiveSegment).join('/');
+    archive.append('', { name: ensureUniqueArchivePath(`${safePath}/.keep`, usedPaths) });
+  }
+
+  for (const doc of documents) {
     try {
-      // Get file from Pinata/IPFS
-      const pinataUrl = `https://gateway.pinata.cloud/ipfs/${doc.ipfsHash}`;
-      const response = await fetch(pinataUrl);
-      
+      const response = await fetch(`https://gateway.pinata.cloud/ipfs/${doc.ipfsHash}`);
+
       if (!response.ok || !response.body) {
+        fetchFailed += 1;
         logger.warn('⚠️ Failed to fetch file for ZIP', {
           documentId: doc.id,
           ipfsHash: doc.ipfsHash,
           status: response?.status
         });
-        continue; // Skip this file, continue with others
+        continue;
       }
 
-      // Sanitize filename for ZIP (remove path separators, limit length)
-      const safeFileName = doc.fileName
-        .replace(/[\/\\:*?"<>|]/g, '_')
-        .slice(0, 200);
+      const safeFileName = sanitizeArchiveSegment(doc.fileName);
+      const archivePath = ensureUniqueArchivePath(
+        doc.archivePath ? `${doc.archivePath}/${safeFileName}` : safeFileName,
+        usedPaths
+      );
 
-      const fileStream = Readable.fromWeb(response.body);
-      archive.append(fileStream, { name: safeFileName });
-      
+      archive.append(Readable.fromWeb(response.body), { name: archivePath });
+      successfullyAdded += 1;
     } catch (error: any) {
+      fetchFailed += 1;
       logger.warn('⚠️ Error adding file to ZIP', {
         documentId: doc.id,
         error: error.message
       });
-      // Continue with other files — don't fail entire bulk download
     }
   }
 
-  // ✅ 6. Finalize the archive (must be called after all appends)
   archive.finalize();
 
-  // ✅ 7. Prepare metadata for logging/response
-  const metadata = accessibleDocs.map(doc => ({
+  const metadata = documents.map(doc => ({
     id: doc.id,
     title: doc.title,
     fileName: doc.fileName,
@@ -274,18 +367,137 @@ export const bulkDownloadDocuments = async (documentIds: string[], userId: strin
     stream: archive,
     metadata,
     summary: {
-      totalRequested: documentIds.length,
-      successfullyAdded: accessibleDocs.length,
-      accessDenied: deniedDocs.length,
-      fetchFailed: accessibleDocs.length - (await countSuccessfulFetches(accessibleDocs)) // Optional helper
+      totalRequested: documents.length,
+      successfullyAdded,
+      accessDenied: 0,
+      fetchFailed
     }
   };
 };
 
-// ✅ Helper: Count successful fetches (optional, for detailed summary)
-const countSuccessfulFetches = async (docs: any[]): Promise<number> => {
-  // This is a simplified version — in production, you might track this during the loop
-  return docs.length;
+export const prepareFolderArchive = async (folderId: string, userId: string) => {
+  const rootFolder = await validateFolderAccess(folderId, userId);
+  const folderIds = await getDescendantFolders([folderId]);
+  const folders = await prisma.folder.findMany({
+    where: { id: { in: folderIds }, isArchived: false },
+    select: { id: true, name: true, parentId: true }
+  });
+  const folderPaths = buildFolderArchivePaths(folders, [rootFolder]);
+
+  const documents = await prisma.document.findMany({
+    where: {
+      folderId: { in: folderIds },
+      isArchived: false
+    },
+    select: { id: true, title: true, fileName: true, ipfsHash: true, folderId: true }
+  });
+
+  const archiveDocuments = documents.map((doc: any) => ({
+    ...doc,
+    archivePath: doc.folderId ? folderPaths.get(doc.folderId) : undefined
+  }));
+
+  const folderPathsWithFiles = new Set(archiveDocuments.map((doc: any) => doc.archivePath).filter(Boolean));
+  const emptyFolderPaths = Array.from(folderPaths.values()).filter((folderPath) => !folderPathsWithFiles.has(folderPath));
+  const archive = await createDocumentsArchive(archiveDocuments, emptyFolderPaths);
+
+  return {
+    ...archive,
+    folderName: rootFolder.name
+  };
+};
+
+export const bulkDownloadDocuments = async (input: BulkDownloadInput, userId: string) => {
+  const documentIds = Array.isArray(input) ? input : input.documentIds ?? [];
+  const folderIds = Array.isArray(input) ? [] : input.folderIds ?? [];
+
+  if (documentIds.length === 0 && folderIds.length === 0) {
+    throw new Error('No documents specified for download');
+  }
+
+  const accessibleDocs: ArchiveDocument[] = [];
+  const deniedDocs = [];
+  const selectedDocumentIds = new Set<string>();
+
+  for (const docId of documentIds) {
+    try {
+      const doc = await validateDocumentAccess(docId, userId);
+      if (!selectedDocumentIds.has(doc.id)) {
+        selectedDocumentIds.add(doc.id);
+        accessibleDocs.push(doc);
+      }
+    } catch (error: any) {
+      logger.warn('⚠️ Bulk download: Access denied for document', {
+        documentId: docId,
+        userId,
+        reason: error.message
+      });
+      deniedDocs.push({ id: docId, reason: error.message });
+    }
+  }
+
+  const accessibleFolders = [];
+  for (const folderId of folderIds) {
+    try {
+      accessibleFolders.push(await validateFolderAccess(folderId, userId));
+    } catch (error: any) {
+      logger.warn('⚠️ Bulk download: Access denied for folder', {
+        folderId,
+        userId,
+        reason: error.message
+      });
+      deniedDocs.push({ id: folderId, reason: error.message });
+    }
+  }
+
+  const rootFolderIds = accessibleFolders.map((folder: any) => folder.id);
+  const emptyFolderPaths: string[] = [];
+
+  if (rootFolderIds.length > 0) {
+    const descendantFolderIds = await getDescendantFolders(rootFolderIds);
+    const folders = await prisma.folder.findMany({
+      where: { id: { in: descendantFolderIds }, isArchived: false },
+      select: { id: true, name: true, parentId: true }
+    });
+    const folderPaths = buildFolderArchivePaths(folders, accessibleFolders);
+
+    const folderDocuments = await prisma.document.findMany({
+      where: {
+        folderId: { in: descendantFolderIds },
+        isArchived: false
+      },
+      select: { id: true, title: true, fileName: true, ipfsHash: true, folderId: true }
+    });
+
+    for (const doc of folderDocuments) {
+      if (selectedDocumentIds.has(doc.id)) continue;
+      selectedDocumentIds.add(doc.id);
+      accessibleDocs.push({
+        ...doc,
+        archivePath: doc.folderId ? folderPaths.get(doc.folderId) : undefined
+      });
+    }
+
+    const folderPathsWithFiles = new Set(
+      accessibleDocs.map((doc: any) => doc.archivePath).filter(Boolean)
+    );
+    emptyFolderPaths.push(...Array.from(folderPaths.values()).filter((folderPath) => !folderPathsWithFiles.has(folderPath)));
+  }
+
+  if (accessibleDocs.length === 0 && emptyFolderPaths.length === 0) {
+    throw new Error('Access denied for all selected documents');
+  }
+
+  const archive = await createDocumentsArchive(accessibleDocs, emptyFolderPaths);
+
+  return {
+    ...archive,
+    summary: {
+      ...archive.summary,
+      totalRequested: documentIds.length + folderIds.length,
+      accessDenied: deniedDocs.length
+    }
+  };
 };
 
 // ─────────────────────────────────────────────────────────────

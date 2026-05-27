@@ -180,25 +180,28 @@ export const handleDownloadDocument = async (req: AuthRequest, res: Response, ne
 
 export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { documentIds } = req.body;
+    const { documentIds = [], folderIds = [] } = req.body;
     const userId = req.user?.userId;
 
     // ✅ Validate input
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-    if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'documentIds array is required' });
+    if (!Array.isArray(documentIds) || !Array.isArray(folderIds)) {
+      return res.status(400).json({ success: false, message: 'documentIds and folderIds must be arrays' });
     }
-    if (documentIds.length > 50) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Maximum 50 documents per bulk download' 
+    if (documentIds.length === 0 && folderIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Select at least one document or folder' });
+    }
+    if (documentIds.length + folderIds.length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum 50 items per bulk download'
       });
     }
 
     // ✅ 1. Get ZIP stream from service
-    const { stream, metadata, summary } = await documentService.bulkDownloadDocuments(documentIds, userId);
+    const { stream, metadata, summary } = await documentService.bulkDownloadDocuments({ documentIds, folderIds }, userId);
 
     // ✅ 2. Set headers for ZIP download
     const zipFileName = `decentrashare-export-${new Date().toISOString().slice(0, 10)}.zip`;
@@ -208,7 +211,7 @@ export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Respons
     res.setHeader('Cache-Control', 'no-cache');
 
     // ✅ 3. Log bulk download activity (async, non-blocking)
-    documentService.logBulkDownloadActivity(userId, documentIds, metadata, summary);
+    documentService.logBulkDownloadActivity(userId, [...documentIds, ...folderIds], metadata, summary);
 
     // ✅ 4. Pipe ZIP stream to response
     stream.pipe(res);
@@ -246,6 +249,7 @@ export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Respons
     logger.error('❌ Bulk download error:', {
       userId: req.user?.userId,
       documentIds: req.body?.documentIds,
+      folderIds: req.body?.folderIds,
       error: error.message,
       stack: error.stack
     });

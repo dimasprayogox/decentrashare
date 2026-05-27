@@ -41,7 +41,7 @@
     onRename?: (id: string, name: string) => void;
     onDeleteConfirm?: (id: string, type: 'folder' | 'document', name: string) => void;
     onShare?: (id: string, type: 'folder' | 'document') => void;
-    onDownload?: (id: string) => void;
+    onDownload?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
     onMove?: (id: string, type: 'folder' | 'document') => void | Promise<void>;
     onRestore?: (id: string, type: 'folder' | 'document', name: string) => void | Promise<void>;
     trashMode?: boolean;
@@ -181,6 +181,19 @@ $effect(() => {
     const hours = Math.floor(remaining / (1000 * 60 * 60));
     const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
+  }
+
+  function formatTrashRetentionCountdown(deletedAt: string | null | undefined): string {
+    if (!deletedAt) return 'Auto-delete in 60d';
+    const expiresAt = new Date(deletedAt);
+    expiresAt.setDate(expiresAt.getDate() + 60);
+    const remaining = expiresAt.getTime() - now;
+    if (remaining <= 0) return 'Auto-delete pending';
+    const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return `Auto-delete in ${days}d ${hours}h`;
+    const minutes = Math.max(1, Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60)));
+    return `Auto-delete in ${hours}h ${minutes}m`;
   }
 
  // ─────────────────────────────────────────────────────────────
@@ -570,13 +583,18 @@ $effect(() => {
         <h4 class="text-xs font-semibold text-white/90 truncate w-full uppercase tracking-wide group-hover:text-white transition-colors duration-200">
           {folder.name}
         </h4>
+        {#if trashMode}
+          <span class="inline-flex max-w-full items-center justify-center text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-300 border border-red-500/20" title="Item akan dihapus otomatis setelah 60 hari di Trash">
+            {formatTrashRetentionCountdown(folder.deletedAt)}
+          </span>
+        {/if}
         {#if folder._count?.documents}
         {/if}
       </div>
 
       {#if !selectionMode}
         <div class="absolute top-2 right-2 z-30 {isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-200" data-item-menu onclick={(e) => e.stopPropagation()}>
-          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={true} onRename={onRename} onShare={onShare} onMove={onMove} onRestore={onRestore} trashMode={trashMode} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={undefined} />
+          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={true} onRename={onRename} onShare={onShare} onMove={onMove} onRestore={onRestore} trashMode={trashMode} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={onDownload} />
         </div>
       {/if}
     </div>
@@ -746,8 +764,8 @@ $effect(() => {
 
     {#if isPendingOnChain(item)}
       <div class="px-2 pb-2">
-        <span class="inline-flex w-full items-center justify-center text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" title="File akan otomatis dihapus dari IPFS dan database jika tidak dikonfirmasi dalam 24 jam">
-          Need confirmation: {formatPendingCountdown(item)}
+        <span class="inline-flex w-full items-center justify-center text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-400 border border-red-500/20" title="File akan otomatis dihapus dari IPFS dan database jika tidak dikonfirmasi dalam 24 jam">
+          Auto delete in: {formatPendingCountdown(item)}
         </span>
       </div>
     {:else if isPendingExpired(item)}

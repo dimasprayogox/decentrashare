@@ -171,44 +171,55 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
 
   // ── Download ──────────────────────────────────────────────
 
-  downloadDocument: async (documentId: string): Promise<{ success: true; fileName: string }> => {
+  saveBlob: (blob: Blob, fileName: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  downloadDocument: async (documentId: string, fileName?: string): Promise<{ success: true; fileName: string }> => {
     const blob = await apiClient<Blob>(`/documents/${documentId}/download`, {
       method: 'GET',
       headers: { 'Accept': '*/*' }
     }, 'blob');
 
-    const fileName = `decentrashare-download-${documentId}`;
+    const downloadName = fileName || `decentrashare-download-${documentId}`;
+    storageService.saveBlob(blob, downloadName);
 
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-    
-    return { success: true, fileName };
+    return { success: true, fileName: downloadName };
+  },
+
+  downloadFolder: async (folderId: string, folderName?: string): Promise<{ success: true; fileName: string }> => {
+    const blob = await apiClient<Blob>(`/folders/${folderId}/download`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/zip' }
+    }, 'blob');
+
+    const downloadName = `${folderName || `folder-${folderId}`}.zip`;
+    storageService.saveBlob(blob, downloadName);
+
+    return { success: true, fileName: downloadName };
   },
 
   bulkDownloadDocuments: async (documentIds: string[]): Promise<{ success: true; fileName: string; documentCount: number }> => {
+    return storageService.bulkDownloadItems({ documentIds, folderIds: [] });
+  },
+
+  bulkDownloadItems: async ({ documentIds = [], folderIds = [] }: { documentIds?: string[]; folderIds?: string[] }): Promise<{ success: true; fileName: string; documentCount: number }> => {
     const blob = await apiClient<Blob>('/documents/bulk-download', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': '*/*' },
-      body: JSON.stringify({ documentIds })
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/zip' },
+      body: JSON.stringify({ documentIds, folderIds })
     }, 'blob');
-    
+
     const fileName = `decentrashare-export-${new Date().toISOString().slice(0, 10)}.zip`;
-    
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-    
+    storageService.saveBlob(blob, fileName);
+
     return { success: true, fileName, documentCount: documentIds.length };
   },
 
