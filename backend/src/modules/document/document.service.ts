@@ -1,7 +1,7 @@
 import { prisma } from '../../config/db';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
-import { PrivacyLevel } from '@prisma/client';
+import { Prisma, PrivacyLevel } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
@@ -997,16 +997,64 @@ export const getArchivedDocuments = async (userId: string) => {
  * Restore banyak dokumen sekaligus dari Trash
  */
 export const restoreDocuments = async (documentIds: string[], userId: string) => {
-  return await prisma.document.updateMany({
-    where: {
-      id: { in: documentIds },
-      ownerId: userId,
-      isArchived: true 
-    },
-    data: {
-      isArchived: false,
-      deletedAt: null 
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const documents = await tx.document.findMany({
+      where: {
+        id: { in: documentIds },
+        ownerId: userId,
+        isArchived: true
+      },
+      select: {
+        id: true,
+        folderId: true
+      }
+    });
+
+    if (documents.length === 0) {
+      return { count: 0 };
     }
+
+    const folderIds = [...new Set(documents.map(document => document.folderId).filter((folderId): folderId is string => Boolean(folderId)))];
+    const activeFolders = folderIds.length > 0
+      ? await tx.folder.findMany({
+          where: {
+            id: { in: folderIds },
+            ownerId: userId,
+            isArchived: false
+          },
+          select: { id: true }
+        })
+      : [];
+    const activeFolderIds = new Set(activeFolders.map(folder => folder.id));
+    const restoreToOriginalFolderIds = documents
+      .filter(document => document.folderId && activeFolderIds.has(document.folderId))
+      .map(document => document.id);
+    const restoreToRootIds = documents
+      .filter(document => !document.folderId || !activeFolderIds.has(document.folderId))
+      .map(document => document.id);
+
+    if (restoreToOriginalFolderIds.length > 0) {
+      await tx.document.updateMany({
+        where: { id: { in: restoreToOriginalFolderIds }, ownerId: userId },
+        data: {
+          isArchived: false,
+          deletedAt: null
+        }
+      });
+    }
+
+    if (restoreToRootIds.length > 0) {
+      await tx.document.updateMany({
+        where: { id: { in: restoreToRootIds }, ownerId: userId },
+        data: {
+          isArchived: false,
+          deletedAt: null,
+          folderId: null
+        }
+      });
+    }
+
+    return { count: documents.length };
   });
 };
 

@@ -397,15 +397,15 @@
 
     try {
       isRefreshingStorage = true;
-      await loadStorageData();
+      await loadStorageData(false);
     } finally {
       isRefreshingStorage = false;
     }
   }
 
-  async function loadStorageData() {
+  async function loadStorageData(showLoading = true) {
     try {
-      isLoading = true;
+      if (showLoading) isLoading = true;
       const folderId = page.url.searchParams.get('folder');
 
       if (folderId) {
@@ -436,7 +436,7 @@
     } catch (err) {
       console.error('[Storage] loadStorageData error:', err);
     } finally {
-      setTimeout(() => { isLoading = false; }, 200);
+      if (showLoading) setTimeout(() => { isLoading = false; }, 200);
     }
   }
 
@@ -1436,7 +1436,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   {#if selectionMode && selectedItems?.length > 0}
   {/if}
 </button>
-      
+
+      <button onclick={refreshStorage} class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all disabled:opacity-50" disabled={isLoading || isRefreshingStorage}>Refresh</button>
+
       <!-- Action Buttons -->
       <button onclick={() => showFolder = true} class="flex-1 sm:flex-none px-6 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-bold text-sm hover:bg-white/10 transition-all">+ Folder</button>
       <button onclick={() => showUpload = true} class="flex-1 sm:flex-none px-6 py-3 bg-blue-600 text-white rounded-[20px] font-bold text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20">Upload</button>
@@ -1520,8 +1522,11 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- CONTENT -->
   <!-- ═══════════════════════════════════════════════════ -->
-  {#if isLoading}
-    
+  {#if isLoading || isRefreshingStorage}
+    <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]">
+      <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-400">Loading storage items...</p>
+    </div>
   {:else}
     <div in:fade>
       {#if viewMode === 1}

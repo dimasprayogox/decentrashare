@@ -93,7 +93,7 @@ $effect(() => {
     fileUrl?: string;
     downloadUrl: string;
     requiresAuth?: boolean;
-    privacy?: 'PRIVATE' | 'PUBLIC' | 'LINK_ONLY' | 'SPECIFIC_USER';
+    privacy: 'PRIVATE' | 'PUBLIC' | 'LINK_ONLY' | 'SPECIFIC_USER';
     description?: string | null;
   } | null>(null);
 
@@ -205,16 +205,69 @@ function isImageMimeType(mimeType: string | null | undefined): boolean {
   return supported.includes(mimeType.toLowerCase());
 }
 
+function isVideoMimeType(mimeType: string | null | undefined): boolean {
+  return mimeType?.toLowerCase().startsWith('video/') ?? false;
+}
+
+function isAudioMimeType(mimeType: string | null | undefined): boolean {
+  return mimeType?.toLowerCase().startsWith('audio/') ?? false;
+}
+
+function isBlobPreviewMimeType(mimeType: string | null | undefined, fileName: string | null | undefined): boolean {
+  if (isImageMimeType(mimeType) || isVideoMimeType(mimeType)) return true;
+  const normalized = mimeType?.toLowerCase() || '';
+  const extension = getFileExtension(fileName).toLowerCase();
+  return normalized.includes('pdf') || normalized.startsWith('text/') || normalized.includes('json') || ['txt', 'csv', 'json', 'md', 'pdf'].includes(extension);
+}
+
+function isDocumentPreviewMimeType(mimeType: string | null | undefined, fileName: string | null | undefined): boolean {
+  return isBlobPreviewMimeType(mimeType, fileName) && !isImageMimeType(mimeType) && !isVideoMimeType(mimeType);
+}
+
+function getFileExtension(fileName: string | null | undefined): string {
+  const extension = fileName?.split('.').pop()?.trim();
+  return extension ? extension.toUpperCase().slice(0, 6) : 'FILE';
+}
+
+function getFilePreviewMeta(item: Document) {
+  const mimeType = item.mimeType?.toLowerCase() || '';
+  const extension = getFileExtension(item.fileName || item.title);
+
+  if (mimeType.includes('pdf')) {
+    return { label: 'PDF', icon: 'pdf', gradient: 'from-red-500/25 via-rose-500/10 to-orange-500/20', text: 'text-red-200', badge: 'bg-red-500/20 text-red-200 border-red-400/30' };
+  }
+  if (mimeType.startsWith('video/')) {
+    return { label: extension === 'FILE' ? 'VIDEO' : extension, icon: 'video', gradient: 'from-purple-500/25 via-fuchsia-500/10 to-pink-500/20', text: 'text-purple-200', badge: 'bg-purple-500/20 text-purple-200 border-purple-400/30' };
+  }
+  if (mimeType.startsWith('audio/')) {
+    return { label: extension === 'FILE' ? 'AUDIO' : extension, icon: 'audio', gradient: 'from-emerald-500/25 via-teal-500/10 to-cyan-500/20', text: 'text-emerald-200', badge: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30' };
+  }
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || ['XLS', 'XLSX', 'CSV'].includes(extension)) {
+    return { label: extension === 'FILE' ? 'SHEET' : extension, icon: 'sheet', gradient: 'from-green-500/25 via-lime-500/10 to-emerald-500/20', text: 'text-green-200', badge: 'bg-green-500/20 text-green-200 border-green-400/30' };
+  }
+  if (mimeType.includes('word') || mimeType.includes('document') || ['DOC', 'DOCX', 'TXT', 'RTF'].includes(extension)) {
+    return { label: extension === 'FILE' ? 'DOC' : extension, icon: 'doc', gradient: 'from-blue-500/25 via-sky-500/10 to-cyan-500/20', text: 'text-blue-200', badge: 'bg-blue-500/20 text-blue-200 border-blue-400/30' };
+  }
+  if (mimeType.includes('presentation') || ['PPT', 'PPTX'].includes(extension)) {
+    return { label: extension === 'FILE' ? 'SLIDE' : extension, icon: 'slide', gradient: 'from-orange-500/25 via-amber-500/10 to-yellow-500/20', text: 'text-orange-200', badge: 'bg-orange-500/20 text-orange-200 border-orange-400/30' };
+  }
+  if (mimeType.includes('zip') || mimeType.includes('compressed') || ['ZIP', 'RAR', '7Z', 'TAR', 'GZ'].includes(extension)) {
+    return { label: extension === 'FILE' ? 'ZIP' : extension, icon: 'archive', gradient: 'from-yellow-500/25 via-stone-500/10 to-zinc-500/20', text: 'text-yellow-200', badge: 'bg-yellow-500/20 text-yellow-200 border-yellow-400/30' };
+  }
+
+  return { label: extension, icon: 'file', gradient: 'from-slate-500/25 via-gray-500/10 to-zinc-500/20', text: 'text-slate-200', badge: 'bg-slate-500/20 text-slate-200 border-slate-400/30' };
+}
+
 async function loadPreviewForItem(item: Document) {
-  if (!item?.id || !isImageMimeType(item.mimeType)) return;
-  
+  if (!item?.id || !isBlobPreviewMimeType(item.mimeType, item.fileName || item.title)) return;
+
   const id = item.id;
-  
+
   // Skip jika sudah handled
   if (previewUrls[id] || previewLoading[id] || previewErrors[id]) {
     return;
   }
-  
+
   // Timeout safeguard
   const timeoutId = setTimeout(() => {
     if (previewLoading[id]) {
@@ -222,20 +275,21 @@ async function loadPreviewForItem(item: Document) {
       delete previewLoading[id];
     }
   }, 8000);
-  
+
   try {
     // ✅ Direct property assignment - reliably reactive in Svelte 5
     previewLoading[id] = true;
-    
-    const blobUrl = await storageService.fetchImagePreview(id);
-    
+
+    const blob = await storageService.fetchDocumentPreviewBlob(id);
+    const blobUrl = URL.createObjectURL(blob);
+
     // ✅ Update state - this WILL trigger re-render now!
     previewUrls[id] = blobUrl;
-    
+
   } catch (err) {
     console.warn('⚠️ Failed to load preview for:', id, err);
     previewErrors[id] = err instanceof Error ? err.message : 'Failed to load';
-    
+
   } finally {
     clearTimeout(timeoutId);
     // ✅ Always clear loading state
@@ -301,7 +355,7 @@ $effect(() => {
   if (!items?.length) return;
   
   for (const item of items) {
-    if (!isImageMimeType(item.mimeType)) continue;
+    if (!isBlobPreviewMimeType(item.mimeType, item.fileName || item.title)) continue;
     
     const id = item.id;
     
@@ -331,8 +385,8 @@ function openFilePreview(item: Document) {
     fileUrl: `/api/documents/${item.id}/preview`,
     downloadUrl: `/api/documents/${item.id}/download`,
     requiresAuth: isPrivate,
-    privacy: item.privacy,
-    description: item.description ?? null 
+    privacy: item.privacy ?? 'PRIVATE',
+    description: item.description ?? null
   };
   
   if (import.meta.env.DEV) {
@@ -606,8 +660,9 @@ $effect(() => {
 <!-- ✅ DOCUMENT CARD - REDESIGNED LAYOUT -->
 {#each items as item (item.id)}
   {@const theme = getFileTheme(item.mimeType)}
+  {@const previewMeta = getFilePreviewMeta(item)}
 
-  <div 
+  <div
     class="group relative bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/10 rounded-[10px] 
            hover:from-white/[0.06] hover:to-white/[0.02] hover:border-white/20 transition-all duration-300 
            flex flex-col cursor-pointer overflow-visible select-none
@@ -699,66 +754,62 @@ $effect(() => {
       {/if}
     </div>
 
-    <!-- ✅ FULL IMAGE PREVIEW AREA -->
+    <!-- ✅ FULL FILE PREVIEW AREA -->
     <div class="pr-2 pl-2 pb-2">
-      <div class="relative w-full max-h-35 aspect-square rounded-[8px] overflow-hidden 
-                  bg-white/5 border border-white/10 group-hover:border-white/20 
-                  transition-all duration-300">
-        
+      <div class="relative w-full max-h-35 aspect-square rounded-[8px] overflow-hidden bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-300">
         {#if previewLoading[item.id]}
-          <!-- Loading State -->
           <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/20">
             <div class="w-8 h-8 rounded-full border-3 border-white/20 border-t-blue-500 animate-spin"></div>
             <span class="text-[10px] text-gray-400">Loading preview...</span>
           </div>
-          
-        {:else if previewErrors[item.id]}
-          <!-- Error State: Fallback Icon -->
-          <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 {theme.color}">
-            <svg class="w-12 h-12 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            <span class="text-[10px] text-gray-500">Preview unavailable</span>
-          </div>
-          
-        {:else if previewUrls[item.id]}
-          <!-- ✅ Full Image Preview -->
+        {:else if previewUrls[item.id] && isImageMimeType(item.mimeType)}
           {#key previewUrls[item.id]}
-            <img 
-              src={previewUrls[item.id]} 
-              alt={item.title}
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              loading="lazy"
-              onerror={(e) => {
-                console.error('❌ Image failed to load:', item.id);
-                previewErrors[item.id] = 'Failed to render image';
-                delete previewUrls[item.id];
-              }}
-              onload={() => {
-                if (import.meta.env.DEV) {
-                  console.log('✅ Image rendered:', item.id, item.title);
-                }
-              }}
-            />
+            <img src={previewUrls[item.id]} alt={item.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror={() => { previewErrors[item.id] = 'Failed to render image'; delete previewUrls[item.id]; }} />
           {/key}
-          
+        {:else if previewUrls[item.id] && isVideoMimeType(item.mimeType)}
+          <video src={previewUrls[item.id]} class="w-full h-full object-cover bg-black" preload="metadata" muted playsinline onerror={() => { previewErrors[item.id] = 'Failed to render video'; }}></video>
+          <div class="absolute inset-0 z-10 flex items-center justify-center bg-black/10 pointer-events-none">
+            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 border border-white/20 backdrop-blur-sm shadow-lg shadow-black/40 group-hover:scale-110 transition-transform duration-300">
+              <svg class="ml-1 h-6 w-6 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8 5.14v13.72c0 .76.84 1.22 1.48.81l10.78-6.86a.96.96 0 000-1.62L9.48 4.33A.96.96 0 008 5.14z" />
+              </svg>
+            </div>
+          </div>
+        {:else if previewUrls[item.id] && isDocumentPreviewMimeType(item.mimeType, item.fileName || item.title)}
+          <iframe src={previewUrls[item.id]} title={item.title} class="w-full h-full bg-white border-0 pointer-events-none"></iframe>
+        {:else if !isImageMimeType(item.mimeType)}
+          <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br {previewMeta.gradient}">
+            {#if isAudioMimeType(item.mimeType)}
+              <div class="relative w-20 h-20 rounded-full bg-white/10 border border-white/20 shadow-xl backdrop-blur-sm flex items-center justify-center {previewMeta.text} group-hover:scale-105 transition-transform duration-300">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 19V6l12-2v13"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-2a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+            {:else}
+              <div class="absolute inset-x-4 top-4 h-16 rounded-2xl bg-white/5 border border-white/10"></div>
+              <div class="absolute left-6 right-6 top-8 space-y-2 opacity-60">
+                <div class="h-1.5 rounded-full bg-white/30"></div>
+                <div class="h-1.5 w-4/5 rounded-full bg-white/20"></div>
+                <div class="h-1.5 w-3/5 rounded-full bg-white/10"></div>
+              </div>
+              <div class="relative w-16 h-20 rounded-xl bg-white/10 border border-white/20 shadow-xl backdrop-blur-sm flex items-center justify-center {previewMeta.text} group-hover:scale-105 transition-transform duration-300">
+                <div class="absolute top-0 right-0 w-5 h-5 bg-white/20 rounded-bl-xl"></div>
+                {#if previewMeta.icon === 'archive'}
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                {:else}
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 13h6M9 17h4"/></svg>
+                {/if}
+              </div>
+            {/if}
+           
+          </div>
         {:else}
-          <!-- Placeholder (sebelum loading) -->
           <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 {theme.color}">
-            <svg class="w-12 h-12 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
+            <svg class="w-12 h-12 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            {#if previewErrors[item.id]}<span class="text-[10px] text-gray-500">Preview unavailable</span>{/if}
           </div>
         {/if}
-        
-        {#if isImageMimeType(item.mimeType)}
-          <span class="absolute top-2 right-2 z-20 text-[8px] font-bold
-                       bg-black/60 backdrop-blur-sm text-white px-2 py-0.5 rounded-full">
-            IMG
-          </span>
-        {/if}
+        <span class="absolute top-2 right-2 z-20 text-[8px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-sm {isImageMimeType(item.mimeType) ? 'bg-black/60 text-white border-white/10' : previewMeta.badge}">
+          {isImageMimeType(item.mimeType) ? 'IMG' : previewMeta.label}
+        </span>
       </div>
     </div>
 
