@@ -8,9 +8,7 @@ import { Readable } from 'stream';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
 import { createUserPinGroup } from '../pinata/pinata.service';
-import * as archiverModule from 'archiver';
-
-const archiver = (archiverModule as any).default || archiverModule;
+import { ZipArchive } from 'archiver';
 
 /**
  * Sanitize document object for API response
@@ -316,14 +314,13 @@ export const createDocumentsArchive = async (documents: ArchiveDocument[], empty
     throw new Error('No documents specified for download');
   }
 
-  const archive = archiver('zip', { zlib: { level: 6 } });
+  const archive = new ZipArchive({ zlib: { level: 6 } });
   const usedPaths = new Set<string>();
   let successfullyAdded = 0;
   let fetchFailed = 0;
 
   archive.on('error', (err: any) => {
     logger.error('❌ ZIP archive error', { error: err.message });
-    throw err;
   });
 
   for (const folderPath of emptyFolderPaths) {

@@ -6,8 +6,6 @@ import * as documentService from './document.service';
 import blockchainService from '../blockchain/blockchain.service';
 import { logger } from '../../utils/logger';
 import { Readable } from 'node:stream'; 
-import * as archiverModule from 'archiver';
-const archiver = (archiverModule as any).default || archiverModule;
 
 /**
  * GET /api/documents/:id
