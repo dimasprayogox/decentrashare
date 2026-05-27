@@ -58,7 +58,8 @@ export const uploadMiddleware = multer({
     if (isAllowed) {
       cb(null, true);
     } else {
-      cb(new Error(`Unsupported file type: ${file.originalname}. Supported previewable formats: PDF, DOCX, images (JPG/PNG/GIF/WebP), video (MP4/WebM), audio (MP3/WAV/OGG), text, CSV, and JSON.`), false);
+      const extensionLabel = ext || 'unknown extension';
+      cb(new Error(`Unsupported file type: ${file.originalname} (${extensionLabel}). Supported previewable formats: PDF, DOCX, images (JPG/PNG/GIF/WebP), video (MP4/WebM), audio (MP3/WAV/OGG), text, CSV, and JSON.`), false);
     }
   }
 });

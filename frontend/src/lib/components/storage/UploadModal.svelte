@@ -81,7 +81,8 @@
     const isAudioFile = (file.type.startsWith('audio/') || ['application/octet-stream', ''].includes(file.type)) && ['mp3', 'wav', 'ogg'].includes(ext);
 
     if (!ALLOWED_TYPES.includes(file.type) && !isImageFile && !isVideoFile && !isAudioFile) {
-      return SUPPORTED_FORMATS_MESSAGE;
+      const extensionLabel = ext ? `.${ext}` : 'unknown extension';
+      return `${extensionLabel} files are not supported for upload. ${SUPPORTED_FORMATS_MESSAGE}`;
     }
     return null;
   }
@@ -154,7 +155,13 @@
       if (remainingSlots < array.length) {
         setUploadError(`Only ${remainingSlots} more file${remainingSlots > 1 ? 's' : ''} allowed. ${rejected} file${rejected > 1 ? 's were' : ' was'} rejected.`);
       } else {
-        setUploadError(`${rejected} file${rejected > 1 ? 's' : ''} rejected due to validation errors`);
+        const rejectedMessages = array
+          .map((file) => {
+            const error = validateFile(file);
+            return error ? `${file.name}: ${error}` : '';
+          })
+          .filter(Boolean);
+        setUploadError(rejectedMessages.length > 0 ? rejectedMessages.join(' ') : `${rejected} file${rejected > 1 ? 's' : ''} rejected due to validation errors`);
       }
     }
   }
