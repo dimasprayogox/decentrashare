@@ -199,36 +199,47 @@
     await loadTrashItems();
   }
 
-  async function downloadSelectedDocuments() {
-    if (selectedDocuments.length === 0 || isProcessing) return;
+  async function downloadSelectedItems() {
+    if (selectedCount === 0 || isProcessing) return;
 
     try {
       isProcessing = true;
       errorMessage = '';
       const documentIds = selectedDocuments.map(document => document.id);
-      if (documentIds.length === 1) {
-        await storageService.downloadDocument(documentIds[0]);
+      const folderIds = selectedFolders.map(folder => folder.id);
+
+      if (documentIds.length === 1 && folderIds.length === 0) {
+        await storageService.downloadDocument(documentIds[0], selectedDocuments[0]?.fileName || selectedDocuments[0]?.title);
+      } else if (folderIds.length === 1 && documentIds.length === 0) {
+        await storageService.downloadFolder(folderIds[0], selectedFolders[0]?.name);
       } else {
-        await storageService.bulkDownloadDocuments(documentIds);
+        await storageService.bulkDownloadItems({ documentIds, folderIds });
       }
-      showStatus(`${documentIds.length} document${documentIds.length > 1 ? 's' : ''} downloaded.`, 'success');
+
+      showStatus(`${documentIds.length + folderIds.length} item${documentIds.length + folderIds.length > 1 ? 's' : ''} downloaded.`, 'success');
     } catch (error) {
-      showStatus(error instanceof Error ? error.message : 'Failed to download selected documents.', 'error');
+      showStatus(error instanceof Error ? error.message : 'Failed to download selected items.', 'error');
     } finally {
       isProcessing = false;
     }
   }
 
-  async function downloadSingleDocument(id: string) {
+  async function downloadSingleItem(id: string, type: 'folder' | 'document' = 'document') {
     if (isProcessing) return;
 
     try {
       isProcessing = true;
       errorMessage = '';
-      await storageService.downloadDocument(id);
-      showStatus('Document downloaded.', 'success');
+      if (type === 'folder') {
+        const folder = folders.find(item => item.id === id);
+        await storageService.downloadFolder(id, folder?.name);
+      } else {
+        const document = items.find(item => item.id === id);
+        await storageService.downloadDocument(id, document?.fileName || document?.title);
+      }
+      showStatus(`${type === 'folder' ? 'Folder' : 'Document'} downloaded.`, 'success');
     } catch (error) {
-      showStatus(error instanceof Error ? error.message : 'Failed to download document.', 'error');
+      showStatus(error instanceof Error ? error.message : `Failed to download ${type}.`, 'error');
     } finally {
       isProcessing = false;
     }
@@ -530,7 +541,7 @@
             <span class="text-[10px] text-gray-600">{sortedFolders.length} item{sortedFolders.length === 1 ? '' : 's'}</span>
           </div>
           {#if sortedFolders.length > 0}
-            <FileGrid folders={sortedFolders} items={[]} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+            <FileGrid folders={sortedFolders} items={[]} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
           {:else}
             <p class="text-gray-600 text-sm italic pl-2">No folders in trash</p>
           {/if}
@@ -542,20 +553,20 @@
             <span class="text-[10px] text-gray-600">{sortedItems.length} item{sortedItems.length === 1 ? '' : 's'}</span>
           </div>
           {#if sortedItems.length > 0}
-            <FileTable folders={[]} items={sortedItems} viewMode={1} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+            <FileTable folders={[]} items={sortedItems} viewMode={1} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
           {:else}
             <p class="text-gray-600 text-sm italic pl-2">No documents in trash</p>
           {/if}
         </section>
       {:else if viewMode === 2}
         {#if sortedFolders.length > 0 || sortedItems.length > 0}
-          <FileTable folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+          <FileTable folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">Trash is empty</p></div>
         {/if}
       {:else}
         {#if sortedFolders.length > 0 || sortedItems.length > 0}
-          <FileGrid folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleDocument} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+          <FileGrid folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">Trash is empty</p></div>
         {/if}
@@ -570,7 +581,7 @@
           <p class="text-white font-bold">{selectedCount} selected</p>
           <p class="text-xs text-gray-500">Restore selected trash items or delete them permanently.</p>
         </div>
-        <button onclick={downloadSelectedDocuments} class="px-5 py-3 rounded-2xl bg-white/5 text-white font-bold hover:bg-white/10 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedDocuments.length === 0 || isProcessing}>Download</button>
+        <button onclick={downloadSelectedItems} class="px-5 py-3 rounded-2xl bg-white/5 text-white font-bold hover:bg-white/10 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Download</button>
         <button onclick={confirmSelectedRestore} class="px-5 py-3 rounded-2xl bg-green-600 text-white font-bold hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Restore</button>
         <button onclick={() => showDestroyConfirm = true} class="px-5 py-3 rounded-2xl bg-red-600 text-white font-bold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={selectedCount === 0 || isProcessing}>Delete Permanently</button>
         <button onclick={exitSelectionMode} class="px-5 py-3 rounded-2xl bg-white/5 text-white font-bold hover:bg-white/10 transition-colors" disabled={isProcessing}>Cancel</button>

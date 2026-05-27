@@ -198,7 +198,7 @@ export const handleDownloadFolder = async (req: AuthRequest, res: Response, next
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const { stream, metadata, summary, folderName } = await folderService.downloadFolderArchive(id, userId);
+    const { stream, finalize, metadata, summary, folderName } = await folderService.downloadFolderArchive(id, userId);
     const safeFolderName = encodeURIComponent(`${folderName}.zip`);
 
     res.setHeader('Content-Type', 'application/zip');
@@ -227,6 +227,8 @@ export const handleDownloadFolder = async (req: AuthRequest, res: Response, next
         res.status(500).json({ success: false, message: 'Failed to create folder archive' });
       }
     });
+
+    finalize();
   } catch (error: any) {
     if (error.message?.includes('not found')) {
       return res.status(404).json({ success: false, message: error.message });

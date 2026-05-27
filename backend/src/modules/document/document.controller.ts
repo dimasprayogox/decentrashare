@@ -184,7 +184,7 @@ export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Respons
     }
 
     // ✅ 1. Get ZIP stream from service
-    const { stream, metadata, summary } = await documentService.bulkDownloadDocuments({ documentIds, folderIds }, userId);
+    const { stream, finalize, metadata, summary } = await documentService.bulkDownloadDocuments({ documentIds, folderIds }, userId);
 
     // ✅ 2. Set headers for ZIP download
     const zipFileName = `decentrashare-export-${new Date().toISOString().slice(0, 10)}.zip`;
@@ -218,6 +218,8 @@ export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Respons
         res.status(500).json({ success: false, message: 'Failed to create download archive' });
       }
     });
+
+    finalize();
 
   } catch (error: any) {
     // ✅ Handle known errors

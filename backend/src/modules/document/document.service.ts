@@ -362,7 +362,7 @@ export const createDocumentsArchive = async (documents: ArchiveDocument[], empty
     }
   }
 
-  archive.finalize();
+  const finalize = () => archive.finalize();
 
   const metadata = documents.map(doc => ({
     id: doc.id,
@@ -373,6 +373,7 @@ export const createDocumentsArchive = async (documents: ArchiveDocument[], empty
 
   return {
     stream: archive,
+    finalize,
     metadata,
     summary: {
       totalRequested: documents.length,
