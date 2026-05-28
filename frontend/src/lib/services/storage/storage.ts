@@ -130,7 +130,15 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
     }
   },
 
-  searchUsersForShare: async (query: string, options?: { 
+  getCurrentUser: async () => {
+    return apiClient<{
+      success: boolean;
+      data?: { id: string; username?: string; walletAddress: string };
+      message?: string;
+    }>('/users/me', { method: 'GET' });
+  },
+
+  searchUsersForShare: async (query: string, options?: {
   excludeSharedUserIds?: string[];
   limit?: number;
 }) => {

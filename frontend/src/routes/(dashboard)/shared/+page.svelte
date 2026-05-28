@@ -25,6 +25,7 @@
   let viewMode = $state(2);
   let selectedItems = $state<string[]>([]);
   let selectionMode = $state(false);
+  let currentUserId = $state<string | null>(null);
   let showUpload = $state(false);
   let showFolder = $state(false);
   let folderRoles = $state<Record<string, 'VIEWER' | 'EDITOR' | 'ADMIN'>>({});
@@ -51,6 +52,13 @@
   const selectedCount = $derived(selectedFolders.length + selectedDocuments.length);
   const selectedTypeValue = $derived(selectedFolders.length > 0 && selectedDocuments.length > 0 ? 'mixed' : selectedFolders.length > 0 ? 'folders' : selectedDocuments.length > 0 ? 'documents' : 'items');
   const selectedEditableItems = $derived([...selectedFolders, ...selectedDocuments].filter(item => item.accessRole === 'EDITOR'));
+
+  function applyAccessRole<T extends { ownerId: string; accessRole?: 'VIEWER' | 'EDITOR' | 'ADMIN' }>(item: T, role?: 'VIEWER' | 'EDITOR' | 'ADMIN'): T {
+    return {
+      ...item,
+      accessRole: currentUserId && item.ownerId === currentUserId ? undefined : role
+    };
+  }
 
   function getFileTheme(mimeType: string) {
     if (mimeType.includes('image')) return { color: 'text-purple-500 bg-purple-500/10' };
@@ -309,8 +317,8 @@
       };
       breadcrumbs = pathResponse.data;
       currentFolder = pathResponse.data[pathResponse.data.length - 1] || null;
-      folders = folderResponse.data.map(folder => ({ ...folder, accessRole: folderRoles[folder.id] ?? inheritedRole }));
-      items = documentResponse.data.map(document => ({ ...document, accessRole: inheritedRole }));
+      folders = folderResponse.data.map(folder => applyAccessRole(folder, folderRoles[folder.id] ?? inheritedRole));
+      items = documentResponse.data.map(document => applyAccessRole(document, inheritedRole));
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared folder contents.';
@@ -352,11 +360,11 @@
       }
 
       folderRoles = Object.fromEntries(folderResponse.data.map(item => [item.folder.id, item.role]));
-      const sharedFolders = folderResponse.data.map(item => ({ ...item.folder, accessRole: item.role }));
+      const sharedFolders = folderResponse.data.map(item => applyAccessRole(item.folder, item.role));
       const sharedFolderIds = new Set(sharedFolders.map(folder => folder.id));
       rootFolders = sharedFolders.filter(folder => !folder.parentId || !sharedFolderIds.has(folder.parentId));
       folders = rootFolders;
-      items = documentResponse.data.map(item => ({ ...item.document, accessRole: 'VIEWER' }));
+      items = documentResponse.data.map(item => applyAccessRole(item.document, 'VIEWER'));
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
       rootFolders = [];
@@ -373,8 +381,15 @@
     }
   }
 
-  onMount(() => {
-    loadSharedItems();
+  onMount(async () => {
+    try {
+      const response = await storageService.getCurrentUser();
+      currentUserId = response.data?.id ?? null;
+    } catch {
+      currentUserId = null;
+    }
+
+    await loadSharedItems();
   });
 </script>
 
@@ -591,6 +606,7 @@
               onDownload={handleDownload}
               {selectedItems}
               {selectionMode}
+              {currentUserId}
               onToggleSelect={toggleSelection}
               onRefresh={refreshSharedItems}
             />
@@ -618,6 +634,7 @@
               onDownload={handleDownload}
               {selectedItems}
               {selectionMode}
+              {currentUserId}
               onToggleSelect={toggleSelection}
               onRefresh={refreshSharedItems}
             />
@@ -639,6 +656,7 @@
           onDownload={handleDownload}
           {selectedItems}
           {selectionMode}
+          {currentUserId}
           onToggleSelect={toggleSelection}
           onRefresh={refreshSharedItems}
         />
@@ -655,6 +673,7 @@
           onDownload={handleDownload}
           {selectedItems}
           {selectionMode}
+          {currentUserId}
           onToggleSelect={toggleSelection}
           onRefresh={refreshSharedItems}
         />

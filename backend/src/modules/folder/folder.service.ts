@@ -1,7 +1,7 @@
 import { prisma } from '../../config/db';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
-import { prepareFolderArchive } from '../document/document.service';
+import { prepareFolderArchive, sanitizeDocuments } from '../document/document.service';
 import crypto from 'node:crypto';
 import { AccessRoleFolder } from '@prisma/client'; // Kuncinya di sini agar tidak undefined
 
@@ -898,6 +898,8 @@ export const getSharedWithMeFolders = async (userId: string) => {
 
 
 export const getFolderContents = async (folderId: string, userId?: string, shareToken?: string) => {
+  const getSanitizedFiles = async () => sanitizeDocuments(await getFiles(folderId), userId);
+
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },
     include: { sharedWith: true }
@@ -906,12 +908,12 @@ export const getFolderContents = async (folderId: string, userId?: string, share
   if (!folder) throw new Error("Folder not found");
 
   // 1. Jika Folder PUBLIC -> Semua orang bisa lihat
-  if (folder.privacy === 'PUBLIC') return await getFiles(folderId);
+  if (folder.privacy === 'PUBLIC') return await getSanitizedFiles();
 
   // 2. Jika Folder LINK_ONLY -> Cek apakah tokennya cocok
   if (folder.privacy === 'LINK_ONLY') {
     if (shareToken && folder.shareToken === shareToken) {
-      return await getFiles(folderId);
+      return await getSanitizedFiles();
     }
     throw new Error("Invalid share link");
   }
@@ -923,7 +925,7 @@ export const getFolderContents = async (folderId: string, userId?: string, share
   const hasAccess = folder.sharedWith.some(access => access.userId === userId);
 
   if (isOwner || hasAccess) {
-    return await getFiles(folderId);
+    return await getSanitizedFiles();
   }
 
   throw new Error("You don't have permission to access this folder");
