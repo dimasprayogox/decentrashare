@@ -14,6 +14,7 @@ import type {
   RevokeAccessResponse,
   GetSharedUsersResponse,
   GetSharedWithMeResponse,
+  GetSharedFoldersWithMeResponse,
   GetActivityLogsResponse,
   UpdatePrivacyRequest,
   ShareItemRequest,
@@ -631,7 +632,7 @@ renameFolder: async (folderId: string, newName: string) => {
    * Get folders that other users have shared with current user
    */
   getSharedFoldersWithMe: () => {
-    return apiClient<GetSharedWithMeResponse>('/folders/shared-with-me', {
+    return apiClient<GetSharedFoldersWithMeResponse>('/folders/shared-with-me', {
       method: 'GET'
     });
   },

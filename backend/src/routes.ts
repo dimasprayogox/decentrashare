@@ -2,7 +2,6 @@ import { Router } from 'express'
 import authRoutes from './modules/auth/auth.routes'
 import documentRoutes from './modules/document/document.routes'
 import folderRoutes from './modules/folder/folder.routes'
-import sharedRoutes from './modules/shared/shared.routes'
 import userRoutes from './modules/user/user.routes'
 
 const router = Router()
@@ -11,7 +10,6 @@ const router = Router()
 router.use('/auth', authRoutes)
 router.use('/documents', documentRoutes)
 router.use('/folders', folderRoutes)
-router.use('/shared', sharedRoutes)
 router.use('/users', userRoutes)
 
 // Health check endpoint

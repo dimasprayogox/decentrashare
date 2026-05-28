@@ -365,11 +365,24 @@ export interface GetSharedUsersResponse extends StorageApiResponse {
   }>;
 }
 
+export interface SharedDocumentItem {
+  accessId: string;
+  document: Document;
+}
+
+export interface SharedFolderItem {
+  accessId: string;
+  role: 'VIEWER' | 'EDITOR' | 'ADMIN';
+  sharedAt: string;
+  folder: Folder & { documents?: Document[] };
+}
+
 export interface GetSharedWithMeResponse extends StorageApiResponse {
-  data: Array<{
-    accessId: string;
-    document: Document;
-  }>;
+  data: SharedDocumentItem[];
+}
+
+export interface GetSharedFoldersWithMeResponse extends StorageApiResponse {
+  data: SharedFolderItem[];
 }
 
 export interface GetActivityLogsResponse extends StorageApiResponse {
