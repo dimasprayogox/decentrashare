@@ -25,9 +25,9 @@ export const createFolder = async (
   if (parentId) {
     const parentFolder = await prisma.folder.findUnique({
       where: { id: parentId },
-      include: { sharedWith: { where: { userId }, select: { role: true } } }
+      include: { sharedWith: true }
     });
-    const canCreate = parentFolder?.ownerId === userId || parentFolder?.sharedWith.some(access => access.role === 'EDITOR');
+    const canCreate = parentFolder?.ownerId === userId || parentFolder?.sharedWith.some(access => access.userId === userId && access.role === 'EDITOR');
     if (!parentFolder || !canCreate) throw new Error('Parent folder not found or unauthorized.');
     parentOwnerId = parentFolder.ownerId;
   }
@@ -69,14 +69,26 @@ export const createFolder = async (
     }
   });
 
-  if (parentOwnerId && parentOwnerId !== ownerId) {
-    await prisma.folderAccess.create({
-      data: {
-        folderId: folder.id,
-        userId: parentOwnerId,
-        role: 'EDITOR'
-      }
+  if (parentId) {
+    const parentAccess = await prisma.folderAccess.findMany({
+      where: { folderId: parentId },
+      select: { userId: true, role: true }
     });
+
+    const inheritedAccess = new Map(parentAccess.map(access => [access.userId, access.role]));
+    if (parentOwnerId && parentOwnerId !== ownerId) inheritedAccess.set(parentOwnerId, 'EDITOR');
+    inheritedAccess.delete(ownerId);
+
+    if (inheritedAccess.size > 0) {
+      await prisma.folderAccess.createMany({
+        data: Array.from(inheritedAccess.entries()).map(([userId, role]) => ({
+          folderId: folder.id,
+          userId,
+          role
+        })),
+        skipDuplicates: true
+      });
+    }
   }
 
   return folder;
@@ -642,7 +654,9 @@ export const getUserFolders = async (userId: string, parentId: string | null = n
         ? {
             OR: [
               { ownerId: userId },
-              { sharedWith: { some: { userId } } }
+              { sharedWith: { some: { userId } } },
+              { parent: { ownerId: userId } },
+              { parent: { sharedWith: { some: { userId } } } }
             ]
           }
         : {
@@ -756,50 +770,6 @@ export const getFoldersSharedUsers = async (folderIds: string[], ownerId: string
   return folders;
 };
 
-const detachExternalOwnedItemsFromSubtree = async (
-  tx: any,
-  subtreeFolderIds: string[],
-  ownerId: string,
-  externalOwnerIds?: string[]
-) => {
-  const ownerFilter = externalOwnerIds?.length
-    ? { in: externalOwnerIds }
-    : { not: ownerId };
-
-  const externalFolders = await tx.folder.findMany({
-    where: {
-      id: { in: subtreeFolderIds },
-      ownerId: ownerFilter
-    },
-    select: { id: true, ownerId: true }
-  });
-  const externalFolderIds = externalFolders.map((folder: { id: string }) => folder.id);
-
-  await tx.folder.updateMany({
-    where: {
-      id: { in: externalFolderIds }
-    },
-    data: {
-      parentId: null,
-      privacy: 'PRIVATE'
-    }
-  });
-
-  await tx.document.updateMany({
-    where: {
-      folderId: { in: subtreeFolderIds },
-      ownerId: ownerFilter,
-      folder: {
-        ownerId
-      }
-    },
-    data: {
-      folderId: null,
-      privacy: 'PRIVATE'
-    }
-  });
-};
-
 /**
  * Revoke (Delete) access from multiple users for multiple folders
  */
@@ -815,7 +785,6 @@ export const revokeFoldersAccess = async (
       if (!folder || folder.ownerId !== ownerId) continue;
 
       const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
-      await detachExternalOwnedItemsFromSubtree(tx, subtreeFolderIds, ownerId, item.targetUserIds);
 
       const deleteResult = await tx.folderAccess.deleteMany({
         where: {
@@ -1001,8 +970,6 @@ export const updateFoldersPrivacy = async (
 
       let accessDeleted = 0;
       if (item.newPrivacy !== 'SPECIFIC_USER') {
-        await detachExternalOwnedItemsFromSubtree(tx, subtreeFolderIds, ownerId);
-
         const deleted = await tx.folderAccess.deleteMany({
           where: { folderId: { in: subtreeFolderIds } }
         });
