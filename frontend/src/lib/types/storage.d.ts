@@ -138,6 +138,7 @@ export interface Folder {
   owner?: Pick<AuthUser, 'id' | 'username' | 'walletAddress' | 'avatarUrl'>;
   parent?: Pick<Folder, 'id' | 'name' | 'parentId'>;
   sharedWith?: FolderAccess[];
+  accessRole?: 'VIEWER' | 'EDITOR' | 'ADMIN';
 }
 
 export interface FolderAccess {
@@ -174,6 +175,7 @@ export interface Document {
   owner?: Pick<AuthUser, 'id' | 'username' | 'walletAddress' | 'avatarUrl'>;
   folder?: Pick<Folder, 'id' | 'name'>;
   sharedWith?: DocumentAccess[];
+  accessRole?: 'VIEWER' | 'EDITOR' | 'ADMIN';
 }
 
 export interface DocumentAccess {

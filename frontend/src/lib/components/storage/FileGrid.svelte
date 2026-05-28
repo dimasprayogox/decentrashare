@@ -128,6 +128,13 @@ $effect(() => {
   // ✅ HELPER FUNCTIONS (dari FileTable)
   // ─────────────────────────────────────────────────────────────
 
+  function getAccessRoleBadge(role?: 'VIEWER' | 'EDITOR' | 'ADMIN') {
+    if (role === 'EDITOR') return { label: 'Editor', className: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' };
+    if (role === 'VIEWER') return { label: 'Viewer', className: 'bg-blue-500/10 text-blue-300 border-blue-500/20' };
+    if (role === 'ADMIN') return { label: 'Admin', className: 'bg-purple-500/10 text-purple-300 border-purple-500/20' };
+    return null;
+  }
+
   function formatOwnerName(
     owner: { username?: string | null; email?: string | null; walletAddress: string } | null | undefined,
     currentUserId?: string,
@@ -634,9 +641,17 @@ $effect(() => {
       </div>
 
       <div class="w-full flex flex-col items-center gap-2 mt-auto">
-        <h4 class="text-xs font-semibold text-white/90 truncate w-full uppercase tracking-wide group-hover:text-white transition-colors duration-200">
-          {folder.name}
-        </h4>
+        <div class="flex w-full items-center justify-center gap-2 min-w-0">
+          <h4 class="text-xs font-semibold text-white/90 truncate uppercase tracking-wide group-hover:text-white transition-colors duration-200">
+            {folder.name}
+          </h4>
+          {@const folderRoleBadge = getAccessRoleBadge(folder.accessRole)}
+          {#if folderRoleBadge}
+            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folderRoleBadge.className}">
+              {folderRoleBadge.label}
+            </span>
+          {/if}
+        </div>
         {#if trashMode}
           <span class="inline-flex max-w-full items-center justify-center text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-300 border border-red-500/20" title="Item akan dihapus otomatis setelah 60 hari di Trash">
             {formatTrashRetentionCountdown(folder.deletedAt)}
@@ -716,15 +731,31 @@ $effect(() => {
           </div>
           
           <!-- ✅ Title -->
-          <h4 class="text-sm font-medium pt-4 pb-4 text-white/90 truncate group-hover:text-white transition-colors duration-200">
-            {item.title}
-          </h4>
+          <div class="flex min-w-0 items-center gap-2 pt-4 pb-4">
+            <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
+              {item.title}
+            </h4>
+            {@const selectedDocumentRoleBadge = getAccessRoleBadge(item.accessRole)}
+            {#if selectedDocumentRoleBadge}
+              <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {selectedDocumentRoleBadge.className}">
+                {selectedDocumentRoleBadge.label}
+              </span>
+            {/if}
+          </div>
         </div>
       {:else}
         <!-- ✅ Title (tanpa checkbox) -->
-        <h4 class="text-sm font-medium pt-4 pb-4 text-white/90 truncate group-hover:text-white transition-colors duration-200">
-          {item.title}
-        </h4>
+        <div class="flex min-w-0 items-center gap-2 pt-4 pb-4">
+          <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
+            {item.title}
+          </h4>
+          {@const documentRoleBadge = getAccessRoleBadge(item.accessRole)}
+          {#if documentRoleBadge}
+            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {documentRoleBadge.className}">
+              {documentRoleBadge.label}
+            </span>
+          {/if}
+        </div>
       {/if}
 
       <!-- ✅ ItemMenu (3-dot) - sejajar dengan title -->

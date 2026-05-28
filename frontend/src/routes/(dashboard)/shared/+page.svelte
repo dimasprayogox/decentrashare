@@ -3,6 +3,7 @@
   import { fade } from 'svelte/transition';
 
   import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
+  import UploadModal from '$lib/components/storage/UploadModal.svelte';
   import ViewSwitcher from '$lib/components/storage/ViewSwitcher.svelte';
   import FileTable from '$lib/components/storage/FileTable.svelte';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
@@ -23,7 +24,11 @@
   let viewMode = $state(2);
   let selectedItems = $state<string[]>([]);
   let selectionMode = $state(false);
+  let showUpload = $state(false);
+  let folderRoles = $state<Record<string, 'VIEWER' | 'EDITOR' | 'ADMIN'>>({});
 
+  const currentFolderRole = $derived(currentFolder ? folderRoles[currentFolder.id] : undefined);
+  const canUploadToCurrentFolder = $derived(Boolean(currentFolder && currentFolderRole === 'EDITOR'));
   const sortedFolders = $derived(sortItems(folders, { field: 'updatedAt', direction: 'desc' }));
   const sortedItems = $derived(sortItems(items, { field: 'updatedAt', direction: 'desc' }));
   const totalCount = $derived(folders.length + items.length);
@@ -192,8 +197,8 @@
 
       breadcrumbs = pathResponse.data;
       currentFolder = pathResponse.data[pathResponse.data.length - 1] || null;
-      folders = folderResponse.data;
-      items = documentResponse.data;
+      folders = folderResponse.data.map(folder => ({ ...folder, accessRole: folderRoles[folder.id] }));
+      items = documentResponse.data.map(document => ({ ...document, accessRole: currentFolderRole ?? 'VIEWER' }));
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared folder contents.';
@@ -234,14 +239,16 @@
         throw new Error(folderResponse.message || 'Failed to load shared folders.');
       }
 
-      const sharedFolders = folderResponse.data.map(item => item.folder);
+      folderRoles = Object.fromEntries(folderResponse.data.map(item => [item.folder.id, item.role]));
+      const sharedFolders = folderResponse.data.map(item => ({ ...item.folder, accessRole: item.role }));
       const sharedFolderIds = new Set(sharedFolders.map(folder => folder.id));
       rootFolders = sharedFolders.filter(folder => !folder.parentId || !sharedFolderIds.has(folder.parentId));
       folders = rootFolders;
-      items = documentResponse.data.map(item => item.document);
+      items = documentResponse.data.map(item => ({ ...item.document, accessRole: 'VIEWER' }));
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
       rootFolders = [];
+      folderRoles = {};
       folders = [];
       items = [];
       breadcrumbs = [];
@@ -318,9 +325,17 @@
         </svg>
         Refresh
       </button>
+
+      {#if canUploadToCurrentFolder}
+        <button onclick={() => showUpload = true} class="flex-1 sm:w-32 px-4 py-3 bg-blue-600 text-white rounded-[20px] font-bold text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L8 8m4-4l4 4" /></svg>
+          Upload
+        </button>
+      {/if}
     </div>
   </header>
 
+  <UploadModal isOpen={showUpload} onClose={() => showUpload = false} onUploaded={refreshSharedItems} folderId={currentFolder?.id ?? null} />
 
   {#if errorMessage}
     <div class="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">

@@ -587,13 +587,20 @@ export const uploadMultipleFiles = async (
     logger.debug(`[Pinata] No personal group found for user, uploads will be ungrouped`, { userId });
   }
 
-  // ── 1. SECURITY CHECK: Verify folder ownership ──────────────────────
+  // ── 1. SECURITY CHECK: Verify folder ownership or editor access ──────────────────────
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
   if (folderId) {
-    const folder = await prisma.folder.findFirst({
-      where: { id: folderId, ownerId: userId }
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      include: {
+        sharedWith: {
+          where: { userId },
+          select: { role: true }
+        }
+      }
     });
-    if (!folder) throw new Error("Target folder not found or access denied.");
+    const canUpload = folder?.ownerId === userId || folder?.sharedWith.some(access => access.role === 'EDITOR');
+    if (!folder || !canUpload) throw new Error("Target folder not found or access denied.");
     targetPrivacy = folder.privacy;
   }
 

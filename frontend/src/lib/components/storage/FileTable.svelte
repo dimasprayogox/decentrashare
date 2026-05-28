@@ -115,6 +115,13 @@
   // ─────────────────────────────────────────────────────────────
 
   // ✅ Format owner name display
+  function getAccessRoleBadge(role?: 'VIEWER' | 'EDITOR' | 'ADMIN') {
+    if (role === 'EDITOR') return { label: 'Editor', className: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' };
+    if (role === 'VIEWER') return { label: 'Viewer', className: 'bg-blue-500/10 text-blue-300 border-blue-500/20' };
+    if (role === 'ADMIN') return { label: 'Admin', className: 'bg-purple-500/10 text-purple-300 border-purple-500/20' };
+    return null;
+  }
+
   function formatOwnerName(
     owner: { username?: string | null; email?: string | null; walletAddress: string } | null | undefined,
     currentUserId?: string,
@@ -784,9 +791,17 @@ async function handleConfirmBlockchain(item: Document) {
 
     <!-- Folder Name Text -->
     <div class="min-w-0 flex-1">
-      <span class="block text-sm font-semibold text-white/90 uppercase tracking-wide truncate" title={folder.name}>
-        {folder.name}
-      </span>
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="block text-sm font-semibold text-white/90 uppercase tracking-wide truncate" title={folder.name}>
+          {folder.name}
+        </span>
+        {@const folderRoleBadge = getAccessRoleBadge(folder.accessRole)}
+        {#if folderRoleBadge}
+          <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folderRoleBadge.className}">
+            {folderRoleBadge.label}
+          </span>
+        {/if}
+      </div>
     </div>
   </div>
 </td>
@@ -1007,14 +1022,22 @@ async function handleConfirmBlockchain(item: Document) {
 
               <!-- File Info Text -->
               <div class="min-w-0 flex-1">
-                <p
-                  class="text-sm font-medium text-gray-200 truncate
-                         group-hover/file-row:text-white group-hover/file-row:underline decoration-blue-400/50 underline-offset-4
-                         transition-all duration-200"
-                  title={item.title}
-                >
-                  {item.title}
-                </p>
+                <div class="flex items-center gap-2 min-w-0">
+                  <p
+                    class="text-sm font-medium text-gray-200 truncate
+                           group-hover/file-row:text-white group-hover/file-row:underline decoration-blue-400/50 underline-offset-4
+                           transition-all duration-200"
+                    title={item.title}
+                  >
+                    {item.title}
+                  </p>
+                  {@const documentRoleBadge = getAccessRoleBadge(item.accessRole)}
+                  {#if documentRoleBadge}
+                    <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {documentRoleBadge.className}">
+                      {documentRoleBadge.label}
+                    </span>
+                  {/if}
+                </div>
                 <p class="text-[10px] text-gray-500 uppercase font-medium tracking-wide
                           group-hover/file-row:text-gray-400 transition-colors">
                   {item.fileName?.split('.').pop()?.toUpperCase() || 'FILE'} • {formatFileSize(item.fileSize)}
