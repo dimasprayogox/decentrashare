@@ -234,26 +234,31 @@ const ensureUniqueArchivePath = (filePath: string, usedPaths: Set<string>) => {
 };
 
 const validateFolderAccess = async (folderId: string, userId: string) => {
-  const folder = await prisma.folder.findUnique({
-    where: { id: folderId },
-    include: { sharedWith: true }
-  });
+  let currentFolderId: string | null = folderId;
+  let requestedFolder: any = null;
 
-  if (!folder) {
-    throw new Error('Folder not found.');
-  }
+  while (currentFolderId) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: currentFolderId },
+      include: { sharedWith: true }
+    });
 
-  if (folder.ownerId === userId) {
-    return folder;
-  }
+    if (!folder) {
+      throw new Error('Folder not found.');
+    }
 
-  if (folder.isArchived) {
-    throw new Error('Folder is in trash.');
-  }
+    if (!requestedFolder) requestedFolder = folder;
 
-  const hasAccess = folder.sharedWith.some((access: any) => access.userId === userId);
-  if (hasAccess || folder.privacy === 'PUBLIC') {
-    return folder;
+    if (folder.isArchived) {
+      throw new Error('Folder is in trash.');
+    }
+
+    const hasAccess = folder.sharedWith.some((access: any) => access.userId === userId);
+    if (folder.ownerId === userId || hasAccess || folder.privacy === 'PUBLIC') {
+      return requestedFolder;
+    }
+
+    currentFolderId = folder.parentId;
   }
 
   throw new Error('Access denied. You do not have permission to view this folder.');
@@ -943,20 +948,15 @@ export const moveMultipleDocuments = async (
  * Mengambil semua dokumen milik user yang aktif (tidak diarsip)
  */
 export const getUserDocuments = async (userId: string, folderId: string | null) => {
+  if (folderId) {
+    await validateFolderAccess(folderId, userId);
+  }
+
   const docs = await prisma.document.findMany({
     where: {
       folderId: folderId ? String(folderId) : null,
       isArchived: false,
-      ...(folderId
-        ? {
-            folder: {
-              OR: [
-                { ownerId: userId },
-                { sharedWith: { some: { userId } } }
-              ]
-            }
-          }
-        : { ownerId: userId })
+      ...(folderId ? {} : { ownerId: userId })
     },
     include: {
       folder: true,
