@@ -945,9 +945,18 @@ export const moveMultipleDocuments = async (
 export const getUserDocuments = async (userId: string, folderId: string | null) => {
   const docs = await prisma.document.findMany({
     where: {
-      ownerId: userId,
       folderId: folderId ? String(folderId) : null,
       isArchived: false,
+      ...(folderId
+        ? {
+            folder: {
+              OR: [
+                { ownerId: userId },
+                { sharedWith: { some: { userId } } }
+              ]
+            }
+          }
+        : { ownerId: userId })
     },
     include: {
       folder: true,

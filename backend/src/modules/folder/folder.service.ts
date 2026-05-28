@@ -744,6 +744,50 @@ export const getFoldersSharedUsers = async (folderIds: string[], ownerId: string
   return folders;
 };
 
+const detachExternalOwnedItemsFromSubtree = async (
+  tx: any,
+  subtreeFolderIds: string[],
+  ownerId: string,
+  externalOwnerIds?: string[]
+) => {
+  const ownerFilter = externalOwnerIds?.length
+    ? { in: externalOwnerIds }
+    : { not: ownerId };
+
+  const externalFolders = await tx.folder.findMany({
+    where: {
+      id: { in: subtreeFolderIds },
+      ownerId: ownerFilter
+    },
+    select: { id: true, ownerId: true }
+  });
+  const externalFolderIds = externalFolders.map((folder: { id: string }) => folder.id);
+
+  await tx.folder.updateMany({
+    where: {
+      id: { in: externalFolderIds }
+    },
+    data: {
+      parentId: null,
+      privacy: 'PRIVATE'
+    }
+  });
+
+  await tx.document.updateMany({
+    where: {
+      folderId: { in: subtreeFolderIds },
+      ownerId: ownerFilter,
+      folder: {
+        ownerId
+      }
+    },
+    data: {
+      folderId: null,
+      privacy: 'PRIVATE'
+    }
+  });
+};
+
 /**
  * Revoke (Delete) access from multiple users for multiple folders
  */
@@ -759,6 +803,8 @@ export const revokeFoldersAccess = async (
       if (!folder || folder.ownerId !== ownerId) continue;
 
       const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
+      await detachExternalOwnedItemsFromSubtree(tx, subtreeFolderIds, ownerId, item.targetUserIds);
+
       const deleteResult = await tx.folderAccess.deleteMany({
         where: {
           folderId: { in: subtreeFolderIds },
@@ -941,6 +987,8 @@ export const updateFoldersPrivacy = async (
 
       let accessDeleted = 0;
       if (item.newPrivacy !== 'SPECIFIC_USER') {
+        await detachExternalOwnedItemsFromSubtree(tx, subtreeFolderIds, ownerId);
+
         const deleted = await tx.folderAccess.deleteMany({
           where: { folderId: { in: subtreeFolderIds } }
         });
