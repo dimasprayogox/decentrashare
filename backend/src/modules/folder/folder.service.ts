@@ -53,6 +53,17 @@ export const createFolder = async (
       ownerId,
       parentId: parentId || null,
       privacy: parentId ? 'SPECIFIC_USER' : 'PRIVATE'
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      }
     }
   });
 
@@ -876,6 +887,17 @@ export const getFolderContents = async (folderId: string, userId?: string, share
 const getFiles = async (folderId: string) => {
   return await prisma.document.findMany({
     where: { folderId, isArchived: false },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      }
+    },
     orderBy: { createdAt: 'desc' }
   });
 };
