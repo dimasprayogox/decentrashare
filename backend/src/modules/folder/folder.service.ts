@@ -588,10 +588,17 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
 
 export const getUserFolders = async (userId: string, parentId: string | null = null) => {
   return await prisma.folder.findMany({
-    where: { 
-      ownerId: userId,
+    where: {
       parentId: parentId,
-      isArchived: false // Pastikan hanya ambil yang aktif
+      isArchived: false,
+      ...(parentId
+        ? {
+            OR: [
+              { ownerId: userId },
+              { sharedWith: { some: { userId } } }
+            ]
+          }
+        : { ownerId: userId })
     },
     include: {
       owner: {

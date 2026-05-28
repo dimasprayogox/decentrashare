@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
 
+  import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
   import ViewSwitcher from '$lib/components/storage/ViewSwitcher.svelte';
   import FileTable from '$lib/components/storage/FileTable.svelte';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
@@ -10,50 +11,21 @@
 
   type SortField = 'name' | 'createdAt' | 'updatedAt' | 'fileSize' | 'type';
   type SortDirection = 'asc' | 'desc';
-  type SortPreset = {
-    id: string;
-    label: string;
-    field: SortField;
-    direction: SortDirection;
-  };
-
+  let rootFolders = $state<Folder[]>([]);
   let folders = $state<Folder[]>([]);
   let items = $state<Document[]>([]);
+  let breadcrumbs = $state<{ id: string; name: string }[]>([]);
+  let currentFolder = $state<{ id: string; name: string; parentId?: string | null } | null>(null);
   let isLoading = $state(true);
   let isRefreshing = $state(false);
   let errorMessage = $state('');
   let successMessage = $state('');
   let viewMode = $state(2);
-  let searchQuery = $state('');
   let selectedItems = $state<string[]>([]);
   let selectionMode = $state(false);
-  let sortOption = $state<{ field: SortField; direction: SortDirection }>({
-    field: 'updatedAt',
-    direction: 'desc'
-  });
 
-  const sortPresets: SortPreset[] = [
-    { id: 'updated-desc', label: 'Last modified', field: 'updatedAt', direction: 'desc' },
-    { id: 'created-desc', label: 'Newest shared', field: 'createdAt', direction: 'desc' },
-    { id: 'created-asc', label: 'Oldest shared', field: 'createdAt', direction: 'asc' },
-    { id: 'name-asc', label: 'Name A-Z', field: 'name', direction: 'asc' },
-    { id: 'name-desc', label: 'Name Z-A', field: 'name', direction: 'desc' },
-    { id: 'size-desc', label: 'Largest first', field: 'fileSize', direction: 'desc' },
-    { id: 'size-asc', label: 'Smallest first', field: 'fileSize', direction: 'asc' },
-    { id: 'type-asc', label: 'File type', field: 'type', direction: 'asc' }
-  ];
-
-  const normalizedSearchQuery = $derived(searchQuery.trim().toLowerCase());
-  const visibleFolders = $derived(normalizedSearchQuery
-    ? folders.filter(folder => [folder.name, folder.owner?.username, folder.owner?.walletAddress].some(value => value?.toLowerCase().includes(normalizedSearchQuery)))
-    : folders
-  );
-  const visibleItems = $derived(normalizedSearchQuery
-    ? items.filter(item => [item.title, item.fileName, item.mimeType, item.owner?.username, item.owner?.walletAddress].some(value => value?.toLowerCase().includes(normalizedSearchQuery)))
-    : items
-  );
-  const sortedFolders = $derived(sortItems(visibleFolders, sortOption));
-  const sortedItems = $derived(sortItems(visibleItems, sortOption));
+  const sortedFolders = $derived(sortItems(folders, { field: 'updatedAt', direction: 'desc' }));
+  const sortedItems = $derived(sortItems(items, { field: 'updatedAt', direction: 'desc' }));
   const totalCount = $derived(folders.length + items.length);
   const visibleCount = $derived(sortedFolders.length + sortedItems.length);
   const selectedFolders = $derived(folders.filter(folder => selectedItems.includes(folder.id)));
@@ -130,9 +102,25 @@
     if (!selectionMode) selectedItems = [];
   }
 
-  function openFolder(folder: { id: string } | null) {
-    if (!folder) return;
-    window.location.href = `/storage?folder=${folder.id}`;
+  async function openFolder(folder: { id: string } | null) {
+    if (!folder) {
+      currentFolder = null;
+      breadcrumbs = [];
+      folders = rootFolders;
+      items = [];
+      return;
+    }
+
+    await loadSharedFolderContents(folder.id);
+  }
+
+  function goBack() {
+    if (breadcrumbs.length > 1) {
+      const parentFolder = breadcrumbs[breadcrumbs.length - 2];
+      openFolder(parentFolder);
+    } else {
+      openFolder(null);
+    }
   }
 
   function noop() {}
@@ -179,11 +167,59 @@
     }
   }
 
+  async function loadSharedFolderContents(folderId: string) {
+    try {
+      isLoading = true;
+      errorMessage = '';
+
+      const [pathResponse, folderResponse, documentResponse] = await Promise.all([
+        storageService.getFolderPath(folderId),
+        storageService.getFolders(folderId),
+        storageService.getFolderContents(folderId),
+      ]);
+
+      if (!pathResponse.success || !pathResponse.data) {
+        throw new Error(pathResponse.message || 'Failed to load folder path.');
+      }
+
+      if (!folderResponse.success || !folderResponse.data) {
+        throw new Error(folderResponse.message || 'Failed to load child folders.');
+      }
+
+      if (!documentResponse.success || !documentResponse.data) {
+        throw new Error(documentResponse.message || 'Failed to load folder documents.');
+      }
+
+      breadcrumbs = pathResponse.data;
+      currentFolder = pathResponse.data[pathResponse.data.length - 1] || null;
+      folders = folderResponse.data;
+      items = documentResponse.data;
+      selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to load shared folder contents.';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function refreshSharedItems() {
+    if (currentFolder) {
+      isRefreshing = true;
+      await loadSharedFolderContents(currentFolder.id);
+      isRefreshing = false;
+      return;
+    }
+
+    await loadSharedItems(true);
+  }
+
   async function loadSharedItems(refresh = false) {
     try {
       isLoading = !refresh;
       isRefreshing = refresh;
       errorMessage = '';
+      currentFolder = null;
+      breadcrumbs = [];
 
       const [documentResponse, folderResponse] = await Promise.all([
         storageService.getSharedWithMe(),
@@ -198,12 +234,18 @@
         throw new Error(folderResponse.message || 'Failed to load shared folders.');
       }
 
-      folders = folderResponse.data.map(item => item.folder);
+      const sharedFolders = folderResponse.data.map(item => item.folder);
+      const sharedFolderIds = new Set(sharedFolders.map(folder => folder.id));
+      rootFolders = sharedFolders.filter(folder => !folder.parentId || !sharedFolderIds.has(folder.parentId));
+      folders = rootFolders;
       items = documentResponse.data.map(item => item.document);
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
+      rootFolders = [];
       folders = [];
       items = [];
+      breadcrumbs = [];
+      currentFolder = null;
       selectedItems = [];
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared items.';
     } finally {
@@ -221,93 +263,79 @@
   <title>Dibagikan | DecentraShare</title>
 </svelte:head>
 
-<div class="space-y-8" in:fade>
-  <section class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-    <div>
-      <p class="text-xs font-semibold uppercase tracking-[0.3em] text-blue-400">Shared with me</p>
-      <h1 class="mt-3 text-3xl font-bold text-white md:text-4xl">Dibagikan</h1>
-      <p class="mt-2 max-w-2xl text-sm text-gray-400">
-        File dan folder yang dibagikan user lain ke akun Anda.
-      </p>
+<main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto" in:fade>
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-10">
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      {#if currentFolder}
+        <button onclick={goBack} class="p-2 mt-7 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0" title="Back to parent folder">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        </button>
+      {/if}
+
+      <div class="min-w-0">
+        {#if currentFolder}
+          <Breadcrumbs {breadcrumbs} {currentFolder} navigateTo={openFolder} />
+        {:else}
+          <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Shared with me</p>
+        {/if}
+        <div class="flex items-center gap-3">
+          <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">{currentFolder ? currentFolder.name : 'Dibagikan'}</h2>
+          <ViewSwitcher bind:viewMode />
+        </div>
+        <p class="mt-2 max-w-xl text-sm text-gray-400">
+          {currentFolder ? 'Isi folder yang dibagikan ke akun Anda.' : 'File dan folder yang dibagikan user lain ke akun Anda.'}
+        </p>
+      </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3">
+    <div class="flex gap-3 w-full sm:w-auto">
       <button
-        onclick={() => loadSharedItems(true)}
-        disabled={isLoading || isRefreshing}
-        class="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-gray-200 transition hover:border-blue-500/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        onclick={toggleSelectMode}
+        disabled={totalCount === 0}
+        class="flex-1 sm:w-32 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
+        title={selectionMode ? 'Exit selection mode' : 'Select items'}
       >
-        <svg class="h-4 w-4 {isRefreshing ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <span class="relative">
+          <svg class="w-4 h-4 transition-all duration-300 {selectionMode ? 'drop-shadow-[0_0_8px_rgba(248,113,113,0.6)]' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {#if selectionMode}
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            {:else}
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            {/if}
+          </svg>
+          {#if selectionMode}
+            <span class="absolute inset-0 rounded-full bg-blue-500/40 blur-md animate-ping opacity-70"></span>
+          {/if}
+        </span>
+        <span class="hidden sm:inline transition-colors duration-300 {selectionMode ? 'text-blue-100 font-semibold' : ''}">
+          {selectionMode ? 'Cancel' : 'Select'}
+        </span>
+      </button>
+
+      <button onclick={refreshSharedItems} class="flex-1 sm:w-32 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2" disabled={isLoading || isRefreshing}>
+        <svg class="w-4 h-4 {isRefreshing ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
         Refresh
       </button>
-      <button
-        onclick={toggleSelectMode}
-        disabled={totalCount === 0}
-        class="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-gray-200 transition hover:border-blue-500/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {selectionMode ? 'Cancel selection' : 'Select'}
-      </button>
-      <ViewSwitcher bind:viewMode />
     </div>
-  </section>
+  </header>
 
-  <section class="grid gap-4 md:grid-cols-3">
-    <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-      <p class="text-xs font-medium uppercase tracking-widest text-gray-500">Total</p>
-      <p class="mt-2 text-3xl font-bold text-white">{totalCount}</p>
-    </div>
-    <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-      <p class="text-xs font-medium uppercase tracking-widest text-gray-500">Folders</p>
-      <p class="mt-2 text-3xl font-bold text-white">{folders.length}</p>
-    </div>
-    <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-      <p class="text-xs font-medium uppercase tracking-widest text-gray-500">Documents</p>
-      <p class="mt-2 text-3xl font-bold text-white">{items.length}</p>
-    </div>
-  </section>
-
-  <section class="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/[0.02] p-4 md:flex-row md:items-center md:justify-between">
-    <div class="relative flex-1">
-      <svg class="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 110-15 7.5 7.5 0 010 15z" />
-      </svg>
-      <input
-        bind:value={searchQuery}
-        placeholder="Search shared files, folders, or owners..."
-        class="w-full rounded-2xl border border-white/10 bg-black/20 py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500/50"
-      />
-    </div>
-
-    <select
-      class="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-gray-200 outline-none transition focus:border-blue-500/50"
-      value={`${sortOption.field}:${sortOption.direction}`}
-      onchange={(event) => {
-        const [field, direction] = event.currentTarget.value.split(':') as [SortField, SortDirection];
-        sortOption = { field, direction };
-      }}
-    >
-      {#each sortPresets as preset}
-        <option value={`${preset.field}:${preset.direction}`}>{preset.label}</option>
-      {/each}
-    </select>
-  </section>
 
   {#if errorMessage}
-    <div class="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+    <div class="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
       {errorMessage}
     </div>
   {/if}
 
   {#if successMessage}
-    <div class="rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-200">
+    <div class="mb-6 rounded-xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-200">
       {successMessage}
     </div>
   {/if}
 
   {#if selectionMode && selectedCount > 0}
-    <section class="flex flex-col gap-3 rounded-3xl border border-blue-500/20 bg-blue-500/10 p-4 md:flex-row md:items-center md:justify-between">
+    <section class="mb-6 flex flex-col gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 md:flex-row md:items-center md:justify-between">
       <p class="text-sm text-blue-100">
         {selectedCount} {selectedTypeValue} selected
       </p>
@@ -342,7 +370,7 @@
       </div>
       <h2 class="text-lg font-semibold text-white">No shared items found</h2>
       <p class="mt-2 max-w-md text-sm text-gray-500">
-        {searchQuery ? 'Try another search keyword.' : 'Files or folders shared to you will appear here.'}
+        Files or folders shared to you will appear here.
       </p>
     </div>
   {:else}
@@ -365,7 +393,7 @@
               {selectedItems}
               {selectionMode}
               onToggleSelect={toggleSelection}
-              onRefresh={() => loadSharedItems(true)}
+              onRefresh={refreshSharedItems}
             />
           {:else}
             <p class="pl-2 text-sm italic text-gray-600">No shared folders</p>
@@ -390,7 +418,7 @@
               {selectedItems}
               {selectionMode}
               onToggleSelect={toggleSelection}
-              onRefresh={() => loadSharedItems(true)}
+              onRefresh={refreshSharedItems}
             />
           {:else}
             <p class="pl-2 text-sm italic text-gray-600">No shared documents</p>
@@ -409,7 +437,7 @@
           {selectedItems}
           {selectionMode}
           onToggleSelect={toggleSelection}
-          onRefresh={() => loadSharedItems(true)}
+          onRefresh={refreshSharedItems}
         />
       {:else}
         <FileGrid
@@ -423,9 +451,9 @@
           {selectedItems}
           {selectionMode}
           onToggleSelect={toggleSelection}
-          onRefresh={() => loadSharedItems(true)}
+          onRefresh={refreshSharedItems}
         />
       {/if}
     </div>
   {/if}
-</div>
+</main>
