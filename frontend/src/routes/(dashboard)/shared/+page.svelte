@@ -3,6 +3,7 @@
   import { fade } from 'svelte/transition';
 
   import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
+  import FolderModal from '$lib/components/storage/FolderModal.svelte';
   import UploadModal from '$lib/components/storage/UploadModal.svelte';
   import ViewSwitcher from '$lib/components/storage/ViewSwitcher.svelte';
   import FileTable from '$lib/components/storage/FileTable.svelte';
@@ -25,10 +26,22 @@
   let selectedItems = $state<string[]>([]);
   let selectionMode = $state(false);
   let showUpload = $state(false);
+  let showFolder = $state(false);
   let folderRoles = $state<Record<string, 'VIEWER' | 'EDITOR' | 'ADMIN'>>({});
+  let renamingItem = $state<{ id: string; type: 'folder' | 'document'; name: string } | null>(null);
+  let renameInputValue = $state('');
+  let renameError = $state('');
+  let isRenameProcessing = $state(false);
+  let showMoveModal = $state(false);
+  let moveTargets = $state<Array<{ id: string; type: 'folder' | 'document'; name: string; parentId?: string | null }>>([]);
+  let moveTargetFolderId = $state<string | null>(null);
+  let moveError = $state('');
+  let moveSuccess = $state('');
+  let isMoveProcessing = $state(false);
 
   const currentFolderRole = $derived(currentFolder ? folderRoles[currentFolder.id] : undefined);
-  const canUploadToCurrentFolder = $derived(Boolean(currentFolder && currentFolderRole === 'EDITOR'));
+  const canEditCurrentFolder = $derived(Boolean(currentFolder && currentFolderRole === 'EDITOR'));
+  const canUploadToCurrentFolder = $derived(canEditCurrentFolder);
   const sortedFolders = $derived(sortItems(folders, { field: 'updatedAt', direction: 'desc' }));
   const sortedItems = $derived(sortItems(items, { field: 'updatedAt', direction: 'desc' }));
   const totalCount = $derived(folders.length + items.length);
@@ -37,6 +50,7 @@
   const selectedDocuments = $derived(items.filter(item => selectedItems.includes(item.id)));
   const selectedCount = $derived(selectedFolders.length + selectedDocuments.length);
   const selectedTypeValue = $derived(selectedFolders.length > 0 && selectedDocuments.length > 0 ? 'mixed' : selectedFolders.length > 0 ? 'folders' : selectedDocuments.length > 0 ? 'documents' : 'items');
+  const selectedEditableItems = $derived([...selectedFolders, ...selectedDocuments].filter(item => item.accessRole === 'EDITOR'));
 
   function getFileTheme(mimeType: string) {
     if (mimeType.includes('image')) return { color: 'text-purple-500 bg-purple-500/10' };
@@ -130,6 +144,99 @@
 
   function noop() {}
 
+  function handleRename(id: string, type: 'folder' | 'document', name: string) {
+    const item = type === 'folder' ? folders.find(folder => folder.id === id) : items.find(document => document.id === id);
+    if (!item?.accessRole || item.accessRole !== 'EDITOR') return;
+    renamingItem = { id, type, name };
+    renameInputValue = name;
+    renameError = '';
+  }
+
+  async function handleSubmitRename() {
+    if (!renamingItem || !renameInputValue.trim()) return;
+
+    try {
+      isRenameProcessing = true;
+      renameError = '';
+
+      if (renamingItem.type === 'folder') {
+        await storageService.renameFolder(renamingItem.id, renameInputValue);
+      } else {
+        await storageService.renameDocument(renamingItem.id, renameInputValue);
+      }
+
+      renamingItem = null;
+      renameInputValue = '';
+      await refreshSharedItems();
+    } catch (error) {
+      renameError = error instanceof Error ? error.message : 'Failed to rename item.';
+    } finally {
+      isRenameProcessing = false;
+    }
+  }
+
+  function handleCancelRename() {
+    renamingItem = null;
+    renameInputValue = '';
+    renameError = '';
+  }
+
+  function openMoveModal(targets: Array<{ id: string; type: 'folder' | 'document'; name: string; parentId?: string | null }>) {
+    moveTargets = targets;
+    moveTargetFolderId = currentFolder?.id ?? null;
+    moveError = '';
+    moveSuccess = '';
+    showMoveModal = true;
+  }
+
+  function handleSingleMove(id: string, type: 'folder' | 'document') {
+    const item = type === 'folder' ? folders.find(folder => folder.id === id) : items.find(document => document.id === id);
+    if (!item?.accessRole || item.accessRole !== 'EDITOR') return;
+    openMoveModal([{ id, type, name: type === 'folder' ? (item as Folder).name : (item as Document).title, parentId: type === 'folder' ? (item as Folder).parentId : (item as Document).folderId }]);
+  }
+
+  function handleBulkMove() {
+    const targets = [
+      ...selectedFolders.filter(folder => folder.accessRole === 'EDITOR').map(folder => ({ id: folder.id, type: 'folder' as const, name: folder.name, parentId: folder.parentId })),
+      ...selectedDocuments.filter(document => document.accessRole === 'EDITOR').map(document => ({ id: document.id, type: 'document' as const, name: document.title, parentId: document.folderId }))
+    ];
+
+    if (targets.length === 0) {
+      errorMessage = 'Pilih item dengan akses Editor untuk dipindahkan.';
+      return;
+    }
+
+    openMoveModal(targets);
+  }
+
+  async function handleExecuteMove() {
+    const documentIds = moveTargets.filter(target => target.type === 'document').map(target => target.id);
+    const folderTargets = moveTargets.filter(target => target.type === 'folder');
+
+    try {
+      isMoveProcessing = true;
+      moveError = '';
+
+      if (documentIds.length > 0) {
+        await storageService.moveDocuments(documentIds, moveTargetFolderId);
+      }
+
+      for (const folder of folderTargets) {
+        await storageService.moveFolder(folder.id, moveTargetFolderId);
+      }
+
+      moveSuccess = 'Item moved successfully.';
+      showMoveModal = false;
+      await refreshSharedItems();
+      selectedItems = [];
+      selectionMode = false;
+    } catch (error) {
+      moveError = error instanceof Error ? error.message : 'Failed to move item.';
+    } finally {
+      isMoveProcessing = false;
+    }
+  }
+
   async function handleDownload(id: string, type: 'folder' | 'document') {
     try {
       errorMessage = '';
@@ -195,10 +302,15 @@
         throw new Error(documentResponse.message || 'Failed to load folder documents.');
       }
 
+      const inheritedRole = folderRoles[folderId] ?? currentFolderRole ?? 'VIEWER';
+      folderRoles = {
+        ...folderRoles,
+        ...Object.fromEntries(folderResponse.data.map(folder => [folder.id, folderRoles[folder.id] ?? inheritedRole]))
+      };
       breadcrumbs = pathResponse.data;
       currentFolder = pathResponse.data[pathResponse.data.length - 1] || null;
-      folders = folderResponse.data.map(folder => ({ ...folder, accessRole: folderRoles[folder.id] }));
-      items = documentResponse.data.map(document => ({ ...document, accessRole: currentFolderRole ?? 'VIEWER' }));
+      folders = folderResponse.data.map(folder => ({ ...folder, accessRole: folderRoles[folder.id] ?? inheritedRole }));
+      items = documentResponse.data.map(document => ({ ...document, accessRole: inheritedRole }));
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared folder contents.';
@@ -326,6 +438,13 @@
         Refresh
       </button>
 
+      {#if canEditCurrentFolder}
+        <button onclick={() => showFolder = true} class="flex-1 sm:w-32 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-bold text-sm hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+          <span class="text-lg leading-none">+</span>
+          Folder
+        </button>
+      {/if}
+
       {#if canUploadToCurrentFolder}
         <button onclick={() => showUpload = true} class="flex-1 sm:w-32 px-4 py-3 bg-blue-600 text-white rounded-[20px] font-bold text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 flex items-center justify-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0L8 8m4-4l4 4" /></svg>
@@ -335,7 +454,62 @@
     </div>
   </header>
 
+  <FolderModal isOpen={showFolder} onClose={() => showFolder = false} onCreated={refreshSharedItems} parentId={currentFolder?.id ?? null} existingFolders={folders} />
   <UploadModal isOpen={showUpload} onClose={() => showUpload = false} onUploaded={refreshSharedItems} folderId={currentFolder?.id ?? null} />
+
+  {#if renamingItem}
+    <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+      <div class="bg-[#1a1a1e] p-6 rounded-2xl border border-white/10 shadow-2xl w-full max-w-sm">
+        <h3 class="text-white font-bold mb-4">Rename {renamingItem.type}</h3>
+        <input
+          bind:value={renameInputValue}
+          oninput={() => renameError = ''}
+          onkeydown={(event) => {
+            if (event.key === 'Enter') handleSubmitRename();
+            if (event.key === 'Escape') handleCancelRename();
+          }}
+          class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 transition-all mb-2 {renameError ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/50' : 'border-white/10 focus:border-blue-500 focus:ring-blue-500/50'}"
+          placeholder="Enter new name..."
+          disabled={isRenameProcessing}
+        />
+        {#if renameError}
+          <p class="text-xs text-red-400 ml-1 mb-4" role="alert">{renameError}</p>
+        {/if}
+        <div class="flex gap-3">
+          <button onclick={handleCancelRename} class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50" disabled={isRenameProcessing}>Cancel</button>
+          <button onclick={handleSubmitRename} class="flex-1 h-10 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed" disabled={isRenameProcessing || !renameInputValue.trim()}>{isRenameProcessing ? 'Saving...' : 'Save'}</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showMoveModal}
+    <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+      <div class="bg-[#111115] rounded-[32px] border border-white/10 shadow-2xl shadow-black/60 w-full max-w-md overflow-hidden">
+        <div class="p-6 border-b border-white/10 bg-gradient-to-br from-blue-600/15 via-white/[0.03] to-transparent">
+          <h3 class="text-white font-black text-xl tracking-tight">Move Item</h3>
+          <p class="text-sm text-gray-400 truncate">{moveTargets.map(target => target.name).join(', ')}</p>
+        </div>
+        <div class="p-6 space-y-4">
+          <button onclick={() => moveTargetFolderId = currentFolder?.id ?? null} class="w-full px-4 py-3 rounded-xl border text-left transition-colors {moveTargetFolderId === (currentFolder?.id ?? null) ? 'bg-blue-600/20 border-blue-500/50 text-white' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing}>
+            Current folder
+          </button>
+          {#each folders.filter(folder => folder.accessRole === 'EDITOR') as folder (folder.id)}
+            <button onclick={() => moveTargetFolderId = folder.id} class="w-full px-4 py-3 rounded-xl border text-left transition-colors {moveTargetFolderId === folder.id ? 'bg-blue-600/20 border-blue-500/50 text-white' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing}>
+              {folder.name}
+            </button>
+          {/each}
+          {#if moveError}
+            <p class="text-xs text-red-400" role="alert">{moveError}</p>
+          {/if}
+          <div class="flex gap-3">
+            <button onclick={() => showMoveModal = false} class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50" disabled={isMoveProcessing}>Cancel</button>
+            <button onclick={handleExecuteMove} class="flex-1 h-10 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed" disabled={isMoveProcessing}>{isMoveProcessing ? 'Moving...' : 'Move Here'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   {#if errorMessage}
     <div class="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -355,6 +529,14 @@
         {selectedCount} {selectedTypeValue} selected
       </p>
       <div class="flex gap-2">
+        {#if selectedEditableItems.length > 0}
+          <button
+            onclick={handleBulkMove}
+            class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            Move
+          </button>
+        {/if}
         <button
           onclick={downloadSelectedItems}
           class="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
@@ -404,6 +586,8 @@
               handleDeleteFolder={noop}
               handleDelete={noop}
               {getFileTheme}
+              onRename={(id, name) => handleRename(id, 'folder', name)}
+              onMove={handleSingleMove}
               onDownload={handleDownload}
               {selectedItems}
               {selectionMode}
@@ -429,6 +613,8 @@
               handleDeleteFolder={noop}
               handleDelete={noop}
               {getFileTheme}
+              onRename={(id, name) => handleRename(id, 'document', name)}
+              onMove={handleSingleMove}
               onDownload={handleDownload}
               {selectedItems}
               {selectionMode}
@@ -448,6 +634,8 @@
           handleDeleteFolder={noop}
           handleDelete={noop}
           {getFileTheme}
+          onRename={(id, name) => handleRename(id, folders.some(folder => folder.id === id) ? 'folder' : 'document', name)}
+          onMove={handleSingleMove}
           onDownload={handleDownload}
           {selectedItems}
           {selectionMode}
@@ -462,6 +650,8 @@
           handleDeleteFolder={noop}
           handleDelete={noop}
           {getFileTheme}
+          onRename={(id, name) => handleRename(id, folders.some(folder => folder.id === id) ? 'folder' : 'document', name)}
+          onMove={handleSingleMove}
           onDownload={handleDownload}
           {selectedItems}
           {selectionMode}

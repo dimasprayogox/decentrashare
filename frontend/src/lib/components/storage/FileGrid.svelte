@@ -128,13 +128,6 @@ $effect(() => {
   // ✅ HELPER FUNCTIONS (dari FileTable)
   // ─────────────────────────────────────────────────────────────
 
-  function getAccessRoleBadge(role?: 'VIEWER' | 'EDITOR' | 'ADMIN') {
-    if (role === 'EDITOR') return { label: 'Editor', className: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' };
-    if (role === 'VIEWER') return { label: 'Viewer', className: 'bg-blue-500/10 text-blue-300 border-blue-500/20' };
-    if (role === 'ADMIN') return { label: 'Admin', className: 'bg-purple-500/10 text-purple-300 border-purple-500/20' };
-    return null;
-  }
-
   function formatOwnerName(
     owner: { username?: string | null; email?: string | null; walletAddress: string } | null | undefined,
     currentUserId?: string,
@@ -645,10 +638,9 @@ $effect(() => {
           <h4 class="text-xs font-semibold text-white/90 truncate uppercase tracking-wide group-hover:text-white transition-colors duration-200">
             {folder.name}
           </h4>
-          {@const folderRoleBadge = getAccessRoleBadge(folder.accessRole)}
-          {#if folderRoleBadge}
-            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folderRoleBadge.className}">
-              {folderRoleBadge.label}
+          {#if folder.accessRole}
+            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+              {folder.accessRole === 'EDITOR' ? 'Editor' : folder.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
             </span>
           {/if}
         </div>
@@ -735,10 +727,9 @@ $effect(() => {
             <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
               {item.title}
             </h4>
-            {@const selectedDocumentRoleBadge = getAccessRoleBadge(item.accessRole)}
-            {#if selectedDocumentRoleBadge}
-              <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {selectedDocumentRoleBadge.className}">
-                {selectedDocumentRoleBadge.label}
+            {#if item.accessRole}
+              <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {item.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : item.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+                {item.accessRole === 'EDITOR' ? 'Editor' : item.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
               </span>
             {/if}
           </div>
@@ -749,10 +740,9 @@ $effect(() => {
           <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
             {item.title}
           </h4>
-          {@const documentRoleBadge = getAccessRoleBadge(item.accessRole)}
-          {#if documentRoleBadge}
-            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {documentRoleBadge.className}">
-              {documentRoleBadge.label}
+          {#if item.accessRole}
+            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {item.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : item.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+              {item.accessRole === 'EDITOR' ? 'Editor' : item.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
             </span>
           {/if}
         </div>

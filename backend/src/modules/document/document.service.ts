@@ -869,13 +869,16 @@ export const moveMultipleDocuments = async (
       targetPrivacy = folder.privacy;
     }
 
-    const documents: Array<{ id: string; title: string; folderId: string | null }> = await tx.document.findMany({
+    const documents: Array<{ id: string; title: string; folderId: string | null; ownerId: string }> = await tx.document.findMany({
       where: {
         id: { in: documentIds },
-        ownerId: userId,
-        isArchived: false
+        isArchived: false,
+        OR: [
+          { ownerId: userId },
+          { folder: { sharedWith: { some: { userId, role: 'EDITOR' } } } }
+        ]
       },
-      select: { id: true, title: true, folderId: true }
+      select: { id: true, title: true, folderId: true, ownerId: true }
     });
 
     if (documents.length === 0) {
@@ -919,13 +922,12 @@ export const moveMultipleDocuments = async (
 
     const result = await tx.document.updateMany({
       where: {
-        id: { in: documentIds },
-        ownerId: userId,
+        id: { in: documents.map((document) => document.id) },
         isArchived: false
       },
-      data: { 
+      data: {
         folderId: targetFolderId,
-        privacy: targetPrivacy 
+        privacy: targetPrivacy
       }
     });
 
@@ -1163,13 +1165,16 @@ export const updateDocumentMetadata = async (
   userId: string, 
   updates: { title?: string; description?: string }
 ) => {
-  // 1. Validate document exists and user is owner
-  const doc = await prisma.document.findFirst({ 
-    where: { 
-      id: documentId, 
-      ownerId: userId,
-      isArchived: false  // ← Cannot edit archived documents
-    } 
+  // 1. Validate document exists and user is owner/editor of containing folder
+  const doc = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      isArchived: false,
+      OR: [
+        { ownerId: userId },
+        { folder: { sharedWith: { some: { userId, role: 'EDITOR' } } } }
+      ]
+    }
   });
 
   if (!doc) {
@@ -1189,7 +1194,7 @@ export const updateDocumentMetadata = async (
           equals: newTitle,
           mode: 'insensitive'  // ✅ Sama seperti folder
         },
-        ownerId: userId,
+        ownerId: doc.ownerId,
         folderId: doc.folderId,  // ✅ Gunakan folderId dari document yang ada
         isArchived: false,
         id: { not: documentId }  // ✅ Exclude document yang sedang di-edit (penting!)

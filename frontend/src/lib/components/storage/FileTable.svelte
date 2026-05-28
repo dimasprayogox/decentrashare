@@ -115,13 +115,6 @@
   // ─────────────────────────────────────────────────────────────
 
   // ✅ Format owner name display
-  function getAccessRoleBadge(role?: 'VIEWER' | 'EDITOR' | 'ADMIN') {
-    if (role === 'EDITOR') return { label: 'Editor', className: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' };
-    if (role === 'VIEWER') return { label: 'Viewer', className: 'bg-blue-500/10 text-blue-300 border-blue-500/20' };
-    if (role === 'ADMIN') return { label: 'Admin', className: 'bg-purple-500/10 text-purple-300 border-purple-500/20' };
-    return null;
-  }
-
   function formatOwnerName(
     owner: { username?: string | null; email?: string | null; walletAddress: string } | null | undefined,
     currentUserId?: string,
@@ -795,10 +788,9 @@ async function handleConfirmBlockchain(item: Document) {
         <span class="block text-sm font-semibold text-white/90 uppercase tracking-wide truncate" title={folder.name}>
           {folder.name}
         </span>
-        {@const folderRoleBadge = getAccessRoleBadge(folder.accessRole)}
-        {#if folderRoleBadge}
-          <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folderRoleBadge.className}">
-            {folderRoleBadge.label}
+        {#if folder.accessRole}
+          <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+            {folder.accessRole === 'EDITOR' ? 'Editor' : folder.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
           </span>
         {/if}
       </div>
@@ -1031,10 +1023,9 @@ async function handleConfirmBlockchain(item: Document) {
                   >
                     {item.title}
                   </p>
-                  {@const documentRoleBadge = getAccessRoleBadge(item.accessRole)}
-                  {#if documentRoleBadge}
-                    <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {documentRoleBadge.className}">
-                      {documentRoleBadge.label}
+                  {#if item.accessRole}
+                    <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {item.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : item.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+                      {item.accessRole === 'EDITOR' ? 'Editor' : item.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
                     </span>
                   {/if}
                 </div>

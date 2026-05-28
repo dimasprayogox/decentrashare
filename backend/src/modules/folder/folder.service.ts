@@ -19,16 +19,28 @@ export const createFolder = async (
 ) => {
   const folderName = name.trim();
 
+  let ownerId = userId;
+
+  if (parentId) {
+    const parentFolder = await prisma.folder.findUnique({
+      where: { id: parentId },
+      include: { sharedWith: { where: { userId }, select: { role: true } } }
+    });
+    const canCreate = parentFolder?.ownerId === userId || parentFolder?.sharedWith.some(access => access.role === 'EDITOR');
+    if (!parentFolder || !canCreate) throw new Error('Parent folder not found or unauthorized.');
+    ownerId = parentFolder.ownerId;
+  }
+
   const existingFolder = await prisma.folder.findFirst({
     where: {
-      name: { 
-        equals: folderName, 
-        mode: 'insensitive' 
+      name: {
+        equals: folderName,
+        mode: 'insensitive'
       },
-      ownerId: userId,
-      parentId: parentId || null, 
+      ownerId,
+      parentId: parentId || null,
       isArchived: false,
-      deletedAt: null    
+      deletedAt: null
     }
   });
 
@@ -36,13 +48,20 @@ export const createFolder = async (
     throw new Error(`Folder "${folderName}" already exists in this location`);
   }
 
-  return await prisma.folder.create({
-    data: { 
-      name: folderName, 
-      ownerId: userId, 
-      parentId: parentId || null 
+  const folder = await prisma.folder.create({
+    data: {
+      name: folderName,
+      ownerId,
+      parentId: parentId || null,
+      privacy: parentId ? 'SPECIFIC_USER' : 'PRIVATE'
     }
   });
+
+  if (parentId && ownerId !== userId) {
+    await prisma.folderAccess.create({ data: { folderId: folder.id, userId, role: 'EDITOR' } });
+  }
+
+  return folder;
 };
 
 export const renameFolder = async (
@@ -53,10 +72,12 @@ export const renameFolder = async (
   const folderName = newName.trim();
 
   const folder = await prisma.folder.findUnique({
-    where: { id: folderId }
+    where: { id: folderId },
+    include: { sharedWith: { where: { userId }, select: { role: true } } }
   });
 
-  if (!folder || folder.ownerId !== userId) {
+  const canRename = folder?.ownerId === userId || folder?.sharedWith.some(access => access.role === 'EDITOR');
+  if (!folder || !canRename) {
     throw new Error("Folder not found or unauthorized.");
   }
 
@@ -66,7 +87,7 @@ export const renameFolder = async (
         equals: folderName,
         mode: 'insensitive'
       },
-      ownerId: userId,
+      ownerId: folder.ownerId,
       parentId: folder.parentId,
       id: { not: folderId },
       isArchived: false,
@@ -90,9 +111,13 @@ export const moveFolder = async (
   targetFolderId: string | null = null
 ) => {
   return await prisma.$transaction(async (tx) => {
-    const folder = await tx.folder.findUnique({ where: { id: folderId } });
+    const folder = await tx.folder.findUnique({
+      where: { id: folderId },
+      include: { sharedWith: { where: { userId }, select: { role: true } } }
+    });
 
-    if (!folder || folder.ownerId !== userId || folder.isArchived) {
+    const canMoveSource = folder?.ownerId === userId || folder?.sharedWith.some(access => access.role === 'EDITOR');
+    if (!folder || !canMoveSource || folder.isArchived) {
       throw new Error('Folder not found or unauthorized.');
     }
 
@@ -104,9 +129,13 @@ export const moveFolder = async (
     let location = 'Root';
 
     if (targetFolderId) {
-      const targetFolder = await tx.folder.findUnique({ where: { id: targetFolderId } });
+      const targetFolder = await tx.folder.findUnique({
+        where: { id: targetFolderId },
+        include: { sharedWith: { where: { userId }, select: { role: true } } }
+      });
 
-      if (!targetFolder || targetFolder.ownerId !== userId || targetFolder.isArchived) {
+      const canMoveToTarget = targetFolder?.ownerId === userId || targetFolder?.sharedWith.some(access => access.role === 'EDITOR');
+      if (!targetFolder || !canMoveToTarget || targetFolder.isArchived) {
         throw new Error('Target folder not found or unauthorized.');
       }
 
@@ -128,7 +157,7 @@ export const moveFolder = async (
     const duplicateFolder = await tx.folder.findFirst({
       where: {
         id: { not: folderId },
-        ownerId: userId,
+        ownerId: folder.ownerId,
         parentId: normalizedTargetFolderId,
         isArchived: false,
         deletedAt: null,
@@ -146,7 +175,7 @@ export const moveFolder = async (
     const subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
 
     await tx.folder.updateMany({
-      where: { id: { in: subtreeFolderIds }, ownerId: userId },
+      where: { id: { in: subtreeFolderIds }, ownerId: folder.ownerId },
       data: { privacy: targetPrivacy }
     });
 
@@ -161,7 +190,7 @@ export const moveFolder = async (
     await tx.document.updateMany({
       where: {
         folderId: { in: subtreeFolderIds },
-        ownerId: userId,
+        ownerId: folder.ownerId,
         isArchived: false
       },
       data: { privacy: targetPrivacy }
@@ -175,7 +204,7 @@ export const moveFolder = async (
       const documents = await tx.document.findMany({
         where: {
           folderId: { in: subtreeFolderIds },
-          ownerId: userId
+          ownerId: folder.ownerId
         },
         select: { id: true }
       });
