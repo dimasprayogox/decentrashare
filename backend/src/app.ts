@@ -87,7 +87,7 @@ app.get('/', (req, res) => {
   })
 })
 
-if (process.env.ENABLE_JOBS === 'true' || process.env.NODE_ENV === 'production') {
+if (process.env.ENABLE_JOBS !== 'false') {
   void runOrphanedPinCleanup().catch((error: unknown) => {
     logger.error('Initial orphaned pin cleanup crashed', { error });
   });
