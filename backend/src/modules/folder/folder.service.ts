@@ -902,11 +902,21 @@ export const getFolderContents = async (folderId: string, userId?: string, share
   // 3. Jika PRIVATE atau SPECIFIC_USER -> Butuh Login (userId)
   if (!userId) throw new Error("Authentication required");
 
-  const isOwner = folder.ownerId === userId;
-  const hasAccess = folder.sharedWith.some(access => access.userId === userId);
+  let currentFolder: typeof folder | null = folder;
+  while (currentFolder) {
+    const isOwner = currentFolder.ownerId === userId;
+    const hasAccess = currentFolder.sharedWith.some(access => access.userId === userId);
 
-  if (isOwner || hasAccess) {
-    return await getSanitizedFiles();
+    if (isOwner || hasAccess) {
+      return await getSanitizedFiles();
+    }
+
+    currentFolder = currentFolder.parentId
+      ? await prisma.folder.findUnique({
+          where: { id: currentFolder.parentId },
+          include: { sharedWith: true }
+        })
+      : null;
   }
 
   throw new Error("You don't have permission to access this folder");

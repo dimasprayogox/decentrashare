@@ -32,7 +32,7 @@ export const sanitizeDocument = (doc: any, currentUserId?: string) => {
 
     ipfsHash: undefined, 
 
-    blockchainTx: (isOwner || !isPrivate) ? doc.blockchainTx : undefined,
+    blockchainTx: (currentUserId || !isPrivate) ? doc.blockchainTx : undefined,
     isOnChain: doc.isOnChain,
     pendingOnChainUntil: isOwner ? doc.pendingOnChainUntil : undefined,
     cleanupStatus: isOwner ? doc.cleanupStatus : undefined,
@@ -79,11 +79,7 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
           avatarUrl: true
         }
       },
-      folder: {
-        include: {
-          sharedWith: true // Check folder-level permissions
-        }
-      },
+      folder: true,
       sharedWith: true // Check file-level permissions
     }
   });
@@ -101,20 +97,19 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
     throw new Error("Document is in trash.");
   }
 
-  // 2. Folder Inheritance: Check if the parent folder grants access
-  if (document.folder) {
-    // Public Folder access
-    if (document.folder.privacy === 'PUBLIC') {
-      return document;
+  // 2. Folder Inheritance: Check if the containing folder or its ancestors grant access
+  let hasFolderAccess = false;
+  if (document.folderId) {
+    try {
+      await validateFolderAccess(document.folderId, userId);
+      hasFolderAccess = true;
+    } catch {
+      hasFolderAccess = false;
     }
+  }
 
-    // Shared Folder access: If user is in the folder's access list
-    const hasFolderAccess = document.folder.sharedWith.some(
-      (access) => access.userId === userId
-    );
-    if (hasFolderAccess) {
-      return document;
-    }
+  if (hasFolderAccess) {
+    return document;
   }
 
   // 3. Direct Document Access: Check specific file sharing or public status
@@ -233,7 +228,7 @@ const ensureUniqueArchivePath = (filePath: string, usedPaths: Set<string>) => {
   return candidate;
 };
 
-const validateFolderAccess = async (folderId: string, userId: string) => {
+const validateFolderAccess = async (folderId: string, userId: string, requiredRole?: 'EDITOR') => {
   let currentFolderId: string | null = folderId;
   let requestedFolder: any = null;
 
@@ -253,8 +248,14 @@ const validateFolderAccess = async (folderId: string, userId: string) => {
       throw new Error('Folder is in trash.');
     }
 
-    const hasAccess = folder.sharedWith.some((access: any) => access.userId === userId);
-    if (folder.ownerId === userId || hasAccess || folder.privacy === 'PUBLIC') {
+    if (folder.ownerId === userId) {
+      return requestedFolder;
+    }
+
+    const access = folder.sharedWith.find((access: any) => access.userId === userId);
+    if (requiredRole === 'EDITOR') {
+      if (access?.role === 'EDITOR') return requestedFolder;
+    } else if (access || folder.privacy === 'PUBLIC') {
       return requestedFolder;
     }
 
@@ -595,17 +596,7 @@ export const uploadMultipleFiles = async (
   // ── 1. SECURITY CHECK: Verify folder ownership or editor access ──────────────────────
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
   if (folderId) {
-    const folder = await prisma.folder.findUnique({
-      where: { id: folderId },
-      include: {
-        sharedWith: {
-          where: { userId },
-          select: { role: true }
-        }
-      }
-    });
-    const canUpload = folder?.ownerId === userId || folder?.sharedWith.some(access => access.role === 'EDITOR');
-    if (!folder || !canUpload) throw new Error("Target folder not found or access denied.");
+    const folder = await validateFolderAccess(folderId, userId, 'EDITOR');
     targetPrivacy = folder.privacy;
   }
 
