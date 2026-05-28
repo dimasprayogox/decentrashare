@@ -34,6 +34,7 @@
   let showDestroyConfirm = $state(false);
   let showRestoreConfirm = $state(false);
   let viewMode = $state(1);
+  let currentUserId = $state<string | null>(null);
   let sortOption = $state<{ field: SortField; direction: SortDirection }>({
     field: 'deletedAt',
     direction: 'desc'
@@ -328,6 +329,14 @@
   });
 
   onMount(() => {
+    storageService.getCurrentUser()
+      .then(response => {
+        currentUserId = response.data?.id ?? null;
+      })
+      .catch(() => {
+        currentUserId = null;
+      });
+
     const handleSearch = (event: Event) => {
       const customEvent = event as CustomEvent<{ query?: string }>;
       searchQuery = customEvent.detail?.query ?? '';
@@ -524,7 +533,7 @@
             <span class="text-[10px] text-gray-600">{sortedFolders.length} item{sortedFolders.length === 1 ? '' : 's'}</span>
           </div>
           {#if sortedFolders.length > 0}
-            <FileGrid folders={sortedFolders} items={[]} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+            <FileGrid folders={sortedFolders} items={[]} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} currentUserId={currentUserId ?? undefined} onRefresh={loadTrashItems} />
           {:else}
             <p class="text-gray-600 text-sm italic pl-2">No folders in trash</p>
           {/if}
@@ -536,20 +545,20 @@
             <span class="text-[10px] text-gray-600">{sortedItems.length} item{sortedItems.length === 1 ? '' : 's'}</span>
           </div>
           {#if sortedItems.length > 0}
-            <FileTable folders={[]} items={sortedItems} viewMode={1} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+            <FileTable folders={[]} items={sortedItems} viewMode={1} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} currentUserId={currentUserId ?? undefined} onRefresh={loadTrashItems} />
           {:else}
             <p class="text-gray-600 text-sm italic pl-2">No documents in trash</p>
           {/if}
         </section>
       {:else if viewMode === 2}
         {#if sortedFolders.length > 0 || sortedItems.length > 0}
-          <FileTable folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+          <FileTable folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} currentUserId={currentUserId ?? undefined} onRefresh={loadTrashItems} />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">Trash is empty</p></div>
         {/if}
       {:else}
         {#if sortedFolders.length > 0 || sortedItems.length > 0}
-          <FileGrid folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} onRefresh={loadTrashItems} />
+          <FileGrid folders={sortedFolders} items={sortedItems} viewMode={2} openFolder={openFolder} handleDeleteFolder={noop} handleDelete={noop} {getFileTheme} selectedItems={selectedItems} {selectionMode} onToggleSelect={toggleSelection} onDownload={downloadSingleItem} onRestore={confirmSingleRestore} trashMode={true} onDeleteConfirm={confirmSingleDestroy} currentUserId={currentUserId ?? undefined} onRefresh={loadTrashItems} />
         {:else}
           <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]"><p class="text-gray-500">Trash is empty</p></div>
         {/if}

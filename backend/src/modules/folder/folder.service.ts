@@ -20,6 +20,7 @@ export const createFolder = async (
   const folderName = name.trim();
 
   const ownerId = userId;
+  let parentOwnerId: string | null = null;
 
   if (parentId) {
     const parentFolder = await prisma.folder.findUnique({
@@ -28,6 +29,7 @@ export const createFolder = async (
     });
     const canCreate = parentFolder?.ownerId === userId || parentFolder?.sharedWith.some(access => access.role === 'EDITOR');
     if (!parentFolder || !canCreate) throw new Error('Parent folder not found or unauthorized.');
+    parentOwnerId = parentFolder.ownerId;
   }
 
   const existingFolder = await prisma.folder.findFirst({
@@ -66,6 +68,16 @@ export const createFolder = async (
       }
     }
   });
+
+  if (parentOwnerId && parentOwnerId !== ownerId) {
+    await prisma.folderAccess.create({
+      data: {
+        folderId: folder.id,
+        userId: parentOwnerId,
+        role: 'EDITOR'
+      }
+    });
+  }
 
   return folder;
 };

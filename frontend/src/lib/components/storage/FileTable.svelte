@@ -121,16 +121,16 @@
     ownerId?: string
   ): string {
     const isCurrentUser = currentUserId && ownerId && currentUserId === ownerId;
-    const suffix = isCurrentUser ? ' (Saya)' : '';
-    
+    if (isCurrentUser) return 'Me';
+
     if (!owner) {
-      if (ownerId) return `${ownerId.slice(0, 8)}...${suffix}`;
-      return `Unknown${suffix}`;
+      if (ownerId) return `${ownerId.slice(0, 8)}...`;
+      return 'Unknown';
     }
-    
-    if (owner.username) return `${owner.username}${suffix}`;
-    if (owner.email) return `${owner.email}${suffix}`;
-    return `${owner.walletAddress.slice(0, 6)}...${owner.walletAddress.slice(-4)}${suffix}`;
+
+    if (owner.username) return owner.username;
+    if (owner.email) return owner.email;
+    return `${owner.walletAddress.slice(0, 6)}...${owner.walletAddress.slice(-4)}`;
   }
 
   // ✅ Get avatar URL or initial (INI YANG MISSING!)
@@ -850,18 +850,9 @@ async function handleConfirmBlockchain(item: Document) {
                                  group-hover/owner:opacity-100 transition-opacity duration-200"></span>
                   </div>
                   
-                  <span class="text-xs text-gray-300 truncate max-w-[100px] 
-                               group-hover/owner:text-blue-300 group-hover/owner:font-medium
-                               transition-colors duration-200">
-                    {formatOwnerName(folder.owner, currentUserId, folder.ownerId)}  
+                  <span class="text-xs truncate max-w-[100px] transition-colors duration-200 {isCurrentUser ? 'text-blue-400 font-semibold' : 'text-gray-300 group-hover/owner:text-blue-300 group-hover/owner:font-medium'}">
+                    {formatOwnerName(folder.owner, currentUserId, folder.ownerId)}
                   </span>
-                  
-                  {#if isCurrentUser}
-                    <span class="text-[9px] text-blue-400 font-medium opacity-80 
-                                 group-hover/owner:opacity-100 transition-opacity">
-                      (Saya)
-                    </span>
-                  {/if}
                 </button>
               {:else}
                 <span class="text-xs text-gray-600 italic">Unknown</span>
@@ -1089,18 +1080,9 @@ async function handleConfirmBlockchain(item: Document) {
                                group-hover/owner:opacity-100 transition-opacity duration-200"></span>
                 </div>
                 
-                <span class="text-xs text-gray-300 truncate max-w-[100px] 
-                             group-hover/owner:text-blue-300 group-hover/owner:font-medium
-                             transition-colors duration-200">
-                  {formatOwnerName(item.owner, currentUserId, item.ownerId)}  
+                <span class="text-xs truncate max-w-[100px] transition-colors duration-200 {isCurrentUser ? 'text-blue-400 font-semibold' : 'text-gray-300 group-hover/owner:text-blue-300 group-hover/owner:font-medium'}">
+                  {formatOwnerName(item.owner, currentUserId, item.ownerId)}
                 </span>
-                
-                {#if isCurrentUser}
-                  <span class="text-[9px] text-blue-400 font-medium opacity-80 
-                               group-hover/owner:opacity-100 transition-opacity">
-                    (Saya)
-                  </span>
-                {/if}
               </button>
             {:else}
               <span class="text-xs text-gray-600 italic">Unknown</span>

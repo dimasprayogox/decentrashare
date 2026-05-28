@@ -134,14 +134,14 @@ $effect(() => {
     ownerId?: string
   ): string {
     const isCurrentUser = currentUserId && ownerId && currentUserId === ownerId;
-    const suffix = isCurrentUser ? ' (Saya)' : '';
+    if (isCurrentUser) return 'Me';
     if (!owner) {
-      if (ownerId) return `${ownerId.slice(0, 8)}...${suffix}`;
-      return `Unknown${suffix}`;
+      if (ownerId) return `${ownerId.slice(0, 8)}...`;
+      return 'Unknown';
     }
-    if (owner.username) return `${owner.username}${suffix}`;
-    if (owner.email) return `${owner.email}${suffix}`;
-    return `${owner.walletAddress.slice(0, 6)}...${owner.walletAddress.slice(-4)}${suffix}`;
+    if (owner.username) return owner.username;
+    if (owner.email) return owner.email;
+    return `${owner.walletAddress.slice(0, 6)}...${owner.walletAddress.slice(-4)}`;
   }
 
   function getOwnerAvatar(owner: {

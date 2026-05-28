@@ -992,11 +992,19 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   const handleFilesUploaded = () => refreshStorage();
 
   onMount(() => {
-  currentUser = {
-    id: 'user_123',
-    username: 'demo_user',
-    walletAddress: '0xabc123def456'
-  };
+  storageService.getCurrentUser()
+    .then(response => {
+      if (response.data) {
+        currentUser = {
+          id: response.data.id,
+          username: response.data.username || '',
+          walletAddress: response.data.walletAddress
+        };
+      }
+    })
+    .catch(() => {
+      currentUser = null;
+    });
 
   const handleStorageRefresh = () => {
     void refreshStorage();
@@ -1520,8 +1528,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
                 confirmDelete({ id, type, name });   
                 deleteError = "";
               }}
-              {selectedItems} 
+              {selectedItems}
               {selectionMode}
+              currentUserId={currentUser?.id}
               onToggleSelect={toggleSelection}
               {isSelected} 
               onRefresh={refreshStorage}
@@ -1544,8 +1553,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
                 confirmDelete({ id, type, name });   
                 deleteError = "";
               }}
-              {selectedItems} 
+              {selectedItems}
               {selectionMode}
+              currentUserId={currentUser?.id}
               onToggleSelect={toggleSelection}
               {isSelected}
               onRefresh={refreshStorage}
@@ -1565,8 +1575,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
                 confirmDelete({ id, type, name });   
                 deleteError = "";
               }}
-            {selectedItems} 
+            {selectedItems}
             {selectionMode}
+            currentUserId={currentUser?.id}
             onToggleSelect={toggleSelection}
             {isSelected}
             onRefresh={refreshStorage}
@@ -1587,8 +1598,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
               confirmDelete({ id, type, name });
               deleteError = "";
             }}
-            {selectedItems} 
+            {selectedItems}
             {selectionMode}
+            currentUserId={currentUser?.id}
             onToggleSelect={toggleSelection}
             {isSelected}
             onRefresh={refreshStorage}
