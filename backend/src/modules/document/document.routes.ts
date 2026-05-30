@@ -6,6 +6,7 @@ import {
   handleDownloadDocument,
   handleBulkDownloadDocuments,
   handleGetDocumentDetail,
+  handleSearchPublicDocuments,
   handleUpdateDocumentMetadata,
   handleArchiveDocuments,
   handleGetArchivedDocuments,
@@ -65,6 +66,7 @@ router.post("/batch/trigger-blockchain", triggerBatchBlockchainConfirmation);
 router.get('/logs', handleGetActivityLogs);
 router.post('/bulk-download', handleBulkDownloadDocuments);
 router.get("/root", handleGetRootDocuments);
+router.get("/public/search", handleSearchPublicDocuments);
 router.patch("/move", handleMoveDocuments);
 
 router.patch("/:id/confirm-onchain", confirmDocumentOnChain);

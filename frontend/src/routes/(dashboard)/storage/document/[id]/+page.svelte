@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import mammoth from 'mammoth/mammoth.browser';
   import * as XLSX from 'xlsx';
   import { storageService } from '$lib/services/storage/storage';
@@ -26,6 +26,12 @@
   let pdfPageCount = $state(0);
   let zoomLevel = $state(1);
   let pdfCanvas = $state<HTMLCanvasElement | null>(null);
+  let publicSearchQuery = $state('');
+  let publicSearchResults = $state<Document[]>([]);
+  let isPublicSearchLoading = $state(false);
+  let publicSearchError = $state('');
+  let hasPublicSearchSubmitted = $state(false);
+  let publicSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const documentId = $derived(page.params.id);
 
@@ -81,6 +87,14 @@
   function getOwnerName(owner: Document['owner']): string {
     if (!owner) return 'Unknown owner';
     return owner.username || owner.walletAddress || owner.id;
+  }
+
+  function getResultOwnerInitial(owner: Document['owner']): string {
+    return getOwnerName(owner).slice(0, 1).toUpperCase();
+  }
+
+  function getFileTypeLabel(file: Document): string {
+    return getFileExtension(file.fileName) || file.mimeType || 'FILE';
   }
 
   function shortAddress(value?: string | null): string {
@@ -197,6 +211,51 @@
     await storageService.downloadDocument(documentDetail.id, documentDetail.fileName);
   }
 
+  async function searchPublicDocuments() {
+    const query = publicSearchQuery.trim();
+    hasPublicSearchSubmitted = Boolean(query);
+
+    if (query.length < 2) {
+      publicSearchResults = [];
+      publicSearchError = query.length === 1 ? 'Type at least 2 characters to search.' : '';
+      isPublicSearchLoading = false;
+      return;
+    }
+
+    try {
+      isPublicSearchLoading = true;
+      publicSearchError = '';
+      const response = await storageService.searchPublicDocuments(query, 12);
+      if (!response.success) throw new Error(response.message || 'Failed to search public documents.');
+      publicSearchResults = (response.data || []).filter(item => item.id !== documentId);
+    } catch (error) {
+      publicSearchResults = [];
+      publicSearchError = error instanceof Error ? error.message : 'Failed to search public documents.';
+    } finally {
+      isPublicSearchLoading = false;
+    }
+  }
+
+  function handlePublicSearchInput() {
+    if (publicSearchTimeout) clearTimeout(publicSearchTimeout);
+    publicSearchTimeout = setTimeout(() => {
+      void searchPublicDocuments();
+    }, 300);
+  }
+
+  function clearPublicSearch() {
+    if (publicSearchTimeout) clearTimeout(publicSearchTimeout);
+    publicSearchQuery = '';
+    publicSearchResults = [];
+    publicSearchError = '';
+    hasPublicSearchSubmitted = false;
+    isPublicSearchLoading = false;
+  }
+
+  function openPublicDocument(id: string) {
+    goto(`/storage/document/${id}`);
+  }
+
   $effect(() => {
     pdfPage;
     zoomLevel;
@@ -208,6 +267,10 @@
   onMount(() => {
     void loadDocument();
     return () => clearPreview();
+  });
+
+  onDestroy(() => {
+    if (publicSearchTimeout) clearTimeout(publicSearchTimeout);
   });
 </script>
 
@@ -394,6 +457,81 @@
             <p class="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{documentDetail.description}</p>
           </section>
         {/if}
+
+        <section class="rounded-[28px] border border-blue-500/20 bg-gradient-to-br from-blue-500/10 via-[#111115] to-purple-500/10 p-5 shadow-2xl shadow-blue-950/20">
+          <div class="mb-4 flex items-start gap-3">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/20">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+            </div>
+            <div>
+              <h2 class="text-white font-bold">Discover public documents</h2>
+              <p class="mt-1 text-xs leading-relaxed text-gray-400">Search public files shared by other DecentraShare users.</p>
+            </div>
+          </div>
+
+          <div class="relative">
+            <span class="absolute inset-y-0 left-4 flex items-center text-gray-500">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </span>
+            <input
+              type="search"
+              bind:value={publicSearchQuery}
+              oninput={handlePublicSearchInput}
+              onkeydown={(event) => { if (event.key === 'Enter') void searchPublicDocuments(); }}
+              placeholder="Search public documents..."
+              class="w-full rounded-2xl border border-white/10 bg-black/30 py-3 pl-11 pr-11 text-sm text-white outline-none transition-all placeholder:text-gray-600 focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20"
+            />
+            {#if publicSearchQuery}
+              <button onclick={clearPublicSearch} class="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-white" aria-label="Clear public document search">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            {/if}
+          </div>
+
+          {#if publicSearchError}
+            <div class="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">{publicSearchError}</div>
+          {/if}
+
+          <div class="mt-4 space-y-3">
+            {#if isPublicSearchLoading}
+              {#each Array(3) as _}
+                <div class="h-20 animate-pulse rounded-2xl border border-white/5 bg-white/[0.04]"></div>
+              {/each}
+            {:else if publicSearchResults.length > 0}
+              {#each publicSearchResults as result (result.id)}
+                <button onclick={() => openPublicDocument(result.id)} class="group w-full rounded-2xl border border-white/10 bg-black/20 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-blue-400/40 hover:bg-blue-500/10">
+                  <div class="flex items-start gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-xs font-black text-blue-300 ring-1 ring-white/10">{getFileTypeLabel(result)}</div>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2">
+                        <p class="truncate text-sm font-semibold text-white group-hover:text-blue-200">{result.title}</p>
+                        <span class="shrink-0 rounded-full bg-green-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-green-300">Public</span>
+                      </div>
+                      <p class="mt-0.5 truncate text-xs text-gray-500">{result.fileName}</p>
+                      <div class="mt-2 flex items-center gap-2 text-[11px] text-gray-500">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/15 text-[10px] font-bold text-blue-300">{getResultOwnerInitial(result.owner)}</span>
+                        <span class="truncate">{getOwnerName(result.owner)}</span>
+                        <span>•</span>
+                        <span>{formatFileSize(result.fileSize)}</span>
+                      </div>
+                    </div>
+                    <svg class="mt-1 h-4 w-4 shrink-0 text-gray-600 transition group-hover:translate-x-0.5 group-hover:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                  </div>
+                </button>
+              {/each}
+            {:else if hasPublicSearchSubmitted && publicSearchQuery.trim().length >= 2}
+              <div class="rounded-2xl border border-white/10 bg-black/20 p-5 text-center">
+                <p class="text-sm font-medium text-white">No public documents found</p>
+                <p class="mt-1 text-xs text-gray-500">Try a different title, file name, type, or owner.</p>
+              </div>
+            {:else}
+              <div class="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-center">
+                <p class="text-sm text-gray-400">Start typing to discover public documents.</p>
+                <p class="mt-1 text-xs text-gray-600">Results only include files marked as Public by other users.</p>
+              </div>
+            {/if}
+          </div>
+        </section>
       </aside>
     </div>
   {/if}

@@ -1004,6 +1004,49 @@ export const moveMultipleDocuments = async (
 /**
  * Mengambil semua dokumen milik user yang aktif (tidak diarsip)
  */
+export const searchPublicDocuments = async (userId: string, query: string, limit = 12) => {
+  const searchQuery = query.trim();
+  const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 30);
+
+  if (searchQuery.length < 2) return [];
+
+  const docs = await prisma.document.findMany({
+    where: {
+      privacy: 'PUBLIC',
+      ownerId: { not: userId },
+      isArchived: false,
+      deletedAt: null,
+      OR: [
+        { title: { contains: searchQuery, mode: 'insensitive' } },
+        { fileName: { contains: searchQuery, mode: 'insensitive' } },
+        { description: { contains: searchQuery, mode: 'insensitive' } },
+        { mimeType: { contains: searchQuery, mode: 'insensitive' } },
+        { owner: { username: { contains: searchQuery, mode: 'insensitive' } } },
+        { owner: { walletAddress: { contains: searchQuery, mode: 'insensitive' } } }
+      ]
+    },
+    include: {
+      folder: true,
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      }
+    },
+    orderBy: [
+      { updatedAt: 'desc' },
+      { createdAt: 'desc' }
+    ],
+    take: safeLimit
+  });
+
+  return sanitizeDocuments(docs, userId);
+};
+
 export const getUserDocuments = async (userId: string, folderId: string | null) => {
   if (folderId) {
     await validateFolderAccess(folderId, userId);

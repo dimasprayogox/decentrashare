@@ -263,6 +263,10 @@ export interface GetDocumentDetailResponse extends StorageApiResponse {
   data: Document;
 }
 
+export interface SearchPublicDocumentsResponse extends StorageApiResponse {
+  data: Document[];
+}
+
 export interface DownloadResponse {
   success: boolean;
   fileName: string;

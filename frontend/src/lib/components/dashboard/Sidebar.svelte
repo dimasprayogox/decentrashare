@@ -155,7 +155,7 @@
               {active === 'shared' ? STYLES.active : STYLES.inactive}">
       {#if active === 'shared'}{@html Icons.ActiveDot()}{/if}
       {@html Icons.Shared(active === 'shared')}
-      <span class="transition-transform group-hover:translate-x-0.5">Dibagikan</span>
+      <span class="transition-transform group-hover:translate-x-0.5">Shared With Me</span>
     </a>
 
     <!-- Trash -->

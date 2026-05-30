@@ -12,6 +12,37 @@ import { Readable } from 'node:stream';
  * Fetches document details with hybrid access validation
  */
 // ✅ Update handleGetDocumentDetail:
+export const handleSearchPublicDocuments = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const query = String(req.query.q || '').trim();
+    const limit = req.query.limit ? Number(req.query.limit) : 12;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (query.length < 2) {
+      return res.status(200).json({
+        success: true,
+        message: 'Type at least 2 characters to search public documents.',
+        data: []
+      });
+    }
+
+    const documents = await documentService.searchPublicDocuments(userId, query, limit);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Public documents retrieved successfully.',
+      data: documents
+    });
+  } catch (error: any) {
+    logger.error('Failed to search public documents', { error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to search public documents' });
+  }
+};
+
 export const handleGetDocumentDetail = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
