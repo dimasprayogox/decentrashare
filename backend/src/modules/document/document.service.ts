@@ -967,11 +967,25 @@ export const getUserDocuments = async (userId: string, folderId: string | null) 
     await validateFolderAccess(folderId, userId);
   }
 
+  const folder = folderId
+    ? await prisma.folder.findUnique({
+        where: { id: String(folderId) },
+        select: { ownerId: true }
+      })
+    : null;
+
   const docs = await prisma.document.findMany({
     where: {
       folderId: folderId ? String(folderId) : null,
       isArchived: false,
-      ...(folderId ? {} : { ownerId: userId })
+      OR: folderId
+        ? [
+            { ownerId: userId },
+            { sharedWith: { some: { userId } } },
+            ...(folder?.ownerId === userId ? [{ folder: { ownerId: userId } }] : []),
+            { privacy: { in: ['PUBLIC', 'LINK_ONLY'] } }
+          ]
+        : [{ ownerId: userId }]
     },
     include: {
       folder: true,

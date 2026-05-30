@@ -652,7 +652,8 @@ export const getUserFolders = async (userId: string, parentId: string | null = n
       isArchived: false,
       OR: [
         { ownerId: userId },
-        { sharedWith: { some: { userId } } }
+        { sharedWith: { some: { userId } } },
+        { parent: { ownerId: userId } }
       ]
     },
     include: {
@@ -995,7 +996,7 @@ export const updateFoldersPrivacy = async (
       });
 
       const updatedDocuments = await tx.document.findMany({
-        where: { folderId: { in: subtreeFolderIds }, ownerId },
+        where: { folderId: { in: subtreeFolderIds } },
         select: { id: true }
       });
 
