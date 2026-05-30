@@ -3,7 +3,7 @@ import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { prepareFolderArchive, sanitizeDocuments } from '../document/document.service';
 import crypto from 'node:crypto';
-import { AccessRoleFolder } from '@prisma/client'; // Kuncinya di sini agar tidak undefined
+import { AccessRoleFolder, PrivacyLevel } from '@prisma/client'; // Kuncinya di sini agar tidak undefined
 
 /** * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN (Sesuai kode kamu)
  */
@@ -334,19 +334,165 @@ async function getAllDescendantFolderIds(
       },
       select: { id: true }
     });
-    
+
     const childIds = children.map((c: any) => c.id);
     const newIds = childIds.filter((id: string) => !allIds.has(id));
-    
+
     if (newIds.length === 0) break; // No more descendants
-    
+
     // Add new IDs to set and continue to next level
     newIds.forEach((id: string) => allIds.add(id));
     currentLevelIds = childIds;
   }
-  
+
   return Array.from(allIds);
 }
+
+const getUniqueRootFolderName = async (tx: any, ownerId: string, desiredName: string) => {
+  let candidate = desiredName;
+  let counter = 1;
+
+  while (await tx.folder.findFirst({
+    where: {
+      ownerId,
+      parentId: null,
+      isArchived: false,
+      deletedAt: null,
+      name: { equals: candidate, mode: 'insensitive' }
+    },
+    select: { id: true }
+  })) {
+    candidate = `${desiredName} (${counter})`;
+    counter += 1;
+  }
+
+  return candidate;
+};
+
+const getUniqueRootDocumentTitle = async (tx: any, ownerId: string, desiredTitle: string) => {
+  let candidate = desiredTitle;
+  let counter = 1;
+
+  while (await tx.document.findFirst({
+    where: {
+      ownerId,
+      folderId: null,
+      isArchived: false,
+      deletedAt: null,
+      title: { equals: candidate, mode: 'insensitive' }
+    },
+    select: { id: true }
+  })) {
+    candidate = `${desiredTitle} (${counter})`;
+    counter += 1;
+  }
+
+  return candidate;
+};
+
+const relocateOwnedContentFromSharedSubtree = async (
+  tx: any,
+  params: { subtreeFolderIds: string[]; rootOwnerId: string; onlyOwnerId?: string }
+) => {
+  const { subtreeFolderIds, rootOwnerId, onlyOwnerId } = params;
+  const ownerFilter = onlyOwnerId ? { ownerId: onlyOwnerId } : { ownerId: { not: rootOwnerId } };
+
+  const foldersToMove = await tx.folder.findMany({
+    where: {
+      id: { in: subtreeFolderIds },
+      isArchived: false,
+      ...ownerFilter
+    },
+    select: { id: true, name: true, ownerId: true, parentId: true }
+  });
+
+  const movedFolderSourceIds = new Set(foldersToMove.map((folder: any) => folder.id));
+  const topLevelFolders = foldersToMove.filter((folder: any) => !folder.parentId || !movedFolderSourceIds.has(folder.parentId));
+  const movedFolderIds: string[] = [];
+
+  for (const folder of topLevelFolders) {
+    const newName = await getUniqueRootFolderName(tx, folder.ownerId, folder.name);
+    await tx.folder.update({
+      where: { id: folder.id },
+      data: {
+        parentId: null,
+        name: newName,
+        privacy: 'PRIVATE',
+        shareToken: null
+      }
+    });
+
+    const movedSubtreeIds = await getAllDescendantFolderIds(tx, [folder.id]);
+    movedFolderIds.push(...movedSubtreeIds);
+
+    await tx.folder.updateMany({
+      where: { id: { in: movedSubtreeIds } },
+      data: { privacy: 'PRIVATE', shareToken: null }
+    });
+
+    await tx.document.updateMany({
+      where: { folderId: { in: movedSubtreeIds }, isArchived: false },
+      data: { privacy: 'PRIVATE' }
+    });
+  }
+
+  const movedFolderSet = new Set(movedFolderIds);
+  const documentsToMove = await tx.document.findMany({
+    where: {
+      folderId: { in: subtreeFolderIds.filter(folderId => !movedFolderSet.has(folderId)) },
+      isArchived: false,
+      ...ownerFilter
+    },
+    select: { id: true, title: true, ownerId: true }
+  });
+
+  for (const document of documentsToMove) {
+    const newTitle = await getUniqueRootDocumentTitle(tx, document.ownerId, document.title);
+    await tx.document.update({
+      where: { id: document.id },
+      data: {
+        folderId: null,
+        title: newTitle,
+        privacy: 'PRIVATE'
+      }
+    });
+  }
+
+  const movedDocumentIds = documentsToMove.map((document: any) => document.id);
+  const documentsInsideMovedFolders = movedFolderIds.length > 0
+    ? await tx.document.findMany({
+        where: { folderId: { in: movedFolderIds }, isArchived: false },
+        select: { id: true }
+      })
+    : [];
+  const allMovedDocumentIds = [
+    ...movedDocumentIds,
+    ...documentsInsideMovedFolders.map((document: any) => document.id)
+  ];
+
+  if (movedFolderIds.length > 0) {
+    await tx.folderAccess.deleteMany({
+      where: {
+        folderId: { in: movedFolderIds },
+        userId: rootOwnerId
+      }
+    });
+  }
+
+  if (allMovedDocumentIds.length > 0) {
+    await tx.documentAccess.deleteMany({
+      where: {
+        documentId: { in: allMovedDocumentIds },
+        userId: rootOwnerId
+      }
+    });
+  }
+
+  return {
+    movedFolderCount: topLevelFolders.length,
+    movedDocumentCount: allMovedDocumentIds.length
+  };
+};
 
 export const getArchivedFolders = async (userId: string) => {
   return await prisma.folder.findMany({
@@ -696,6 +842,13 @@ export const shareFoldersFlexible = async (
       for (const target of item.targetUsers) {
         if (target.userId === ownerId) continue;
 
+        const existingAccess = await tx.folderAccess.findUnique({
+          where: {
+            folderId_userId: { folderId: item.folderId, userId: target.userId }
+          },
+          select: { role: true }
+        });
+
         for (const folderId of subtreeFolderIds) {
           await tx.folderAccess.upsert({
             where: {
@@ -723,7 +876,20 @@ export const shareFoldersFlexible = async (
           });
         }
 
-        folderResults.push({ userId: target.userId, role: target.role, status: 'granted' });
+        const relocation = existingAccess?.role === 'EDITOR' && target.role === 'VIEWER'
+          ? await relocateOwnedContentFromSharedSubtree(tx, {
+              subtreeFolderIds,
+              rootOwnerId: ownerId,
+              onlyOwnerId: target.userId
+            })
+          : { movedFolderCount: 0, movedDocumentCount: 0 };
+
+        folderResults.push({
+          userId: target.userId,
+          role: target.role,
+          status: 'granted',
+          ...relocation
+        });
       }
 
       await tx.folder.updateMany({
@@ -989,14 +1155,19 @@ export const updateFoldersPrivacy = async (
       }
 
       const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
+      const relocation = folder.privacy === 'SPECIFIC_USER' && item.newPrivacy !== 'SPECIFIC_USER'
+        ? await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: ownerId })
+        : { movedFolderCount: 0, movedDocumentCount: 0 };
+
+      const remainingSubtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
 
       const folderUpdate = await tx.folder.updateMany({
-        where: { id: { in: subtreeFolderIds }, ownerId },
+        where: { id: { in: remainingSubtreeFolderIds }, ownerId },
         data: { privacy: item.newPrivacy }
       });
 
       const updatedDocuments = await tx.document.findMany({
-        where: { folderId: { in: subtreeFolderIds } },
+        where: { folderId: { in: remainingSubtreeFolderIds }, ownerId },
         select: { id: true }
       });
 
@@ -1008,7 +1179,7 @@ export const updateFoldersPrivacy = async (
       let accessDeleted = 0;
       if (item.newPrivacy !== 'SPECIFIC_USER') {
         const deleted = await tx.folderAccess.deleteMany({
-          where: { folderId: { in: subtreeFolderIds } }
+          where: { folderId: { in: remainingSubtreeFolderIds } }
         });
         const deletedDocumentAccess = await tx.documentAccess.deleteMany({
           where: { documentId: { in: updatedDocuments.map(document => document.id) } }
@@ -1021,7 +1192,8 @@ export const updateFoldersPrivacy = async (
         status: folderUpdate.count > 0 ? 'updated' : 'failed',
         newPrivacy: item.newPrivacy,
         accessRevoked: accessDeleted,
-        cascadedFolders: subtreeFolderIds.length
+        cascadedFolders: remainingSubtreeFolderIds.length,
+        ...relocation
       });
     }
 

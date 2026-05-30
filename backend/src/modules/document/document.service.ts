@@ -734,7 +734,7 @@ if (existingFile) {
         });
 
         const inheritedDocumentAccess = Array.from(
-          new Set(folderAccessToInherit.map(access => access.userId).filter(accessUserId => accessUserId !== userId))
+          new Set([...folderAccessToInherit.map(access => access.userId), userId])
         );
 
         if (inheritedDocumentAccess.length > 0) {
@@ -1435,12 +1435,13 @@ export const revokeDocumentsAccess = async (
  * Mengambil daftar user yang memiliki akses ke banyak dokumen sekaligus (Hanya Pemilik)
  */
 export const getDocumentsSharedUsers = async (documentIds: string[], ownerId: string) => {
-  // 1. Ambil semua dokumen yang diminta dan pastikan Bos adalah pemiliknya
-// 1. Ambil semua dokumen yang ID-nya ada dalam array dan dimiliki oleh Bos
   const documents = await prisma.document.findMany({
     where: {
-      id: { in: documentIds }, // Menggunakan operator 'in' untuk mencari banyak ID
-      ownerId: ownerId
+      id: { in: documentIds },
+      OR: [
+        { ownerId },
+        { folder: { ownerId } }
+      ]
     },
     select: {
       id: true,
