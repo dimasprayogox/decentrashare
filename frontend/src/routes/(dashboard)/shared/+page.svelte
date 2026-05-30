@@ -39,12 +39,27 @@
   let moveError = $state('');
   let moveSuccess = $state('');
   let isMoveProcessing = $state(false);
+  let searchQuery = $state('');
+  let sortOption = $state<{ field: SortField; direction: SortDirection }>({
+    field: 'updatedAt',
+    direction: 'desc'
+  });
+
 
   const currentFolderRole = $derived(currentFolder ? folderRoles[currentFolder.id] : undefined);
   const canEditCurrentFolder = $derived(Boolean(currentFolder && currentFolderRole === 'EDITOR'));
   const canUploadToCurrentFolder = $derived(canEditCurrentFolder);
-  const sortedFolders = $derived(sortItems(folders, { field: 'updatedAt', direction: 'desc' }));
-  const sortedItems = $derived(sortItems(items, { field: 'updatedAt', direction: 'desc' }));
+  const normalizedSearchQuery = $derived(searchQuery.trim().toLowerCase());
+  const visibleFolders = $derived(normalizedSearchQuery
+    ? folders.filter(folder => folder.name.toLowerCase().includes(normalizedSearchQuery))
+    : folders
+  );
+  const visibleItems = $derived(normalizedSearchQuery
+    ? items.filter(item => [item.title, item.fileName, item.mimeType].some(value => value?.toLowerCase().includes(normalizedSearchQuery)))
+    : items
+  );
+  const sortedFolders = $derived(sortItems(visibleFolders, sortOption));
+  const sortedItems = $derived(sortItems(visibleItems, sortOption));
   const totalCount = $derived(folders.length + items.length);
   const visibleCount = $derived(sortedFolders.length + sortedItems.length);
   const selectedFolders = $derived(folders.filter(folder => selectedItems.includes(folder.id)));
@@ -210,7 +225,7 @@
     ];
 
     if (targets.length === 0) {
-      errorMessage = 'Pilih item dengan akses Editor untuk dipindahkan.';
+      errorMessage = 'Select items with Editor access to move.';
       return;
     }
 
@@ -381,20 +396,38 @@
     }
   }
 
-  onMount(async () => {
-    try {
-      const response = await storageService.getCurrentUser();
-      currentUserId = response.data?.id ?? null;
-    } catch {
-      currentUserId = null;
-    }
+  onMount(() => {
+    storageService.getCurrentUser()
+      .then(response => {
+        currentUserId = response.data?.id ?? null;
+      })
+      .catch(() => {
+        currentUserId = null;
+      });
 
-    await loadSharedItems();
+    const handleSearch = (event: Event) => {
+      const customEvent = event as CustomEvent<{ query?: string }>;
+      searchQuery = customEvent.detail?.query ?? '';
+    };
+    const handleSort = (event: Event) => {
+      const customEvent = event as CustomEvent<{ field?: SortField; direction?: SortDirection }>;
+      if (!customEvent.detail?.field || !customEvent.detail?.direction) return;
+      sortOption = { field: customEvent.detail.field, direction: customEvent.detail.direction };
+    };
+
+    window.addEventListener('decentrashare:search', handleSearch);
+    window.addEventListener('decentrashare:sort', handleSort);
+    void loadSharedItems();
+
+    return () => {
+      window.removeEventListener('decentrashare:search', handleSearch);
+      window.removeEventListener('decentrashare:sort', handleSort);
+    };
   });
 </script>
 
 <svelte:head>
-  <title>Dibagikan | DecentraShare</title>
+  <title>Shared | DecentraShare</title>
 </svelte:head>
 
 <main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto" in:fade>
@@ -413,11 +446,11 @@
           <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Shared with me</p>
         {/if}
         <div class="flex items-center gap-3">
-          <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">{currentFolder ? currentFolder.name : 'Dibagikan'}</h2>
+          <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">{currentFolder ? currentFolder.name : 'Shared'}</h2>
           <ViewSwitcher bind:viewMode />
         </div>
         <p class="mt-2 max-w-xl text-sm text-gray-400">
-          {currentFolder ? 'Isi folder yang dibagikan ke akun Anda.' : 'File dan folder yang dibagikan user lain ke akun Anda.'}
+          {currentFolder ? 'Contents of the folder shared with your account.' : 'Files and folders other users have shared with your account.'}
         </p>
       </div>
     </div>

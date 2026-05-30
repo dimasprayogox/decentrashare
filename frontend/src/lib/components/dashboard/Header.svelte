@@ -34,7 +34,7 @@
   // ✅ CORRECT: Extract path first, then derive pageTitle
   // Step 1: Derived path (normalize trailing slash)
   const currentPath = $derived(page.url.pathname.replace(/\/$/, '') || '/dashboard');
-  const showSortControl = $derived(currentPath.startsWith('/storage') || currentPath.startsWith('/trash'));
+  const showSortControl = $derived(currentPath.startsWith('/storage') || currentPath.startsWith('/shared') || currentPath.startsWith('/trash'));
   const modifiedDateField = $derived<SortField>(currentPath.startsWith('/trash') ? 'deletedAt' : 'updatedAt');
   const sortFields = $derived([
     { field: 'name' as const, label: 'Title' },

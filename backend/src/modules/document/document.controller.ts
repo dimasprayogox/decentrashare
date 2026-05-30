@@ -309,7 +309,7 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
       const firstError = results[0];
       httpStatus = firstError?.errorCode === 'FOLDER_WRITE_FORBIDDEN' ? 403 : 400;
       responseMessage = firstError?.errorCode === 'FOLDER_WRITE_FORBIDDEN'
-        ? firstError.error || 'You only have viewer access to this folder. Uploading documents is not allowed.'
+        ? firstError.error || 'You only have viewer access to this folder'
         : 'All uploads failed';
       isSuccess = false;
     } else if (summary.duplicate > 0 && summary.uploaded === 0) {

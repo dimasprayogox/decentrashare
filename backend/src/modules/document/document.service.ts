@@ -268,7 +268,7 @@ const validateFolderAccess = async (folderId: string, userId: string, requiredRo
       if (['EDITOR', 'ADMIN'].includes(access?.role || '')) return requestedFolder;
       if (access?.role === 'VIEWER') {
         throw createAccessError(
-          'You only have viewer access to this folder. Uploading documents or creating folders is not allowed.',
+          'You only have viewer access to this folder',
           403,
           'FOLDER_WRITE_FORBIDDEN'
         );

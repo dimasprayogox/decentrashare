@@ -31,7 +31,7 @@ export const createFolder = async (
     const canCreate = parentFolder?.ownerId === userId || ['EDITOR', 'ADMIN'].includes(parentAccess?.role || '');
     if (!parentFolder) throw new Error('Parent folder not found.');
     if (!canCreate) {
-      const error: any = new Error('You only have viewer access to this folder. Uploading documents or creating folders is not allowed.');
+      const error: any = new Error('You only have viewer access to this folder');
       error.status = 403;
       error.errorCode = 'FOLDER_WRITE_FORBIDDEN';
       throw error;
