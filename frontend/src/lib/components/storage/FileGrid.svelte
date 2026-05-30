@@ -655,7 +655,7 @@ $effect(() => {
 
       {#if !selectionMode}
         <div class="absolute top-2 right-2 z-30 {isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-200" data-item-menu onclick={(e) => e.stopPropagation()}>
-          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={true} onRename={onRename} onShare={onShare} onMove={onMove} onRestore={onRestore} trashMode={trashMode} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={onDownload} />
+          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={currentUserId === folder.ownerId} onRename={onRename} onShare={onShare} onMove={onMove} onRestore={onRestore} trashMode={trashMode} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={onDownload} />
         </div>
       {/if}
     </div>
@@ -758,7 +758,7 @@ $effect(() => {
             itemType="document"
             itemName={item.title}
             itemDescription={item.description}
-            isOwner={true}
+            isOwner={currentUserId === item.ownerId}
             onRename={onRename}
             onEdit={(id, title, description) => {
               if (import.meta.env.DEV) console.log('🎯 Grid ItemMenu onEdit:', { id, title });

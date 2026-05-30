@@ -406,9 +406,79 @@ const relocateOwnedContentFromSharedSubtree = async (
     select: { id: true, name: true, ownerId: true, parentId: true }
   });
 
+  const allSubtreeFolders: Array<{ id: string; parentId: string | null; ownerId: string }> = await tx.folder.findMany({
+    where: { id: { in: subtreeFolderIds }, isArchived: false },
+    select: { id: true, parentId: true, ownerId: true }
+  });
+  const folderById = new Map<string, { id: string; parentId: string | null; ownerId: string }>(
+    allSubtreeFolders.map(folder => [folder.id, folder])
+  );
   const movedFolderSourceIds = new Set(foldersToMove.map((folder: any) => folder.id));
   const topLevelFolders = foldersToMove.filter((folder: any) => !folder.parentId || !movedFolderSourceIds.has(folder.parentId));
+  const topLevelFolderIds = new Set(topLevelFolders.map((folder: any) => folder.id));
   const movedFolderIds: string[] = [];
+
+  const findNearestRootOwnerParentId = (folderId: string | null) => {
+    let currentFolderId = folderId;
+    while (currentFolderId) {
+      const folder = folderById.get(currentFolderId);
+      if (!folder) return null;
+      if (folder.ownerId === rootOwnerId && !movedFolderSourceIds.has(folder.id)) return folder.id;
+      currentFolderId = folder.parentId;
+    }
+    return null;
+  };
+
+  const rootOwnerFoldersToRescue = await tx.folder.findMany({
+    where: {
+      id: { in: subtreeFolderIds },
+      ownerId: rootOwnerId,
+      isArchived: false
+    },
+    select: { id: true, name: true, parentId: true }
+  });
+
+  for (const folder of rootOwnerFoldersToRescue) {
+    if (!folder.parentId || !movedFolderSourceIds.has(folder.parentId)) continue;
+    if (!topLevelFolderIds.has(folder.id) && movedFolderSourceIds.has(folder.id)) continue;
+
+    const newParentId = findNearestRootOwnerParentId(folder.parentId);
+    const newName = newParentId
+      ? folder.name
+      : await getUniqueRootFolderName(tx, rootOwnerId, folder.name);
+
+    await tx.folder.update({
+      where: { id: folder.id },
+      data: {
+        parentId: newParentId,
+        name: newName
+      }
+    });
+  }
+
+  const rootOwnerDocumentsToRescue = await tx.document.findMany({
+    where: {
+      folderId: { in: Array.from(movedFolderSourceIds) },
+      ownerId: rootOwnerId,
+      isArchived: false
+    },
+    select: { id: true, title: true, folderId: true }
+  });
+
+  for (const document of rootOwnerDocumentsToRescue) {
+    const newFolderId = findNearestRootOwnerParentId(document.folderId);
+    const newTitle = newFolderId
+      ? document.title
+      : await getUniqueRootDocumentTitle(tx, rootOwnerId, document.title);
+
+    await tx.document.update({
+      where: { id: document.id },
+      data: {
+        folderId: newFolderId,
+        title: newTitle
+      }
+    });
+  }
 
   for (const folder of topLevelFolders) {
     const newName = await getUniqueRootFolderName(tx, folder.ownerId, folder.name);

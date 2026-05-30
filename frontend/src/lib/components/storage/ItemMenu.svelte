@@ -318,53 +318,57 @@ function updateMenuPosition() {
         </button>
       {/if}
 
-      <button
-        onclick={handleRestore}
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-green-400 hover:bg-green-500/10 active:bg-green-500/20 hover:text-green-300 transition-colors min-h-[44px]"
-        role="menuitem"
-      >
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a4 4 0 010 8H7m-4-8l4-4m-4 4l4 4"/>
-        </svg>
-        <span class="truncate">Restore</span>
-      </button>
+      {#if isOwner}
+        <button
+          onclick={handleRestore}
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-green-400 hover:bg-green-500/10 active:bg-green-500/20 hover:text-green-300 transition-colors min-h-[44px]"
+          role="menuitem"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a4 4 0 010 8H7m-4-8l4-4m-4 4l4 4"/>
+          </svg>
+          <span class="truncate">Restore</span>
+        </button>
 
-      <div class="my-1 h-px bg-white/10"></div>
+        <div class="my-1 h-px bg-white/10"></div>
 
-      <button
-        onclick={handleDelete}
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-300 transition-colors min-h-[44px]"
-        role="menuitem"
-      >
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-        </svg>
-        <span class="truncate">Delete Permanently</span>
-      </button>
+        <button
+          onclick={handleDelete}
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-300 transition-colors min-h-[44px]"
+          role="menuitem"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          <span class="truncate">Delete Permanently</span>
+        </button>
+      {/if}
     {:else}
     <!-- ✅ CONDITIONAL: Folder → Rename, Document → Edit -->
-    {#if itemType === 'folder'}
-      <button 
-        onclick={handleRename} 
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]" 
-        role="menuitem"
-      >
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-        </svg>
-        <span class="truncate">Rename</span>
-      </button>
-    {:else if itemType === 'document'}
-      <button 
-        onclick={handleEdit} 
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]" 
-        role="menuitem"
-      >
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-        </svg>
-        <span class="truncate">Edit</span>
-      </button>
+    {#if isOwner}
+      {#if itemType === 'folder'}
+        <button
+          onclick={handleRename}
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+          role="menuitem"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+          </svg>
+          <span class="truncate">Rename</span>
+        </button>
+      {:else if itemType === 'document'}
+        <button
+          onclick={handleEdit}
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+          role="menuitem"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          <span class="truncate">Edit</span>
+        </button>
+      {/if}
     {/if}
 
     <!-- Move to... (NEW) -->
@@ -409,20 +413,22 @@ function updateMenuPosition() {
       </button>
     {/if}
 
-    <!-- Divider -->
-    <div class="my-1 h-px bg-white/10"></div>
+    {#if isOwner}
+      <!-- Divider -->
+      <div class="my-1 h-px bg-white/10"></div>
 
-    <!-- Delete (Danger) -->
-    <button 
-      onclick={handleDelete} 
-      class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-300 transition-colors min-h-[44px]" 
-      role="menuitem"
-    >
-      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-      </svg>
-      <span class="truncate">Move to Trash</span>
-    </button>
+      <!-- Delete (Danger) -->
+      <button
+        onclick={handleDelete}
+        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-300 transition-colors min-h-[44px]"
+        role="menuitem"
+      >
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        <span class="truncate">Move to Trash</span>
+      </button>
+    {/if}
     {/if}
   </div>
 {/if}

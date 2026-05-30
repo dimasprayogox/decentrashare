@@ -893,7 +893,7 @@ async function handleConfirmBlockchain(item: Document) {
                     itemId={folder.id}
                     itemType="folder"
                     itemName={folder.name}
-                    isOwner={true}
+                    isOwner={currentUserId === folder.ownerId}
                     onRename={onRename}
                     onShare={onShare}
                     onMove={onMove}
@@ -1212,7 +1212,7 @@ async function handleConfirmBlockchain(item: Document) {
                 itemType="document"
                 itemName={item.title}
                 itemDescription={item.description}
-                isOwner={true}
+                isOwner={currentUserId === item.ownerId}
                 onRename={onRename}
                 onEdit={(id, title, description) => openEditModal({ id, title, description })}
                 onShare={onShare}
