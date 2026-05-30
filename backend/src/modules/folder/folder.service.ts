@@ -994,8 +994,13 @@ export const updateFoldersPrivacy = async (
         data: { privacy: item.newPrivacy }
       });
 
-      await tx.document.updateMany({
+      const updatedDocuments = await tx.document.findMany({
         where: { folderId: { in: subtreeFolderIds }, ownerId },
+        select: { id: true }
+      });
+
+      await tx.document.updateMany({
+        where: { id: { in: updatedDocuments.map(document => document.id) } },
         data: { privacy: item.newPrivacy }
       });
 
@@ -1004,7 +1009,10 @@ export const updateFoldersPrivacy = async (
         const deleted = await tx.folderAccess.deleteMany({
           where: { folderId: { in: subtreeFolderIds } }
         });
-        accessDeleted = deleted.count;
+        const deletedDocumentAccess = await tx.documentAccess.deleteMany({
+          where: { documentId: { in: updatedDocuments.map(document => document.id) } }
+        });
+        accessDeleted = deleted.count + deletedDocumentAccess.count;
       }
 
       results.push({

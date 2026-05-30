@@ -599,9 +599,15 @@ export const uploadMultipleFiles = async (
 
   // ── 1. SECURITY CHECK: Verify folder ownership or editor access ──────────────────────
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
+  let folderAccessToInherit: { userId: string }[] = [];
   if (folderId) {
     const folder = await validateFolderAccess(folderId, userId, 'EDITOR');
     targetPrivacy = folder.privacy;
+    folderAccessToInherit = await prisma.folderAccess.findMany({
+      where: { folderId },
+      select: { userId: true }
+    });
+    if (folder.ownerId !== userId) folderAccessToInherit.push({ userId: folder.ownerId });
   }
 
   // ── Main upload loop ───────────────────────────────────────────────
@@ -726,6 +732,20 @@ if (existingFile) {
             privacy: targetPrivacy,
           },
         });
+
+        const inheritedDocumentAccess = Array.from(
+          new Set(folderAccessToInherit.map(access => access.userId).filter(accessUserId => accessUserId !== userId))
+        );
+
+        if (inheritedDocumentAccess.length > 0) {
+          await tx.documentAccess.createMany({
+            data: inheritedDocumentAccess.map(accessUserId => ({
+              documentId: doc.id,
+              userId: accessUserId
+            })),
+            skipDuplicates: true
+          });
+        }
 
         await tx.activityLog.create({
           data: {
