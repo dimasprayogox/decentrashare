@@ -271,6 +271,15 @@ export interface SearchPublicFoldersResponse extends StorageApiResponse {
   data: Folder[];
 }
 
+export interface GetPublicFolderContentsResponse extends StorageApiResponse {
+  data: {
+    folders: Folder[];
+    documents: Document[];
+    currentFolder: { id: string; name: string; parentId: string | null };
+    breadcrumbs: Array<{ id: string; name: string }>;
+  };
+}
+
 export interface DownloadResponse {
   success: boolean;
   fileName: string;

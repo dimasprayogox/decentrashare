@@ -309,6 +309,110 @@ export const searchPublicFolders = async (userId: string, query: string, limit =
   });
 };
 
+export const getPublicFolderContents = async (folderId: string, userId: string) => {
+  const folder = await prisma.folder.findUnique({
+    where: { id: folderId },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      }
+    }
+  });
+
+  if (!folder || folder.isArchived || folder.deletedAt) {
+    throw new Error('Folder not found.');
+  }
+
+  if (folder.privacy !== 'PUBLIC') {
+    throw new Error('Folder is not publicly accessible.');
+  }
+
+  const [childFolders, documents, breadcrumbs] = await Promise.all([
+    prisma.folder.findMany({
+      where: {
+        parentId: folderId,
+        privacy: 'PUBLIC',
+        ownerId: { not: userId },
+        isArchived: false,
+        deletedAt: null
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            walletAddress: true,
+            avatarUrl: true
+          }
+        },
+        _count: { select: { documents: true } }
+      },
+      orderBy: [
+        { updatedAt: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    }),
+    prisma.document.findMany({
+      where: {
+        folderId,
+        privacy: 'PUBLIC',
+        ownerId: { not: userId },
+        isArchived: false,
+        deletedAt: null
+      },
+      include: {
+        folder: true,
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            walletAddress: true,
+            avatarUrl: true
+          }
+        }
+      },
+      orderBy: [
+        { updatedAt: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    }),
+    getPublicFolderBreadcrumbs(folderId)
+  ]);
+
+  return {
+    folders: childFolders,
+    documents: sanitizeDocuments(documents, userId),
+    currentFolder: { id: folder.id, name: folder.name, parentId: folder.parentId },
+    breadcrumbs
+  };
+};
+
+async function getPublicFolderBreadcrumbs(folderId: string) {
+  const path: Array<{ id: string; name: string }> = [];
+  let currentId: string | null = folderId;
+
+  while (currentId) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: currentId },
+      select: { id: true, name: true, parentId: true, privacy: true, isArchived: true, deletedAt: true }
+    });
+
+    if (!folder || folder.privacy !== 'PUBLIC' || folder.isArchived || folder.deletedAt) break;
+    path.unshift({ id: folder.id, name: folder.name });
+    currentId = folder.parentId;
+  }
+
+  return path;
+}
+
 export const getFolderDetail = async (folderId: string, userId: string) => {
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },

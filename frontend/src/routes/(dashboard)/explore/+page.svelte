@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { fade } from 'svelte/transition';
 
+  import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
   import FileTable from '$lib/components/storage/FileTable.svelte';
   import ViewSwitcher from '$lib/components/storage/ViewSwitcher.svelte';
@@ -14,7 +15,12 @@
   let query = $state('');
   let folders = $state<Folder[]>([]);
   let items = $state<Document[]>([]);
+  let browseFolders = $state<Folder[]>([]);
+  let browseItems = $state<Document[]>([]);
+  let breadcrumbs = $state<Array<{ id: string; name: string }>>([]);
+  let currentFolder = $state<{ id: string; name: string; parentId: string | null } | null>(null);
   let isSearching = $state(false);
+  let isFolderLoading = $state(false);
   let searchError = $state('');
   let viewMode = $state(2);
   let currentUser = $state<{ id: string; username: string; walletAddress: string } | null>(null);
@@ -28,8 +34,10 @@
 
   const publicFolders = $derived(folders.filter(folder => folder.privacy === 'PUBLIC' && folder.ownerId !== currentUser?.id));
   const publicItems = $derived(items.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id));
-  const sortedFolders = $derived(sortItems(publicFolders, sortOption));
-  const sortedItems = $derived(sortItems(publicItems, sortOption));
+  const activeFolders = $derived(currentFolder ? browseFolders : publicFolders);
+  const activeItems = $derived(currentFolder ? browseItems : publicItems);
+  const sortedFolders = $derived(sortItems(activeFolders, sortOption));
+  const sortedItems = $derived(sortItems(activeItems, sortOption));
   const resultCount = $derived(sortedFolders.length + sortedItems.length);
 
   function getFileTheme(mimeType: string) {
@@ -133,15 +141,51 @@
     }, 350);
   }
 
-  async function handleDownload(id: string) {
-    const item = items.find(document => document.id === id);
+  async function handleDownload(id: string, type: 'folder' | 'document' = 'document') {
+    if (type === 'folder') {
+      const folder = [...folders, ...browseFolders].find(item => item.id === id);
+      await storageService.downloadFolder(id, folder?.name);
+      return;
+    }
+
+    const item = [...items, ...browseItems].find(document => document.id === id);
     await storageService.downloadDocument(id, item?.title || item?.fileName);
+  }
+
+  async function openFolder(folder: { id: string } | null) {
+    if (!folder) {
+      currentFolder = null;
+      breadcrumbs = [];
+      browseFolders = [];
+      browseItems = [];
+      searchError = '';
+      return;
+    }
+
+    try {
+      isFolderLoading = true;
+      searchError = '';
+      const response = await storageService.getPublicFolderContents(folder.id);
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Gagal membuka folder publik.');
+      }
+
+      currentFolder = response.data.currentFolder;
+      breadcrumbs = response.data.breadcrumbs;
+      browseFolders = response.data.folders.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id);
+      browseItems = response.data.documents.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id);
+    } catch (error: unknown) {
+      searchError = error instanceof Error ? error.message : 'Gagal membuka folder publik.';
+    } finally {
+      isFolderLoading = false;
+    }
   }
 
   function noop() {}
   const isSelected = () => false;
 
   $effect(() => {
+    if (currentFolder) return;
     query;
     currentUser?.id;
     scheduleSearch();
@@ -205,13 +249,25 @@
         </button>
       </div>
       <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
-        <span>Minimal 2 karakter untuk mulai mencari.</span>
+        <span>{currentFolder ? `Browsing folder: ${currentFolder.name}` : 'Minimal 2 karakter untuk mulai mencari.'}</span>
         <span class="font-bold text-emerald-300">{resultCount} results · {sortedFolders.length} folders · {sortedItems.length} documents</span>
       </div>
     </div>
   </header>
 
-  {#if query.trim().length < 2}
+  {#if currentFolder}
+    <div class="mb-6 rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4" transition:fade>
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="min-w-0">
+          <Breadcrumbs {breadcrumbs} {currentFolder} navigateTo={openFolder} />
+          <p class="mt-2 text-xs text-gray-500">Menampilkan isi folder public. Hanya folder dan dokumen Public yang terlihat.</p>
+        </div>
+        <button onclick={() => openFolder(null)} class="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white hover:bg-white/10 transition-colors">Back to search results</button>
+      </div>
+    </div>
+  {/if}
+
+  {#if !currentFolder && query.trim().length < 2}
     <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]" transition:fade>
       <div class="w-14 h-14 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
         <svg class="w-7 h-7 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
@@ -219,10 +275,10 @@
       <p class="text-white font-bold">Ketik minimal 2 karakter untuk mencari folder dan dokumen public.</p>
       <p class="text-gray-500 text-sm mt-1">Hasil hanya menampilkan konten public milik orang lain.</p>
     </div>
-  {:else if isSearching}
+  {:else if isSearching || isFolderLoading}
     <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]" transition:fade>
       <div class="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p class="text-gray-400">Searching public folders and documents...</p>
+      <p class="text-gray-400">{isFolderLoading ? 'Loading public folder contents...' : 'Searching public folders and documents...'}</p>
     </div>
   {:else if searchError}
     <div class="py-20 text-center border border-red-500/20 rounded-[32px] bg-red-500/[0.03]" transition:fade>
@@ -235,11 +291,11 @@
         <FileGrid
           folders={sortedFolders}
           items={sortedItems}
-          openFolder={noop}
+          {openFolder}
           handleDeleteFolder={noop}
           handleDelete={noop}
           {getFileTheme}
-          onDownload={(id) => handleDownload(id)}
+          onDownload={handleDownload}
           selectedItems={[]}
           selectionMode={false}
           currentUserId={currentUser?.id}
@@ -253,11 +309,11 @@
           folders={sortedFolders}
           items={sortedItems}
           viewMode={2}
-          openFolder={noop}
+          {openFolder}
           handleDeleteFolder={noop}
           handleDelete={noop}
           {getFileTheme}
-          onDownload={(id) => handleDownload(id)}
+          onDownload={handleDownload}
           selectedItems={[]}
           selectionMode={false}
           currentUserId={currentUser?.id}

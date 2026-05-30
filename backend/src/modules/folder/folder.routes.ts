@@ -17,6 +17,7 @@ import {
   handleGetSharedWithMe,
   handleGetPublicFolder,
   handleSearchPublicFolders,
+  handleGetPublicFolderContents,
   handleUpdatePrivacy,
   handleMoveFolder,
   handleDownloadFolder
@@ -32,6 +33,7 @@ router.get("/open/:token", handleGetPublicFolder);
 router.use(authMiddleware);
 
 router.get("/public/search", handleSearchPublicFolders);
+router.get("/public/:id/contents", handleGetPublicFolderContents);
 
 router.post("/", handleCreateFolder);
 router.get("/", handleGetMyFolders);

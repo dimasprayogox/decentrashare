@@ -218,6 +218,36 @@ export const handleSearchPublicFolders = async (req: AuthRequest, res: Response)
   }
 };
 
+export const handleGetPublicFolderContents = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const contents = await folderService.getPublicFolderContents(id, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Public folder contents retrieved successfully.',
+      data: contents
+    });
+  } catch (error: any) {
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ success: false, message: 'Folder not found' });
+    }
+
+    if (error.message?.includes('not publicly accessible')) {
+      return res.status(403).json({ success: false, message: 'Folder is not publicly accessible' });
+    }
+
+    logger.error('Failed to get public folder contents', { error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to get public folder contents' });
+  }
+};
+
 export const handleGetFolderDetail = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
