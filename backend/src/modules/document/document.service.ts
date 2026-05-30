@@ -97,6 +97,10 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
     throw new Error("Document is in trash.");
   }
 
+  if (document.privacy === 'PRIVATE') {
+    throw new Error("Access denied. You do not have permission to view this document.");
+  }
+
   // 2. Folder Inheritance: Check if the containing folder or its ancestors grant access
   let hasFolderAccess = false;
   if (document.folderId) {

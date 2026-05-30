@@ -650,21 +650,10 @@ export const getUserFolders = async (userId: string, parentId: string | null = n
     where: {
       parentId: parentId,
       isArchived: false,
-      ...(parentId
-        ? {
-            OR: [
-              { ownerId: userId },
-              { sharedWith: { some: { userId } } },
-              { parent: { ownerId: userId } },
-              { parent: { sharedWith: { some: { userId } } } }
-            ]
-          }
-        : {
-            OR: [
-              { ownerId: userId },
-              { sharedWith: { some: { userId } } }
-            ]
-          })
+      OR: [
+        { ownerId: userId },
+        { sharedWith: { some: { userId } } }
+      ]
     },
     include: {
       owner: {
@@ -698,6 +687,11 @@ export const shareFoldersFlexible = async (
       const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
       const folderResults = [];
 
+      const subtreeDocuments = await tx.document.findMany({
+        where: { folderId: { in: subtreeFolderIds }, ownerId },
+        select: { id: true }
+      });
+
       for (const target of item.targetUsers) {
         if (target.userId === ownerId) continue;
 
@@ -711,6 +705,19 @@ export const shareFoldersFlexible = async (
               folderId,
               userId: target.userId,
               role: target.role
+            }
+          });
+        }
+
+        for (const document of subtreeDocuments) {
+          await tx.documentAccess.upsert({
+            where: {
+              documentId_userId: { documentId: document.id, userId: target.userId }
+            },
+            update: {},
+            create: {
+              documentId: document.id,
+              userId: target.userId
             }
           });
         }
@@ -789,6 +796,13 @@ export const revokeFoldersAccess = async (
       const deleteResult = await tx.folderAccess.deleteMany({
         where: {
           folderId: { in: subtreeFolderIds },
+          userId: { in: item.targetUserIds }
+        }
+      });
+
+      await tx.documentAccess.deleteMany({
+        where: {
+          document: { folderId: { in: subtreeFolderIds } },
           userId: { in: item.targetUserIds }
         }
       });
@@ -879,7 +893,7 @@ export const getSharedWithMeFolders = async (userId: string) => {
 
 
 export const getFolderContents = async (folderId: string, userId?: string, shareToken?: string) => {
-  const getSanitizedFiles = async () => sanitizeDocuments(await getFiles(folderId), userId);
+  const getSanitizedFiles = async () => sanitizeDocuments(await getFiles(folderId, userId), userId);
 
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },
@@ -923,9 +937,16 @@ export const getFolderContents = async (folderId: string, userId?: string, share
 };
 
 // Fungsi pembantu biar gak ngetik ulang
-const getFiles = async (folderId: string) => {
+const getFiles = async (folderId: string, userId?: string) => {
   return await prisma.document.findMany({
-    where: { folderId, isArchived: false },
+    where: {
+      folderId,
+      isArchived: false,
+      OR: [
+        { privacy: { not: 'PRIVATE' } },
+        ...(userId ? [{ ownerId: userId }, { sharedWith: { some: { userId } } }] : [])
+      ]
+    },
     include: {
       owner: {
         select: {

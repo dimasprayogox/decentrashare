@@ -14,7 +14,7 @@
     
     try {
       confirming = true;
-      statusMsg = "🔐 Preparing...";
+      statusMsg = "Preparing...";
       
       // 1. Minta data blockchain dari backend
       const response = await storageService.triggerBlockchainConfirmation(document.id);
@@ -23,12 +23,12 @@
         throw new Error(response.message || "Failed to prepare blockchain data");
       }
       
-      statusMsg = "🦊 Confirm in wallet...";
+      statusMsg = "Confirm in wallet...";
       
       // 2. Prompt MetaMask sign TX
       const txResult = await recordFileOnChain(response.data.blockchainData);
       
-      statusMsg = "⛓️ Updating status...";
+      statusMsg = "Updating status...";
       
       // 3. Notify backend bahwa TX confirmed
       await storageService.confirmDocumentOnChain(
@@ -37,20 +37,20 @@
         txResult.blockNumber
       );
       
-      statusMsg = "✅ On-chain!";
+      statusMsg = "On-chain!";
       onConfirmed?.(); // Refresh parent
       
     } catch (err: any) {
       console.error("Confirm blockchain failed:", err);
       
       if (err.message?.includes('expired')) {
-        statusMsg = "⏰ Expired";
+        statusMsg = "Expired";
       } else if (err.message === 'TRANSACTION_REJECTED') {
-        statusMsg = "❌ Cancelled";
+        statusMsg = "Cancelled";
       } else if (err.message?.includes('insufficient')) {
-        statusMsg = "💸 No ETH";
+        statusMsg = "No ETH";
       } else {
-        statusMsg = "⚠️ Error";
+        statusMsg = "Error";
       }
     } finally {
       confirming = false;
