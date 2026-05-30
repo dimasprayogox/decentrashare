@@ -1394,7 +1394,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     
     <div class="flex gap-3 w-full sm:w-auto">
       <!-- Select Mode Toggle -->
-     <button 
+     <button
   onclick={toggleSelectMode}
   class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center gap-2 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
   title={selectionMode ? 'Exit selection mode' : 'Select items'}

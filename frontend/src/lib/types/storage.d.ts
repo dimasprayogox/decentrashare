@@ -267,6 +267,10 @@ export interface SearchPublicDocumentsResponse extends StorageApiResponse {
   data: Document[];
 }
 
+export interface SearchPublicFoldersResponse extends StorageApiResponse {
+  data: Folder[];
+}
+
 export interface DownloadResponse {
   success: boolean;
   fileName: string;

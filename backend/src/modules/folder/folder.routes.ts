@@ -16,6 +16,7 @@ import {
   handleRevokeFolderAccess,
   handleGetSharedWithMe,
   handleGetPublicFolder,
+  handleSearchPublicFolders,
   handleUpdatePrivacy,
   handleMoveFolder,
   handleDownloadFolder
@@ -29,6 +30,8 @@ router.get("/open/:token", handleGetPublicFolder);
 
 // --- SEMUA RUTE DI BAWAH INI BUTUH LOGIN ---
 router.use(authMiddleware);
+
+router.get("/public/search", handleSearchPublicFolders);
 
 router.post("/", handleCreateFolder);
 router.get("/", handleGetMyFolders);

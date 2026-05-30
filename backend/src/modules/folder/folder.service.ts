@@ -271,6 +271,44 @@ export const downloadFolderArchive = async (folderId: string, userId: string) =>
   return prepareFolderArchive(folderId, userId);
 };
 
+export const searchPublicFolders = async (userId: string, query: string, limit = 12) => {
+  const searchQuery = query.trim();
+  const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 30);
+
+  if (searchQuery.length < 2) return [];
+
+  return prisma.folder.findMany({
+    where: {
+      privacy: 'PUBLIC',
+      ownerId: { not: userId },
+      isArchived: false,
+      deletedAt: null,
+      OR: [
+        { name: { contains: searchQuery, mode: 'insensitive' } },
+        { owner: { username: { contains: searchQuery, mode: 'insensitive' } } },
+        { owner: { walletAddress: { contains: searchQuery, mode: 'insensitive' } } }
+      ]
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          walletAddress: true,
+          avatarUrl: true
+        }
+      },
+      _count: { select: { documents: true } }
+    },
+    orderBy: [
+      { updatedAt: 'desc' },
+      { createdAt: 'desc' }
+    ],
+    take: safeLimit
+  });
+};
+
 export const getFolderDetail = async (folderId: string, userId: string) => {
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },

@@ -187,6 +187,37 @@ export const handleMoveFolder = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const handleSearchPublicFolders = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const query = String(req.query.q || '').trim();
+    const limit = req.query.limit ? Number(req.query.limit) : 12;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (query.length < 2) {
+      return res.status(200).json({
+        success: true,
+        message: 'Type at least 2 characters to search public folders.',
+        data: []
+      });
+    }
+
+    const folders = await folderService.searchPublicFolders(userId, query, limit);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Public folders retrieved successfully.',
+      data: folders
+    });
+  } catch (error: any) {
+    logger.error('Failed to search public folders', { error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to search public folders' });
+  }
+};
+
 export const handleGetFolderDetail = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

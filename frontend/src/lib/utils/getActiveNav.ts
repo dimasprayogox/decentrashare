@@ -14,7 +14,8 @@ export function getActiveNav(pathname: string): NavState {
   }
 
   // Main routes
-  if (path === '/storage') return { active: 'storage', subActive: '' };
+  if (path === '/explore') return { active: 'explore', subActive: '' };
+  if (path.startsWith('/storage')) return { active: 'storage', subActive: '' };
   if (path === '/shared') return { active: 'shared', subActive: '' };
   if (path === '/trash') return { active: 'trash', subActive: '' };
 

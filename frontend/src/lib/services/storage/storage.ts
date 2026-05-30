@@ -6,6 +6,7 @@ import type {
   GetDocumentsResponse,
   GetDocumentDetailResponse,
   SearchPublicDocumentsResponse,
+  SearchPublicFoldersResponse,
   UploadFilesResponse,
   MoveDocumentsResponse,
   MoveFolderResponse,
@@ -191,6 +192,12 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
 
   searchPublicDocuments: (query: string, limit: number = 12) => {
     return apiClient<SearchPublicDocumentsResponse>(`/documents/public/search${buildQueryString({ q: query, limit })}`, {
+      method: 'GET'
+    });
+  },
+
+  searchPublicFolders: (query: string, limit: number = 12) => {
+    return apiClient<SearchPublicFoldersResponse>(`/folders/public/search${buildQueryString({ q: query, limit })}`, {
       method: 'GET'
     });
   },

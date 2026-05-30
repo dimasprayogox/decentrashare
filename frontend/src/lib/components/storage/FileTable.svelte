@@ -27,7 +27,8 @@
     onToggleSelect,
     selectionMode = false,
     currentUserId,
-    onRefresh
+    onRefresh,
+    publicExploreMode = false
   }: {
     folders: Folder[];
     items: Document[];
@@ -48,6 +49,7 @@
     selectionMode?: boolean;
     currentUserId?: string;
     onRefresh?: () => Promise<void>;
+    publicExploreMode?: boolean;
   } = $props();
 
   // ─────────────────────────────────────────────────────────────
@@ -893,13 +895,13 @@ async function handleConfirmBlockchain(item: Document) {
                     itemId={folder.id}
                     itemType="folder"
                     itemName={folder.name}
-                    isOwner={currentUserId === folder.ownerId}
-                    onRename={onRename}
-                    onShare={onShare}
-                    onMove={onMove}
-                    onRestore={onRestore}
+                    isOwner={!publicExploreMode && currentUserId === folder.ownerId}
+                    onRename={publicExploreMode ? undefined : onRename}
+                    onShare={publicExploreMode ? undefined : onShare}
+                    onMove={publicExploreMode ? undefined : onMove}
+                    onRestore={publicExploreMode ? undefined : onRestore}
                     trashMode={trashMode}
-                    onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
+                    onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
                     onDownload={onDownload}
                   />
                 </div>
@@ -1148,7 +1150,7 @@ async function handleConfirmBlockchain(item: Document) {
     </a>
     
 
-  {:else if trashMode}
+  {:else if trashMode || publicExploreMode}
     <span class="text-xs text-gray-600">—</span>
   {:else if isPendingOnChain(item)}
     <div class="flex flex-col items-center gap-1">
@@ -1212,14 +1214,14 @@ async function handleConfirmBlockchain(item: Document) {
                 itemType="document"
                 itemName={item.title}
                 itemDescription={item.description}
-                isOwner={currentUserId === item.ownerId}
-                onRename={onRename}
-                onEdit={(id, title, description) => openEditModal({ id, title, description })}
-                onShare={onShare}
-                onMove={onMove}
-                onRestore={onRestore}
+                isOwner={!publicExploreMode && currentUserId === item.ownerId}
+                onRename={publicExploreMode ? undefined : onRename}
+                onEdit={publicExploreMode ? undefined : (id, title, description) => openEditModal({ id, title, description })}
+                onShare={publicExploreMode ? undefined : onShare}
+                onMove={publicExploreMode ? undefined : onMove}
+                onRestore={publicExploreMode ? undefined : onRestore}
                 trashMode={trashMode}
-                onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
+                onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
                 onDownload={onDownload}
               />
             </div>

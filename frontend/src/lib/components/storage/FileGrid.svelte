@@ -29,7 +29,8 @@
     onToggleSelect,
     selectionMode = false,
     currentUserId,
-    onRefresh
+    onRefresh,
+    publicExploreMode = false
   }: {
     folders: Folder[];
     items: Document[];
@@ -50,6 +51,7 @@
     selectionMode?: boolean;
     currentUserId?: string;
     onRefresh?: () => Promise<void>;
+    publicExploreMode?: boolean;
   } = $props();
 
   // 🔥 DEBUG PROPS - Tempel di sini
@@ -655,7 +657,7 @@ $effect(() => {
 
       {#if !selectionMode}
         <div class="absolute top-2 right-2 z-30 {isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-200" data-item-menu onclick={(e) => e.stopPropagation()}>
-          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={currentUserId === folder.ownerId} onRename={onRename} onShare={onShare} onMove={onMove} onRestore={onRestore} trashMode={trashMode} onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={onDownload} />
+          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={!publicExploreMode && currentUserId === folder.ownerId} onRename={publicExploreMode ? undefined : onRename} onShare={publicExploreMode ? undefined : onShare} onMove={publicExploreMode ? undefined : onMove} onRestore={publicExploreMode ? undefined : onRestore} trashMode={trashMode} onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={onDownload} />
         </div>
       {/if}
     </div>
@@ -758,17 +760,17 @@ $effect(() => {
             itemType="document"
             itemName={item.title}
             itemDescription={item.description}
-            isOwner={currentUserId === item.ownerId}
-            onRename={onRename}
-            onEdit={(id, title, description) => {
+            isOwner={!publicExploreMode && currentUserId === item.ownerId}
+            onRename={publicExploreMode ? undefined : onRename}
+            onEdit={publicExploreMode ? undefined : (id, title, description) => {
               if (import.meta.env.DEV) console.log('🎯 Grid ItemMenu onEdit:', { id, title });
               openEditModal({ id, title, description });
             }}
-            onShare={onShare}
-            onMove={onMove}
-            onRestore={onRestore}
+            onShare={publicExploreMode ? undefined : onShare}
+            onMove={publicExploreMode ? undefined : onMove}
+            onRestore={publicExploreMode ? undefined : onRestore}
             trashMode={trashMode}
-            onDelete={(id, type, name) => onDeleteConfirm?.(id, type, name)}
+            onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
             onDownload={onDownload}
           />
         </div>
