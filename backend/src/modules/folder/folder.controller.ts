@@ -26,13 +26,21 @@ export const handleCreateFolder = async (req: AuthRequest, res: Response, next: 
     
   } catch (error: any) {
     if (error.message?.toLowerCase().includes('already exists')) {
-      return res.status(409).json({ 
+      return res.status(409).json({
         success: false,
         message: error.message,
-        errorCode: 'FOLDER_EXISTS' 
+        errorCode: 'FOLDER_EXISTS'
       });
     }
-    
+
+    if (error.errorCode === 'FOLDER_WRITE_FORBIDDEN' || error.status === 403) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+        errorCode: error.errorCode || 'FOLDER_WRITE_FORBIDDEN'
+      });
+    }
+
     next(error);
   }
 };

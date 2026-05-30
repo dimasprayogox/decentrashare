@@ -27,8 +27,15 @@ export const createFolder = async (
       where: { id: parentId },
       include: { sharedWith: true }
     });
-    const canCreate = parentFolder?.ownerId === userId || parentFolder?.sharedWith.some(access => access.userId === userId && access.role === 'EDITOR');
-    if (!parentFolder || !canCreate) throw new Error('Parent folder not found or unauthorized.');
+    const parentAccess = parentFolder?.sharedWith.find(access => access.userId === userId);
+    const canCreate = parentFolder?.ownerId === userId || ['EDITOR', 'ADMIN'].includes(parentAccess?.role || '');
+    if (!parentFolder) throw new Error('Parent folder not found.');
+    if (!canCreate) {
+      const error: any = new Error('You only have viewer access to this folder. Uploading documents or creating folders is not allowed.');
+      error.status = 403;
+      error.errorCode = 'FOLDER_WRITE_FORBIDDEN';
+      throw error;
+    }
     parentOwnerId = parentFolder.ownerId;
   }
 

@@ -306,8 +306,11 @@ export const handleUpload = async (req: AuthRequest, res: Response, next: NextFu
 
     if (summary.error === results.length) {
       // ❌ Semua gagal
-      httpStatus = 400;
-      responseMessage = 'All uploads failed';
+      const firstError = results[0];
+      httpStatus = firstError?.errorCode === 'FOLDER_WRITE_FORBIDDEN' ? 403 : 400;
+      responseMessage = firstError?.errorCode === 'FOLDER_WRITE_FORBIDDEN'
+        ? firstError.error || 'You only have viewer access to this folder. Uploading documents is not allowed.'
+        : 'All uploads failed';
       isSuccess = false;
     } else if (summary.duplicate > 0 && summary.uploaded === 0) {
       // ⚠️ Semua duplicate (bukan error, tapi info)

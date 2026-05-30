@@ -233,6 +233,13 @@ const ensureUniqueArchivePath = (filePath: string, usedPaths: Set<string>) => {
 };
 
 const validateFolderAccess = async (folderId: string, userId: string, requiredRole?: 'EDITOR') => {
+  const createAccessError = (message: string, status = 403, errorCode = 'FOLDER_ACCESS_DENIED') => {
+    const error: any = new Error(message);
+    error.status = status;
+    error.errorCode = errorCode;
+    return error;
+  };
+
   let currentFolderId: string | null = folderId;
   let requestedFolder: any = null;
 
@@ -243,13 +250,13 @@ const validateFolderAccess = async (folderId: string, userId: string, requiredRo
     });
 
     if (!folder) {
-      throw new Error('Folder not found.');
+      throw createAccessError('Folder not found.', 404, 'FOLDER_NOT_FOUND');
     }
 
     if (!requestedFolder) requestedFolder = folder;
 
     if (folder.isArchived) {
-      throw new Error('Folder is in trash.');
+      throw createAccessError('Folder is in trash.', 410, 'FOLDER_ARCHIVED');
     }
 
     if (folder.ownerId === userId) {
@@ -258,7 +265,14 @@ const validateFolderAccess = async (folderId: string, userId: string, requiredRo
 
     const access = folder.sharedWith.find((access: any) => access.userId === userId);
     if (requiredRole === 'EDITOR') {
-      if (access?.role === 'EDITOR') return requestedFolder;
+      if (['EDITOR', 'ADMIN'].includes(access?.role || '')) return requestedFolder;
+      if (access?.role === 'VIEWER') {
+        throw createAccessError(
+          'You only have viewer access to this folder. Uploading documents or creating folders is not allowed.',
+          403,
+          'FOLDER_WRITE_FORBIDDEN'
+        );
+      }
     } else if (access || folder.privacy === 'PUBLIC') {
       return requestedFolder;
     }
@@ -266,7 +280,7 @@ const validateFolderAccess = async (folderId: string, userId: string, requiredRo
     currentFolderId = folder.parentId;
   }
 
-  throw new Error('Access denied. You do not have permission to view this folder.');
+  throw createAccessError('Access denied. You do not have permission to view this folder.');
 };
 
 const getDescendantFolders = async (rootFolderIds: string[]) => {
@@ -597,17 +611,44 @@ export const uploadMultipleFiles = async (
     logger.debug(`[Pinata] No personal group found for user, uploads will be ungrouped`, { userId });
   }
 
-  // ── 1. SECURITY CHECK: Verify folder ownership or editor access ──────────────────────
+  // ── 1. SECURITY CHECK: Verify folder ownership or editor/admin access ──────────────────────
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
   let folderAccessToInherit: { userId: string }[] = [];
-  if (folderId) {
-    const folder = await validateFolderAccess(folderId, userId, 'EDITOR');
-    targetPrivacy = folder.privacy;
-    folderAccessToInherit = await prisma.folderAccess.findMany({
-      where: { folderId },
-      select: { userId: true }
+  try {
+    if (folderId) {
+      const folder = await validateFolderAccess(folderId, userId, 'EDITOR');
+      targetPrivacy = folder.privacy;
+      folderAccessToInherit = await prisma.folderAccess.findMany({
+        where: { folderId },
+        select: { userId: true }
+      });
+      if (folder.ownerId !== userId) folderAccessToInherit.push({ userId: folder.ownerId });
+    }
+  } catch (error: any) {
+    files.forEach(file => {
+      results.push({
+        success: false,
+        fileName: file.originalname,
+        status: 'error',
+        error: error.message,
+        errorCode: error.errorCode || 'FOLDER_WRITE_FORBIDDEN'
+      });
+      if (fs.existsSync(file.path)) {
+        try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+      }
     });
-    if (folder.ownerId !== userId) folderAccessToInherit.push({ userId: folder.ownerId });
+
+    return {
+      results,
+      summary: {
+        total: results.length,
+        uploaded: 0,
+        duplicate: 0,
+        error: results.length
+      },
+      blockchainPayload: [],
+      folderId
+    };
   }
 
   // ── Main upload loop ───────────────────────────────────────────────
@@ -788,9 +829,10 @@ if (existingFile) {
         errorCode: error.errorCode
       });
       
-      results.push({ 
-        success: false, 
-        fileName: file.originalname, 
+      results.push({
+        success: false,
+        fileName: file.originalname,
+        status: 'error',
         error: error.message,
         errorCode: error.errorCode
       });
