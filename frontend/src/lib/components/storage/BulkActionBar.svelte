@@ -17,6 +17,7 @@
     deleteTitle = 'Move selected items to trash',
     onCancel,
     isProcessing = false,  // ✅ Loading state
+    isDownloading = false,
     isConfirmingBlockchain = false,
     canConfirmBlockchain = false,
     confirmBlockchainCount = 0
@@ -33,6 +34,7 @@
     deleteTitle?: string;
     onCancel?: () => void;
     isProcessing?: boolean;
+    isDownloading?: boolean;
     isConfirmingBlockchain?: boolean;
     canConfirmBlockchain?: boolean;
     confirmBlockchainCount?: number;
@@ -91,10 +93,18 @@
       class="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       title="Download selected items"
     >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-      </svg>
-      <span class="hidden sm:inline">Download</span>
+      {#if isDownloading}
+        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        <span class="hidden sm:inline">Downloading...</span>
+      {:else}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        <span class="hidden sm:inline">Download</span>
+      {/if}
     </button>
 
     {#if canConfirmBlockchain || isConfirmingBlockchain}

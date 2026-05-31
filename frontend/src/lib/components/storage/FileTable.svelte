@@ -1019,11 +1019,6 @@ async function handleConfirmBlockchain(item: Document) {
                   >
                     {item.title}
                   </p>
-                  {#if item.accessRole}
-                    <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {item.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : item.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
-                      {item.accessRole === 'EDITOR' ? 'Editor' : item.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
-                    </span>
-                  {/if}
                 </div>
                 <p class="text-[10px] text-gray-500 uppercase font-medium tracking-wide
                           group-hover/file-row:text-gray-400 transition-colors">

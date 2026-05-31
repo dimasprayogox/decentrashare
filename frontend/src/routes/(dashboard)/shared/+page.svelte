@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
+  import { fade, scale } from 'svelte/transition';
 
   import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
   import FolderModal from '$lib/components/storage/FolderModal.svelte';
@@ -8,6 +8,7 @@
   import ViewSwitcher from '$lib/components/storage/ViewSwitcher.svelte';
   import FileTable from '$lib/components/storage/FileTable.svelte';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
+  import BulkActionBar from '$lib/components/storage/BulkActionBar.svelte';
   import { storageService } from '$lib/services/storage/storage';
   import type { Document, Folder } from '$lib/types/storage';
 
@@ -20,6 +21,7 @@
   let currentFolder = $state<{ id: string; name: string; parentId?: string | null } | null>(null);
   let isLoading = $state(true);
   let isRefreshing = $state(false);
+  let isBulkDownloading = $state(false);
   let errorMessage = $state('');
   let successMessage = $state('');
   let viewMode = $state(2);
@@ -65,13 +67,21 @@
   const selectedFolders = $derived(folders.filter(folder => selectedItems.includes(folder.id)));
   const selectedDocuments = $derived(items.filter(item => selectedItems.includes(item.id)));
   const selectedCount = $derived(selectedFolders.length + selectedDocuments.length);
+  const isProcessing = $derived(isLoading || isRefreshing || isMoveProcessing || isRenameProcessing || isBulkDownloading);
+  const isBulkActionProcessing = $derived(isProcessing);
   const selectedTypeValue = $derived(selectedFolders.length > 0 && selectedDocuments.length > 0 ? 'mixed' : selectedFolders.length > 0 ? 'folders' : selectedDocuments.length > 0 ? 'documents' : 'items');
-  const selectedEditableItems = $derived([...selectedFolders, ...selectedDocuments].filter(item => item.accessRole === 'EDITOR'));
 
-  function applyAccessRole<T extends { ownerId: string; accessRole?: 'VIEWER' | 'EDITOR' | 'ADMIN' }>(item: T, role?: 'VIEWER' | 'EDITOR' | 'ADMIN'): T {
+  function applyFolderAccessRole<T extends { ownerId: string; accessRole?: 'VIEWER' | 'EDITOR' | 'ADMIN' }>(item: T, role?: 'VIEWER' | 'EDITOR' | 'ADMIN'): T {
     return {
       ...item,
       accessRole: currentUserId && item.ownerId === currentUserId ? undefined : role
+    };
+  }
+
+  function removeDocumentAccessRole<T extends { accessRole?: 'VIEWER' | 'EDITOR' | 'ADMIN' }>(document: T): T {
+    return {
+      ...document,
+      accessRole: undefined
     };
   }
 
@@ -218,20 +228,6 @@
     openMoveModal([{ id, type, name: type === 'folder' ? (item as Folder).name : (item as Document).title, parentId: type === 'folder' ? (item as Folder).parentId : (item as Document).folderId }]);
   }
 
-  function handleBulkMove() {
-    const targets = [
-      ...selectedFolders.filter(folder => folder.accessRole === 'EDITOR').map(folder => ({ id: folder.id, type: 'folder' as const, name: folder.name, parentId: folder.parentId })),
-      ...selectedDocuments.filter(document => document.accessRole === 'EDITOR').map(document => ({ id: document.id, type: 'document' as const, name: document.title, parentId: document.folderId }))
-    ];
-
-    if (targets.length === 0) {
-      errorMessage = 'Select items with Editor access to move.';
-      return;
-    }
-
-    openMoveModal(targets);
-  }
-
   async function handleExecuteMove() {
     const documentIds = moveTargets.filter(target => target.type === 'document').map(target => target.id);
     const folderTargets = moveTargets.filter(target => target.type === 'folder');
@@ -280,9 +276,10 @@
   }
 
   async function downloadSelectedItems() {
-    if (selectedCount === 0) return;
+    if (selectedCount === 0 || isBulkDownloading) return;
 
     try {
+      isBulkDownloading = true;
       errorMessage = '';
       successMessage = '';
       const documentIds = selectedDocuments.map(document => document.id);
@@ -297,8 +294,12 @@
       }
 
       successMessage = `${documentIds.length + folderIds.length} item${documentIds.length + folderIds.length > 1 ? 's' : ''} downloaded.`;
+      selectedItems = [];
+      selectionMode = false;
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to download selected items.';
+    } finally {
+      isBulkDownloading = false;
     }
   }
 
@@ -332,8 +333,8 @@
       };
       breadcrumbs = pathResponse.data;
       currentFolder = pathResponse.data[pathResponse.data.length - 1] || null;
-      folders = folderResponse.data.map(folder => applyAccessRole(folder, folderRoles[folder.id] ?? inheritedRole));
-      items = documentResponse.data.map(document => applyAccessRole(document, inheritedRole));
+      folders = folderResponse.data.map(folder => applyFolderAccessRole(folder, folderRoles[folder.id] ?? inheritedRole));
+      items = documentResponse.data.map(removeDocumentAccessRole);
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared folder contents.';
@@ -375,12 +376,12 @@
       }
 
       folderRoles = Object.fromEntries(folderResponse.data.map(item => [item.folder.id, item.role]));
-      const sharedFolders = folderResponse.data.map(item => applyAccessRole(item.folder, item.role));
+      const sharedFolders = folderResponse.data.map(item => applyFolderAccessRole(item.folder, item.role));
       const sharedFolderIds = new Set(sharedFolders.map(folder => folder.id));
       rootFolders = sharedFolders.filter(folder => !folder.parentId || !sharedFolderIds.has(folder.parentId));
       folders = rootFolders;
       items = documentResponse.data
-        .map(item => applyAccessRole(item.document, 'VIEWER'))
+        .map(item => removeDocumentAccessRole(item.document))
         .filter(document => !document.folderId || !sharedFolderIds.has(document.folderId));
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
@@ -433,6 +434,15 @@
 </svelte:head>
 
 <main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto" in:fade>
+  {#if isProcessing}
+    <div class="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+      <div class="bg-[#121214] p-8 rounded-[40px] border border-white/10 shadow-2xl flex flex-col items-center" in:scale>
+        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h3 class="text-white font-bold text-lg">DecentraShare Sync</h3>
+        <p class="text-gray-500 text-sm italic">Wait a minute...</p>
+      </div>
+    </div>
+  {/if}
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-10">
     <div class="flex items-center gap-3 flex-1 min-w-0">
       {#if currentFolder}
@@ -558,52 +568,21 @@
     </div>
   {/if}
 
-  {#if errorMessage}
-    <div class="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-      {errorMessage}
-    </div>
-  {/if}
-
-  {#if successMessage}
-    <div class="mb-6 rounded-xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-200">
-      {successMessage}
-    </div>
-  {/if}
-
   {#if selectionMode && selectedCount > 0}
-    <section class="mb-6 flex flex-col gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 md:flex-row md:items-center md:justify-between">
-      <p class="text-sm text-blue-100">
-        {selectedCount} {selectedTypeValue} selected
-      </p>
-      <div class="flex gap-2">
-        {#if selectedEditableItems.length > 0}
-          <button
-            onclick={handleBulkMove}
-            class="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-          >
-            Move
-          </button>
-        {/if}
-        <button
-          onclick={downloadSelectedItems}
-          class="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
-        >
-          Download
-        </button>
-        <button
-          onclick={() => { selectionMode = false; selectedItems = []; }}
-          class="rounded-2xl border border-white/10 px-4 py-2 text-sm font-medium text-gray-200 transition hover:text-white"
-        >
-          Clear
-        </button>
-      </div>
-    </section>
+    <BulkActionBar
+      selectedCount={selectedCount}
+      selectedType={selectedTypeValue}
+      onDownload={downloadSelectedItems}
+      onCancel={() => { selectionMode = false; selectedItems = []; }}
+      isProcessing={isBulkActionProcessing}
+      isDownloading={isBulkDownloading}
+    />
   {/if}
 
   {#if isLoading}
     <div class="flex flex-col items-center justify-center rounded-[32px] border border-white/5 bg-white/[0.01] py-24 text-center">
       <div class="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-      <p class="text-gray-400">Loading shared items...</p>
+      <p class="text-gray-400">Wait a minute...</p>
     </div>
   {:else if visibleCount === 0}
     <div class="flex flex-col items-center justify-center rounded-[32px] border border-white/5 bg-white/[0.01] py-24 text-center">

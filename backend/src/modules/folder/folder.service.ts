@@ -1011,7 +1011,7 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
 };
 
 export const getUserFolders = async (userId: string, parentId: string | null = null) => {
-  return await prisma.folder.findMany({
+  const folders = await prisma.folder.findMany({
     where: {
       parentId: parentId,
       isArchived: false,
@@ -1030,9 +1030,22 @@ export const getUserFolders = async (userId: string, parentId: string | null = n
           walletAddress: true,
           avatarUrl: true
         }
+      },
+      sharedWith: {
+        where: { userId },
+        select: { role: true }
       }
     },
     orderBy: { createdAt: 'desc' }
+  });
+
+  return folders.map(folder => {
+    const accessRole = folder.ownerId === userId ? undefined : folder.sharedWith[0]?.role;
+    const { sharedWith, ...folderData } = folder;
+    return {
+      ...folderData,
+      accessRole
+    };
   });
 };
 

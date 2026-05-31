@@ -731,11 +731,6 @@ $effect(() => {
             <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
               {item.title}
             </h4>
-            {#if item.accessRole}
-              <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {item.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : item.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
-                {item.accessRole === 'EDITOR' ? 'Editor' : item.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
-              </span>
-            {/if}
           </div>
         </div>
       {:else}
@@ -744,11 +739,6 @@ $effect(() => {
           <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
             {item.title}
           </h4>
-          {#if item.accessRole}
-            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {item.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : item.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
-              {item.accessRole === 'EDITOR' ? 'Editor' : item.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
-            </span>
-          {/if}
         </div>
       {/if}
 

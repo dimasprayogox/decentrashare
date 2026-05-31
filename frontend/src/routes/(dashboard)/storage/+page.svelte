@@ -147,6 +147,8 @@
   let downloadStatus = $state('');
   let downloadSuccess = $state('');
   let downloadError = $state('');
+  let bulkActionError = $state('');
+  let bulkActionErrorTimer: ReturnType<typeof setTimeout> | undefined;
 
   // Combined processing state
   const isProcessing = $derived(isDeleteProcessing || isRenameProcessing || isBulkConfirmingBlockchain || isMoveProcessing || isDownloading || isLoading);
@@ -161,6 +163,47 @@
 
   function getSelectedDocuments(items: Document[]) {
     return items.filter(d => selectedItems.includes(d.id));
+  }
+
+  function showBulkActionError(message: string) {
+    bulkActionError = message;
+    if (bulkActionErrorTimer) clearTimeout(bulkActionErrorTimer);
+    bulkActionErrorTimer = setTimeout(() => {
+      bulkActionError = '';
+    }, 4000);
+  }
+
+  function isOwnedByCurrentUser(item: { ownerId: string }): boolean {
+    return Boolean(currentUser?.id && item.ownerId === currentUser.id);
+  }
+
+  function getSelectedItemsOwnedByOthers() {
+    if (!currentUser?.id) return [];
+    return [
+      ...getSelectedFolders(folders),
+      ...getSelectedDocuments(items)
+    ].filter(item => !isOwnedByCurrentUser(item));
+  }
+
+  function hasSelectedItemsOwnedByOthers() {
+    return getSelectedItemsOwnedByOthers().length > 0;
+  }
+
+  function canMoveIntoFolder(folder: Folder): boolean {
+    return isOwnedByCurrentUser(folder) || folder.accessRole === 'EDITOR' || folder.accessRole === 'ADMIN';
+  }
+
+  function getMoveDestinationDisabledReason(folder: Folder): string {
+    if (isOwnedByCurrentUser(folder) || canMoveIntoFolder(folder)) return '';
+    if (folder.accessRole === 'VIEWER') return 'You only have viewer access to this folder.';
+    return 'You do not have permission to move items into this folder.';
+  }
+
+  function getMoveDestinationMeta(folder: Folder): string {
+    if (isOwnedByCurrentUser(folder)) return `Privacy tujuan: ${folder.privacy}`;
+    if (folder.accessRole === 'EDITOR' || folder.accessRole === 'ADMIN') return `Shared · ${folder.accessRole === 'ADMIN' ? 'Admin' : 'Editor'}`;
+    if (folder.accessRole === 'VIEWER') return 'Shared · Viewer only';
+    return `Privacy tujuan: ${folder.privacy}`;
   }
 
   type DocumentWithTxFallbacks = Document & {
@@ -530,7 +573,12 @@
   // ✅ Bulk delete handlers
   const handleConfirmBulkDelete = () => {
     if (selectedItems.length === 0) return;
-    
+
+    if (hasSelectedItemsOwnedByOthers()) {
+      showBulkActionError('You can only move items you own to trash. Remove shared items from selection first.');
+      return;
+    }
+
     const itemsToDelete = [
       ...getSelectedFolders(folders).map(f => ({ id: f.id, type: 'folder' as const, name: f.name })),
       ...getSelectedDocuments(items).map(d => ({ id: d.id, type: 'document' as const, name: d.title }))
@@ -731,6 +779,11 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       return;
     }
 
+    if (hasSelectedItemsOwnedByOthers()) {
+      showBulkActionError('Only the owner can manage access for selected items. Remove shared items from selection first.');
+      return;
+    }
+
     bulkShareTargets = targets;
     bulkShareSearchQuery = '';
     bulkShareSearchResults = [];
@@ -905,6 +958,11 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       return;
     }
 
+    if (hasSelectedItemsOwnedByOthers()) {
+      showBulkActionError('You can only move items you own. Remove shared items from selection first.');
+      return;
+    }
+
     openMoveModal(targets);
   }
 
@@ -925,6 +983,14 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     if (isInvalidMoveDestination(moveTargetFolderId)) {
       moveError = "Folder tidak bisa dipindahkan ke dirinya sendiri atau subfoldernya.";
       return;
+    }
+
+    if (moveTargetFolderId) {
+      const targetFolder = Object.values(moveFolderTree).flat().find(folder => folder.id === moveTargetFolderId);
+      if (targetFolder && !canMoveIntoFolder(targetFolder)) {
+        moveError = getMoveDestinationDisabledReason(targetFolder);
+        return;
+      }
     }
 
     try {
@@ -1020,7 +1086,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
 </script>
 
 <main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto">
-  
+
   {#if isProcessing}
     <div class="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
       <div class="bg-[#121214] p-8 rounded-[40px] border border-white/10 shadow-2xl flex flex-col items-center" in:scale>
@@ -1233,6 +1299,8 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
 
         {#each visibleMoveFolders as row (row.folder.id)}
           {@const invalidDestination = isInvalidMoveDestination(row.folder.id)}
+          {@const permissionError = getMoveDestinationDisabledReason(row.folder)}
+          {@const disabledDestination = invalidDestination || Boolean(permissionError)}
           <div class="flex items-stretch gap-2" style={`margin-left: ${row.depth * 1.25}rem`}>
             <button onclick={() => toggleMoveFolder(row.folder.id)} class="w-11 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center" disabled={isMoveProcessing} title="Show subfolders">
               {#if isMoveFolderLoading(row.folder.id)}
@@ -1241,10 +1309,10 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
                 <svg class="w-4 h-4 transition-transform {isMoveFolderExpanded(row.folder.id) ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
               {/if}
             </button>
-            <button onclick={() => { if (!invalidDestination) moveTargetFolderId = row.folder.id; }} class="flex-1 flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all {invalidDestination ? 'bg-red-500/5 border-red-500/20 text-gray-600 cursor-not-allowed' : moveTargetFolderId === row.folder.id ? 'bg-blue-600/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing || invalidDestination}>
+            <button onclick={() => { if (disabledDestination) { moveError = permissionError || 'Invalid destination'; return; } moveTargetFolderId = row.folder.id; moveError = ''; }} class="flex-1 flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all {disabledDestination ? 'bg-red-500/5 border-red-500/20 text-gray-600 cursor-not-allowed' : moveTargetFolderId === row.folder.id ? 'bg-blue-600/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing || disabledDestination}>
               <span class="min-w-0">
                 <span class="flex items-center gap-2 font-medium truncate"><svg class="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>{row.folder.name}</span>
-                <span class="block text-xs text-gray-500">Level {row.depth + 1} · {invalidDestination ? 'Invalid destination' : `Privacy tujuan: ${row.folder.privacy}`}</span>
+                <span class="block text-xs text-gray-500">Level {row.depth + 1} · {invalidDestination ? 'Invalid destination' : permissionError || getMoveDestinationMeta(row.folder)}</span>
               </span>
               {#if moveTargetFolderId === row.folder.id}<span class="text-blue-400 text-xs font-semibold">Selected</span>{/if}
             </button>
@@ -1426,80 +1494,6 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     </div>
   </header>
 
-  {#if moveSuccess || bulkShareSuccess || (moveError && !showMoveModal)}
-    <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {moveError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}" role="status" aria-live="polite">
-      {#if moveError}
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-      {:else}
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-      {/if}
-      <p class="text-sm flex-1">{moveError || moveSuccess || bulkShareSuccess}</p>
-      <button onclick={() => { moveError = ''; moveSuccess = ''; bulkShareSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss move status">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
-  {/if}
-
-  {#if downloadStatus || downloadSuccess || downloadError}
-    <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {downloadError ? 'bg-red-500/10 border-red-500/20 text-red-400' : downloadSuccess ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}" role="status" aria-live="polite">
-      {#if downloadStatus}
-        <svg class="w-5 h-5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-        </svg>
-      {:else if downloadSuccess}
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-      {:else}
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-      {/if}
-      <p class="text-sm flex-1">{downloadStatus || downloadSuccess || downloadError}</p>
-      {#if downloadError || downloadSuccess}
-        <button onclick={() => { downloadError = ''; downloadSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss download status">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-      {/if}
-    </div>
-  {/if}
-
-  {#if bulkConfirmStatus || bulkConfirmSuccess || bulkConfirmError}
-    <div class="mb-6 px-4 py-3 rounded-xl border flex items-center gap-3 {bulkConfirmError ? 'bg-red-500/10 border-red-500/20 text-red-400' : bulkConfirmSuccess ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}" role="status" aria-live="polite">
-      {#if bulkConfirmStatus}
-        <svg class="w-5 h-5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-        </svg>
-      {:else if bulkConfirmSuccess}
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-      {:else}
-        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-      {/if}
-      <p class="text-sm flex-1">{bulkConfirmStatus || bulkConfirmSuccess || bulkConfirmError}</p>
-      {#if bulkConfirmError || bulkConfirmSuccess}
-        <button onclick={() => { bulkConfirmError = ''; bulkConfirmSuccess = ''; }} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss blockchain confirmation status">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-      {/if}
-    </div>
-  {/if}
-
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- CONTENT -->
   <!-- ═══════════════════════════════════════════════════ -->
@@ -1619,6 +1613,22 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   <UploadModal isOpen={showUpload} onClose={() => showUpload = false} onUploaded={handleFilesUploaded} folderId={currentFolder?.id ?? null} />
 
   {#if selectionMode}
+    {#if bulkActionError}
+      <div class="fixed bottom-24 left-1/2 z-[1100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-red-500/20 bg-[#1a1a1e] px-4 py-3 text-sm text-red-200 shadow-2xl shadow-black/40" role="alert" transition:fade>
+        <div class="flex items-start gap-3">
+          <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="flex-1">{bulkActionError}</p>
+          <button onclick={() => { bulkActionError = ''; }} class="rounded-lg p-1 text-red-300 transition hover:bg-red-500/10 hover:text-red-100" aria-label="Dismiss bulk action error">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    {/if}
+
     <BulkActionBar
       selectedCount={selectedItems.length}
       selectedType={selectedTypeValue}
