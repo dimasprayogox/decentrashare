@@ -27,10 +27,11 @@ export const sanitizeDocument = (doc: any, currentUserId?: string) => {
     mimeType: doc.mimeType,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
-    privacy: doc.privacy, 
+    privacy: doc.privacy,
     ownerId: doc.ownerId,
+    folderId: doc.folderId,
 
-    ipfsHash: undefined, 
+    ipfsHash: undefined,
 
     blockchainTx: (currentUserId || !isPrivate) ? doc.blockchainTx : undefined,
     isOnChain: doc.isOnChain,

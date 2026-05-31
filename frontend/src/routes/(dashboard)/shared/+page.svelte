@@ -379,7 +379,9 @@
       const sharedFolderIds = new Set(sharedFolders.map(folder => folder.id));
       rootFolders = sharedFolders.filter(folder => !folder.parentId || !sharedFolderIds.has(folder.parentId));
       folders = rootFolders;
-      items = documentResponse.data.map(item => applyAccessRole(item.document, 'VIEWER'));
+      items = documentResponse.data
+        .map(item => applyAccessRole(item.document, 'VIEWER'))
+        .filter(document => !document.folderId || !sharedFolderIds.has(document.folderId));
       selectedItems = selectedItems.filter(id => folders.some(folder => folder.id === id) || items.some(item => item.id === id));
     } catch (error) {
       rootFolders = [];
@@ -449,9 +451,6 @@
           <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">{currentFolder ? currentFolder.name : 'Shared'}</h2>
           <ViewSwitcher bind:viewMode />
         </div>
-        <p class="mt-2 max-w-xl text-sm text-gray-400">
-          {currentFolder ? 'Contents of the folder shared with your account.' : 'Files and folders other users have shared with your account.'}
-        </p>
       </div>
     </div>
 
@@ -642,6 +641,7 @@
               {currentUserId}
               onToggleSelect={toggleSelection}
               onRefresh={refreshSharedItems}
+              sharedMode={true}
             />
           {:else}
             <p class="pl-2 text-sm italic text-gray-600">No shared folders</p>
@@ -670,6 +670,7 @@
               {currentUserId}
               onToggleSelect={toggleSelection}
               onRefresh={refreshSharedItems}
+              sharedMode={true}
             />
           {:else}
             <p class="pl-2 text-sm italic text-gray-600">No shared documents</p>
@@ -692,6 +693,7 @@
           {currentUserId}
           onToggleSelect={toggleSelection}
           onRefresh={refreshSharedItems}
+          sharedMode={true}
         />
       {:else}
         <FileGrid
@@ -709,6 +711,7 @@
           {currentUserId}
           onToggleSelect={toggleSelection}
           onRefresh={refreshSharedItems}
+          sharedMode={true}
         />
       {/if}
     </div>

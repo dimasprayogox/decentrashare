@@ -128,16 +128,16 @@
       if (currentSeq !== requestSeq) return;
       folders = [];
       items = [];
-      searchError = error instanceof Error ? error.message : 'Gagal mencari folder dan dokumen publik.';
+      searchError = error instanceof Error ? error.message : 'Failed to search public folders and documents.';
     } finally {
       if (currentSeq === requestSeq) isSearching = false;
     }
   }
 
-  function scheduleSearch() {
+  function scheduleSearch(searchQuery = query) {
     if (searchTimeout) clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      void performSearch(query);
+      void performSearch(searchQuery);
     }, 350);
   }
 
@@ -167,7 +167,7 @@
       searchError = '';
       const response = await storageService.getPublicFolderContents(folder.id);
       if (!response.success || !response.data) {
-        throw new Error(response.message || 'Gagal membuka folder publik.');
+        throw new Error(response.message || 'Failed to open public folder.');
       }
 
       currentFolder = response.data.currentFolder;
@@ -175,20 +175,17 @@
       browseFolders = response.data.folders.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id);
       browseItems = response.data.documents.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id);
     } catch (error: unknown) {
-      searchError = error instanceof Error ? error.message : 'Gagal membuka folder publik.';
+      searchError = error instanceof Error ? error.message : 'Failed to open public folder.';
     } finally {
       isFolderLoading = false;
     }
   }
 
   function noop() {}
-  const isSelected = () => false;
 
   $effect(() => {
     if (currentFolder) return;
-    query;
-    currentUser?.id;
-    scheduleSearch();
+    scheduleSearch(query);
   });
 
   onMount(() => {
@@ -213,32 +210,32 @@
 </script>
 
 <main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto">
-  <header class="flex flex-col gap-6 mb-8">
-    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-      <div>
-        <p class="text-xs font-black uppercase tracking-[0.35em] text-emerald-400/80 mb-3">Explore</p>
-        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white">Search Public Files & Folders</h1>
-        <p class="text-sm text-gray-400 mt-2 max-w-2xl">Temukan folder dan dokumen berstatus Public yang diupload oleh user lain. Konten milik sendiri otomatis disembunyikan dari hasil.</p>
-      </div>
-
-      <ViewSwitcher bind:viewMode />
+  <header class="mb-8 space-y-4">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
+      <div class="min-w-0">
+        <p class="text-xs font-black uppercase tracking-[0.35em] text-blue-400/80 mb-2">Explore</p>
+        <div class="flex items-center gap-3">
+          <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">Public Files</h2>
+          <ViewSwitcher bind:viewMode />
+        </div>
+    </div>
     </div>
 
-    <div class="rounded-[28px] border border-white/10 bg-white/[0.03] p-3 sm:p-4 shadow-xl shadow-black/10">
+    <section class="rounded-[28px] border border-white/10 bg-white/[0.03] p-3 sm:p-4 shadow-xl shadow-black/10" aria-label="Public file search">
       <div class="flex flex-col md:flex-row gap-3">
         <div class="relative flex-1">
           <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
           <input
             bind:value={query}
-            class="w-full h-13 rounded-2xl border border-white/10 bg-black/20 pl-12 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition-all"
-            placeholder="Cari folder, judul, nama file, atau tipe dokumen public..."
-            autofocus
+            class="w-full h-13 rounded-2xl border border-white/10 bg-black/20 pl-12 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all disabled:opacity-60"
+            placeholder="Search folders or documents public..."
+            disabled={currentFolder !== null}
           />
         </div>
         <button
           onclick={() => performSearch(query)}
-          class="h-13 px-6 rounded-2xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          disabled={isSearching || query.trim().length < 2}
+          class="h-13 px-6 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          disabled={currentFolder !== null || isSearching || query.trim().length < 2}
         >
           {#if isSearching}
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -249,85 +246,89 @@
         </button>
       </div>
       <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
-        <span>{currentFolder ? `Browsing folder: ${currentFolder.name}` : 'Minimal 2 karakter untuk mulai mencari.'}</span>
-        <span class="font-bold text-emerald-300">{resultCount} results · {sortedFolders.length} folders · {sortedItems.length} documents</span>
+        <span class="pl-1 text-xs text-gray-300"> {sortedFolders.length} folders | {sortedItems.length} documents</span>
       </div>
-    </div>
+    </section>
   </header>
 
   {#if currentFolder}
-    <div class="mb-6 rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4" transition:fade>
-      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <section class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-8" transition:fade>
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <button onclick={() => openFolder(null)} class="p-2 mt-7 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0" title="Back to search results">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        </button>
+
         <div class="min-w-0">
           <Breadcrumbs {breadcrumbs} {currentFolder} navigateTo={openFolder} />
-          <p class="mt-2 text-xs text-gray-500">Menampilkan isi folder public. Hanya folder dan dokumen Public yang terlihat.</p>
-        </div>
-        <button onclick={() => openFolder(null)} class="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white hover:bg-white/10 transition-colors">Back to search results</button>
+          <div class="flex items-center gap-3">
+            <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">{currentFolder.name}</h2>
+          </div>
       </div>
-    </div>
+      </div>
+    </section>
   {/if}
 
-  {#if !currentFolder && query.trim().length < 2}
+  {#if isSearching || isFolderLoading}
     <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]" transition:fade>
-      <div class="w-14 h-14 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
-        <svg class="w-7 h-7 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
-      </div>
-      <p class="text-white font-bold">Ketik minimal 2 karakter untuk mencari folder dan dokumen public.</p>
-      <p class="text-gray-500 text-sm mt-1">Hasil hanya menampilkan konten public milik orang lain.</p>
-    </div>
-  {:else if isSearching || isFolderLoading}
-    <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]" transition:fade>
-      <div class="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
       <p class="text-gray-400">{isFolderLoading ? 'Loading public folder contents...' : 'Searching public folders and documents...'}</p>
     </div>
-  {:else if searchError}
-    <div class="py-20 text-center border border-red-500/20 rounded-[32px] bg-red-500/[0.03]" transition:fade>
-      <p class="text-red-300 font-semibold">{searchError}</p>
-      <button onclick={() => performSearch(query)} class="mt-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-200 border border-red-500/20 hover:bg-red-500/20 transition-colors">Try again</button>
-    </div>
-  {:else if resultCount > 0}
-    <div transition:fade>
-      {#if viewMode === 3}
-        <FileGrid
-          folders={sortedFolders}
-          items={sortedItems}
-          {openFolder}
-          handleDeleteFolder={noop}
-          handleDelete={noop}
-          {getFileTheme}
-          onDownload={handleDownload}
-          selectedItems={[]}
-          selectionMode={false}
-          currentUserId={currentUser?.id}
-          onToggleSelect={noop}
-          {isSelected}
-          onRefresh={() => performSearch(query)}
-          publicExploreMode={true}
-        />
-      {:else}
-        <FileTable
-          folders={sortedFolders}
-          items={sortedItems}
-          viewMode={2}
-          {openFolder}
-          handleDeleteFolder={noop}
-          handleDelete={noop}
-          {getFileTheme}
-          onDownload={handleDownload}
-          selectedItems={[]}
-          selectionMode={false}
-          currentUserId={currentUser?.id}
-          onToggleSelect={noop}
-          {isSelected}
-          onRefresh={() => performSearch(query)}
-          publicExploreMode={true}
-        />
-      {/if}
-    </div>
   {:else}
-    <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]" transition:fade>
-      <p class="text-white font-bold">Tidak ada folder atau dokumen public dari user lain.</p>
-      <p class="text-gray-500 text-sm mt-1">Coba keyword lain atau pastikan konten yang dicari berstatus Public.</p>
+    <div in:fade>
+      {#if !currentFolder && query.trim().length < 2}
+        <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]">
+          <div class="w-14 h-14 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
+            <svg class="w-7 h-7 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+          </div>
+          <p class="text-white font-bold">Type at least 2 characters to search public folders and documents.</p>
+          <p class="text-gray-500 text-sm mt-1">Results only show public content owned by other users.</p>
+        </div>
+      {:else if searchError}
+        <div class="py-20 text-center border border-red-500/20 rounded-[32px] bg-red-500/[0.03]">
+          <p class="text-red-300 font-semibold">{searchError}</p>
+          <button onclick={() => performSearch(query)} class="mt-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-200 border border-red-500/20 hover:bg-red-500/20 transition-colors">Try again</button>
+        </div>
+      {:else if resultCount > 0}
+        {#if viewMode === 3}
+          <FileGrid
+            folders={sortedFolders}
+            items={sortedItems}
+            {openFolder}
+            handleDeleteFolder={noop}
+            handleDelete={noop}
+            {getFileTheme}
+            onDownload={handleDownload}
+            selectedItems={[]}
+            selectionMode={false}
+            currentUserId={currentUser?.id}
+            onToggleSelect={noop}
+            onRefresh={() => performSearch(query)}
+            publicExploreMode={true}
+          />
+        {:else}
+          <FileTable
+            folders={sortedFolders}
+            items={sortedItems}
+            viewMode={2}
+            {openFolder}
+            handleDeleteFolder={noop}
+            handleDelete={noop}
+            {getFileTheme}
+            onDownload={handleDownload}
+            selectedItems={[]}
+            selectionMode={false}
+            currentUserId={currentUser?.id}
+            onToggleSelect={noop}
+            onRefresh={() => performSearch(query)}
+            publicExploreMode={true}
+          />
+        {/if}
+      {:else}
+        <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]">
+          <p class="text-white font-bold">No public folders or documents from other users found.</p>
+          <p class="text-gray-500 text-sm mt-1">Try another keyword or make sure the content you are looking for is public.</p>
+        </div>
+      {/if}
     </div>
   {/if}
 </main>

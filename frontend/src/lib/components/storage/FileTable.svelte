@@ -28,7 +28,8 @@
     selectionMode = false,
     currentUserId,
     onRefresh,
-    publicExploreMode = false
+    publicExploreMode = false,
+    sharedMode = false
   }: {
     folders: Folder[];
     items: Document[];
@@ -47,9 +48,10 @@
     selectedItems?: string[];
     onToggleSelect?: (id: string) => void;
     selectionMode?: boolean;
-    currentUserId?: string;
+    currentUserId?: string | null;
     onRefresh?: () => Promise<void>;
     publicExploreMode?: boolean;
+    sharedMode?: boolean;
   } = $props();
 
   // ─────────────────────────────────────────────────────────────
@@ -897,11 +899,12 @@ async function handleConfirmBlockchain(item: Document) {
                     itemName={folder.name}
                     isOwner={!publicExploreMode && currentUserId === folder.ownerId}
                     onRename={publicExploreMode ? undefined : onRename}
-                    onShare={publicExploreMode ? undefined : onShare}
+                    onShare={publicExploreMode || sharedMode ? undefined : onShare}
                     onMove={publicExploreMode ? undefined : onMove}
                     onRestore={publicExploreMode ? undefined : onRestore}
                     trashMode={trashMode}
-                    onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
+                    sharedMode={sharedMode}
+                    onDelete={publicExploreMode || sharedMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
                     onDownload={onDownload}
                   />
                 </div>
@@ -1217,11 +1220,12 @@ async function handleConfirmBlockchain(item: Document) {
                 isOwner={!publicExploreMode && currentUserId === item.ownerId}
                 onRename={publicExploreMode ? undefined : onRename}
                 onEdit={publicExploreMode ? undefined : (id, title, description) => openEditModal({ id, title, description })}
-                onShare={publicExploreMode ? undefined : onShare}
+                onShare={publicExploreMode || sharedMode ? undefined : onShare}
                 onMove={publicExploreMode ? undefined : onMove}
                 onRestore={publicExploreMode ? undefined : onRestore}
                 trashMode={trashMode}
-                onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
+                sharedMode={sharedMode}
+                onDelete={publicExploreMode || sharedMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
                 onDownload={onDownload}
               />
             </div>

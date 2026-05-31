@@ -17,7 +17,8 @@
     onDelete,
     onDownload,
     onRestore,
-    trashMode = false
+    trashMode = false,
+    sharedMode = false
   }: {
     itemId: string;
     itemType: 'folder' | 'document';
@@ -32,6 +33,7 @@
     onDownload?: (id: string, type: 'folder' | 'document') => Promise<void> | void;
     onRestore?: (id: string, type: 'folder' | 'document', name: string) => Promise<void> | void;
     trashMode?: boolean;
+    sharedMode?: boolean;
   } = $props();
 
   // ── State ──
@@ -344,59 +346,61 @@ function updateMenuPosition() {
         </button>
       {/if}
     {:else}
-    <!-- ✅ CONDITIONAL: Folder → Rename, Document → Edit -->
-    {#if isOwner}
-      {#if itemType === 'folder'}
+    {#if !sharedMode}
+      <!-- ✅ CONDITIONAL: Folder → Rename, Document → Edit -->
+      {#if isOwner}
+        {#if itemType === 'folder' && onRename}
+          <button
+            onclick={handleRename}
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+            role="menuitem"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            </svg>
+            <span class="truncate">Rename</span>
+          </button>
+        {:else if itemType === 'document' && onEdit}
+          <button
+            onclick={handleEdit}
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+            role="menuitem"
+          >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            <span class="truncate">Edit</span>
+          </button>
+        {/if}
+      {/if}
+
+      <!-- Move to... (NEW) -->
+      {#if isOwner && onMove}
         <button
-          onclick={handleRename}
+          onclick={handleMove}
           class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
           role="menuitem"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
           </svg>
-          <span class="truncate">Rename</span>
-        </button>
-      {:else if itemType === 'document'}
-        <button
-          onclick={handleEdit}
-          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
-          role="menuitem"
-        >
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-          </svg>
-          <span class="truncate">Edit</span>
+          <span class="truncate">Move to...</span>
         </button>
       {/if}
-    {/if}
 
-    <!-- Move to... (NEW) -->
-    {#if isOwner && onMove}
-      <button 
-        onclick={handleMove} 
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]" 
-        role="menuitem"
-      >
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-        </svg>
-        <span class="truncate">Move to...</span>
-      </button>
-    {/if}
-
-    <!-- Share / Manage Access -->
-    {#if isOwner}
-      <button 
-        onclick={handleShare} 
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]" 
-        role="menuitem"
-      >
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-        </svg>
-        <span class="truncate">Share</span>
-      </button>
+      <!-- Share / Manage Access -->
+      {#if isOwner && onShare}
+        <button
+          onclick={handleShare}
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+          role="menuitem"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+          </svg>
+          <span class="truncate">Share</span>
+        </button>
+      {/if}
     {/if}
 
     <!-- Download -->
@@ -413,7 +417,7 @@ function updateMenuPosition() {
       </button>
     {/if}
 
-    {#if isOwner}
+    {#if isOwner && !sharedMode && onDelete}
       <!-- Divider -->
       <div class="my-1 h-px bg-white/10"></div>
 

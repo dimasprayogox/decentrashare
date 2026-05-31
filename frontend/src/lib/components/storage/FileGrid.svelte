@@ -30,7 +30,8 @@
     selectionMode = false,
     currentUserId,
     onRefresh,
-    publicExploreMode = false
+    publicExploreMode = false,
+    sharedMode = false
   }: {
     folders: Folder[];
     items: Document[];
@@ -49,9 +50,10 @@
     selectedItems?: string[];
     onToggleSelect?: (id: string) => void;
     selectionMode?: boolean;
-    currentUserId?: string;
+    currentUserId?: string | null;
     onRefresh?: () => Promise<void>;
     publicExploreMode?: boolean;
+    sharedMode?: boolean;
   } = $props();
 
   // 🔥 DEBUG PROPS - Tempel di sini
@@ -657,7 +659,7 @@ $effect(() => {
 
       {#if !selectionMode}
         <div class="absolute top-2 right-2 z-30 {isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all duration-200" data-item-menu onclick={(e) => e.stopPropagation()}>
-          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={!publicExploreMode && currentUserId === folder.ownerId} onRename={publicExploreMode ? undefined : onRename} onShare={publicExploreMode ? undefined : onShare} onMove={publicExploreMode ? undefined : onMove} onRestore={publicExploreMode ? undefined : onRestore} trashMode={trashMode} onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={onDownload} />
+          <ItemMenu itemId={folder.id} itemType="folder" itemName={folder.name} isOwner={!publicExploreMode && currentUserId === folder.ownerId} onRename={publicExploreMode ? undefined : onRename} onShare={publicExploreMode || sharedMode ? undefined : onShare} onMove={publicExploreMode ? undefined : onMove} onRestore={publicExploreMode ? undefined : onRestore} trashMode={trashMode} sharedMode={sharedMode} onDelete={publicExploreMode || sharedMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)} onDownload={onDownload} />
         </div>
       {/if}
     </div>
@@ -766,11 +768,12 @@ $effect(() => {
               if (import.meta.env.DEV) console.log('🎯 Grid ItemMenu onEdit:', { id, title });
               openEditModal({ id, title, description });
             }}
-            onShare={publicExploreMode ? undefined : onShare}
+            onShare={publicExploreMode || sharedMode ? undefined : onShare}
             onMove={publicExploreMode ? undefined : onMove}
             onRestore={publicExploreMode ? undefined : onRestore}
             trashMode={trashMode}
-            onDelete={publicExploreMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
+            sharedMode={sharedMode}
+            onDelete={publicExploreMode || sharedMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
             onDownload={onDownload}
           />
         </div>
