@@ -152,7 +152,7 @@ class BlockchainService {
 
   async checkFileExistsOnChain(fileHash: string): Promise<boolean> {
     const contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
-    return Boolean(await contract.isFileExists(fileHash.trim().toLowerCase()));
+    return Boolean(await contract.checkFileExists(fileHash.trim().toLowerCase()));
   }
 
   async checkFilesExistOnChain(fileHashes: string[]) {
@@ -194,7 +194,7 @@ class BlockchainService {
     for (const item of items) {
       try {
         // ✅ Check if fileHash already exists on-chain
-        const exists = await contract.isFileExists(item.fileHash);
+        const exists = await contract.checkFileExists(item.fileHash);
         
         if (!exists) {
           // ✅ Also check if CID already has an owner

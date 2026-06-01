@@ -24,6 +24,7 @@ export function getActiveNav(pathname: string, searchParams?: URLSearchParams): 
   if (path === '/explore') return { active: 'explore', subActive: '' };
   if (path.startsWith('/storage')) return { active: 'storage', subActive: '' };
   if (path === '/shared') return { active: 'shared', subActive: '' };
+  if (path === '/validate') return { active: 'validate', subActive: '' };
   if (path === '/trash') return { active: 'trash', subActive: '' };
 
   // Default
