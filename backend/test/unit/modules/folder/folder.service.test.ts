@@ -136,7 +136,7 @@ describe('Feature: folder management behavior', () => {
 
     const result = await getPublicFolderContents('folder-1', 'user-2');
 
-    expect(result.currentFolder).toEqual({ id: 'folder-1', name: 'Public', parentId: null });
+    expect(result.currentFolder).toEqual(expect.objectContaining({ id: 'folder-1', name: 'Public', parentId: null }));
     expect(result.folders).toHaveLength(1);
     expect(result.documents[0].ipfsHash).toBeUndefined();
     expect(result.breadcrumbs).toEqual([{ id: 'folder-1', name: 'Public' }]);

@@ -308,13 +308,46 @@ export const downloadFolderArchive = async (folderId: string, userId: string) =>
   return prepareFolderArchive(folderId, userId);
 };
 
+const userSummarySelect = {
+  id: true,
+  username: true,
+  email: true,
+  walletAddress: true,
+  avatarUrl: true
+};
+
+const getPublicFolderContributorOwners = async (folderIds: string[]) => {
+  const contributorsByFolderId = new Map<string, any[]>();
+
+  for (const folderId of folderIds) {
+    const subtreeFolderIds = await getAllDescendantFolderIds(prisma, [folderId]);
+    const [folders, documents] = await Promise.all([
+      prisma.folder.findMany({
+        where: { id: { in: subtreeFolderIds }, isArchived: false, deletedAt: null },
+        include: { owner: { select: userSummarySelect } }
+      }),
+      prisma.document.findMany({
+        where: { folderId: { in: subtreeFolderIds }, isArchived: false, deletedAt: null },
+        include: { owner: { select: userSummarySelect } }
+      })
+    ]);
+
+    const contributors = new Map<string, any>();
+    folders.forEach((folder: any) => contributors.set(folder.owner.id, folder.owner));
+    documents.forEach((document: any) => contributors.set(document.owner.id, document.owner));
+    contributorsByFolderId.set(folderId, Array.from(contributors.values()));
+  }
+
+  return contributorsByFolderId;
+};
+
 export const searchPublicFolders = async (userId: string, query: string, limit = 12) => {
   const searchQuery = query.trim();
   const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 30);
 
   if (searchQuery.length < 2) return [];
 
-  return prisma.folder.findMany({
+  const folders = await prisma.folder.findMany({
     where: {
       privacy: 'PUBLIC',
       ownerId: { not: userId },
@@ -328,13 +361,7 @@ export const searchPublicFolders = async (userId: string, query: string, limit =
     },
     include: {
       owner: {
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          walletAddress: true,
-          avatarUrl: true
-        }
+        select: userSummarySelect
       },
       _count: { select: { documents: true } }
     },
@@ -344,6 +371,14 @@ export const searchPublicFolders = async (userId: string, query: string, limit =
     ],
     take: safeLimit
   });
+
+  const contributorsByFolderId = await getPublicFolderContributorOwners(folders.map((folder: any) => folder.id));
+
+  return folders.map((folder: any) => ({
+    ...folder,
+    owners: contributorsByFolderId.get(folder.id) ?? [folder.owner],
+    contributors: contributorsByFolderId.get(folder.id) ?? []
+  }));
 };
 
 export const getPublicFolderContents = async (folderId: string, userId: string) => {
@@ -422,10 +457,21 @@ export const getPublicFolderContents = async (folderId: string, userId: string) 
     getPublicFolderBreadcrumbs(folderId)
   ]);
 
+  const contentOwners = new Map<string, any>();
+  contentOwners.set(folder.owner.id, folder.owner);
+  childFolders.forEach((childFolder: any) => contentOwners.set(childFolder.owner.id, childFolder.owner));
+  documents.forEach((document: any) => contentOwners.set(document.owner.id, document.owner));
+
   return {
     folders: childFolders,
     documents: sanitizeDocuments(documents, userId),
-    currentFolder: { id: folder.id, name: folder.name, parentId: folder.parentId },
+    currentFolder: {
+      id: folder.id,
+      name: folder.name,
+      parentId: folder.parentId,
+      owner: folder.owner,
+      owners: Array.from(contentOwners.values())
+    },
     breadcrumbs
   };
 };
