@@ -115,10 +115,10 @@ export async function recordFileOnChain(
   }
 
   try {
-    callbacks?.onStatus?.('🔐 Confirm in wallet...');
+    callbacks?.onStatus?.('Confirm in wallet...');
     const tx = await contract.recordFile(...trimmedArgs, { gasLimit });
     callbacks?.onTxHash?.(tx.hash);
-    callbacks?.onStatus?.('⛓️ Waiting for confirmation...');
+    callbacks?.onStatus?.('Waiting for confirmation...');
 
     const receipt = await Promise.race([
       tx.wait(1),
@@ -126,7 +126,7 @@ export async function recordFileOnChain(
     ]) as ethers.TransactionReceipt;
 
     if (receipt.status !== 1) throw new Error('TRANSACTION_FAILED_ON_CHAIN');
-    callbacks?.onStatus?.('✅ Confirmed!');
+    callbacks?.onStatus?.('Confirmed!');
 
     return { txHash: receipt.hash, blockNumber: receipt.blockNumber, success: true, gasUsed: receipt.gasUsed?.toString() };
   } catch (error: any) {
@@ -185,13 +185,13 @@ export async function recordFilesBatchOnChain(
   try {
     // Coba encode dulu. Jika gagal, berarti ABI mismatch
     const encodedData = iface.encodeFunctionData('recordFilesBatch', sanitizedArgs);
-    console.log('[Web3] ✅ Encoding verified:', {
+    console.log('[Web3] Encoding verified:', {
       selector: encodedData.slice(0, 10),
       length: encodedData.length,
       cidsCount: sanitizedArgs[0].length
     });
   } catch (encErr: any) {
-    console.error('[Web3] ❌ Encoding failed:', encErr.message);
+    console.error('[Web3] Encoding failed:', encErr.message);
     throw new Error(`ABI Mismatch or Invalid Args: ${encErr.message}`);
   }
 
@@ -199,7 +199,7 @@ export async function recordFilesBatchOnChain(
   const gasLimit = 2000000n; // 2M gas (cukup untuk batch 10 files)
 
   try {
-    callbacks?.onStatus?.('🔐 Confirm batch in wallet...');
+    callbacks?.onStatus?.('Confirm batch in wallet...');
     
     // ✅ KIRIM TX
     const tx = await contract.recordFilesBatch(
@@ -210,7 +210,7 @@ export async function recordFilesBatchOnChain(
     );
     
     callbacks?.onTxHash?.(tx.hash);
-    callbacks?.onStatus?.('⛓️ TX sent, waiting...');
+    callbacks?.onStatus?.('TX sent, waiting...');
 
     const receipt = await Promise.race([
       tx.wait(1),
@@ -218,7 +218,7 @@ export async function recordFilesBatchOnChain(
     ]) as ethers.TransactionReceipt;
 
     if (receipt.status !== 1) throw new Error('TRANSACTION_FAILED_ON_CHAIN');
-    callbacks?.onStatus?.('✅ Batch confirmed!');
+    callbacks?.onStatus?.('Batch confirmed!');
 
     return {
       txHash: receipt.hash,
@@ -287,7 +287,7 @@ export async function tryBatchWithSingleFallback(
     
     for (let i = 0; i < cids.length; i++) {
       try {
-        callbacks?.onStatus?.(`🔐 Confirming file ${i+1}/${cids.length}...`);
+        callbacks?.onStatus?.(`Confirming file ${i+1}/${cids.length}...`);
         
         const result = await recordFileOnChain({
           cid: cids[i],

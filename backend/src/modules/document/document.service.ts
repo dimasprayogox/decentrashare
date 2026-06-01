@@ -909,6 +909,18 @@ export const getRootDocuments = async (userId: string) => {
   });
 };
 
+function buildDocumentMoveAccessEntries(
+  targetFolder: { ownerId: string; sharedWith: Array<{ userId: string }> } | null
+): string[] {
+  if (!targetFolder) return [];
+
+  const inheritedUserIds = new Set<string>();
+  targetFolder.sharedWith.forEach((access) => inheritedUserIds.add(access.userId));
+  inheritedUserIds.add(targetFolder.ownerId);
+
+  return Array.from(inheritedUserIds);
+}
+
 export const moveMultipleDocuments = async (
   documentIds: string[], 
   userId: string, 
@@ -916,6 +928,7 @@ export const moveMultipleDocuments = async (
 ) => {
   return await prisma.$transaction(async (tx) => {
     let targetPrivacy: PrivacyLevel = 'PRIVATE';
+    let targetFolder: { ownerId: string; sharedWith: Array<{ userId: string }> } | null = null;
 
     if (targetFolderId) {
       const folder = await tx.folder.findFirst({
@@ -925,11 +938,13 @@ export const moveMultipleDocuments = async (
             { ownerId: userId },
             { sharedWith: { some: { userId: userId, role: 'EDITOR' } } }
           ]
-        }
+        },
+        include: { sharedWith: true }
       });
 
       if (!folder) throw new Error("Target folder not found or No Permission.");
       targetPrivacy = folder.privacy;
+      targetFolder = folder;
     }
 
     const documents: Array<{ id: string; title: string; folderId: string | null; ownerId: string }> = await tx.document.findMany({
@@ -983,9 +998,11 @@ export const moveMultipleDocuments = async (
       throw new Error(`Document "${duplicateDocument.title}" already exists in this location`);
     }
 
+    const movedDocumentIds = documents.map((document) => document.id);
+
     const result = await tx.document.updateMany({
       where: {
-        id: { in: documents.map((document) => document.id) },
+        id: { in: movedDocumentIds },
         isArchived: false
       },
       data: {
@@ -994,7 +1011,27 @@ export const moveMultipleDocuments = async (
       }
     });
 
-    return { 
+    await tx.documentAccess.deleteMany({
+      where: { documentId: { in: movedDocumentIds } }
+    });
+
+    if (targetPrivacy === 'SPECIFIC_USER') {
+      const inheritedUserIds = buildDocumentMoveAccessEntries(targetFolder);
+      const documentAccess = documents.flatMap((document) =>
+        inheritedUserIds
+          .filter((accessUserId) => accessUserId !== document.ownerId)
+          .map((userId) => ({ documentId: document.id, userId }))
+      );
+
+      if (documentAccess.length > 0) {
+        await tx.documentAccess.createMany({
+          data: documentAccess,
+          skipDuplicates: true
+        });
+      }
+    }
+
+    return {
       count: result.count, 
       appliedPrivacy: targetPrivacy,
       location: targetFolderId ? "Folder" : "Root" 

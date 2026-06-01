@@ -164,25 +164,28 @@ export const moveFolder = async (
 
     let targetPrivacy: 'PRIVATE' | 'PUBLIC' | 'LINK_ONLY' | 'SPECIFIC_USER' = 'PRIVATE';
     let location = 'Root';
+    let inheritedFolderAccess: Array<{ userId: string; role: AccessRoleFolder }> = [];
+    const subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
 
     if (targetFolderId) {
       const targetFolder = await tx.folder.findUnique({
         where: { id: targetFolderId },
-        include: { sharedWith: { where: { userId }, select: { role: true } } }
+        include: { sharedWith: true }
       });
 
-      const canMoveToTarget = targetFolder?.ownerId === userId || targetFolder?.sharedWith.some(access => access.role === 'EDITOR');
+      const targetUserAccess = targetFolder?.sharedWith.find(access => access.userId === userId);
+      const canMoveToTarget = targetFolder?.ownerId === userId || targetUserAccess?.role === 'EDITOR';
       if (!targetFolder || !canMoveToTarget || targetFolder.isArchived) {
         throw new Error('Target folder not found or unauthorized.');
       }
 
-      const descendantIds = await getAllDescendantFolderIds(tx, [folderId]);
-      if (descendantIds.includes(targetFolderId)) {
+      if (subtreeFolderIds.includes(targetFolderId)) {
         throw new Error('Cannot move a folder into its own subfolder.');
       }
 
       targetPrivacy = targetFolder.privacy;
       location = targetFolder.name;
+      inheritedFolderAccess = buildInheritedFolderAccessEntries(targetFolder.sharedWith, targetFolder.ownerId, folder.ownerId);
     }
 
     const normalizedTargetFolderId = targetFolderId ?? null;
@@ -209,10 +212,8 @@ export const moveFolder = async (
       throw new Error(`Folder "${folder.name}" already exists in this location`);
     }
 
-    const subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
-
     await tx.folder.updateMany({
-      where: { id: { in: subtreeFolderIds }, ownerId: folder.ownerId },
+      where: { id: { in: subtreeFolderIds } },
       data: { privacy: targetPrivacy }
     });
 
@@ -224,34 +225,64 @@ export const moveFolder = async (
       }
     });
 
-    await tx.document.updateMany({
+    const documents = await tx.document.findMany({
       where: {
         folderId: { in: subtreeFolderIds },
-        ownerId: folder.ownerId,
+        isArchived: false
+      },
+      select: { id: true, ownerId: true }
+    });
+
+    const documentIds = documents.map((document: any) => document.id);
+
+    await tx.document.updateMany({
+      where: {
+        id: { in: documentIds },
         isArchived: false
       },
       data: { privacy: targetPrivacy }
     });
 
-    if (targetPrivacy !== 'SPECIFIC_USER') {
-      await tx.folderAccess.deleteMany({
-        where: { folderId: { in: subtreeFolderIds } }
-      });
+    await tx.folderAccess.deleteMany({
+      where: { folderId: { in: subtreeFolderIds } }
+    });
 
-      const documents = await tx.document.findMany({
-        where: {
-          folderId: { in: subtreeFolderIds },
-          ownerId: folder.ownerId
-        },
-        select: { id: true }
+    if (documentIds.length > 0) {
+      await tx.documentAccess.deleteMany({
+        where: { documentId: { in: documentIds } }
       });
+    }
 
-      const documentIds = documents.map((document: any) => document.id);
+    if (targetPrivacy === 'SPECIFIC_USER') {
+      if (inheritedFolderAccess.length > 0) {
+        await tx.folderAccess.createMany({
+          data: subtreeFolderIds.flatMap((folderId: string) =>
+            inheritedFolderAccess.map((access) => ({
+              folderId,
+              userId: access.userId,
+              role: access.role
+            }))
+          ),
+          skipDuplicates: true
+        });
+      }
 
       if (documentIds.length > 0) {
-        await tx.documentAccess.deleteMany({
-          where: { documentId: { in: documentIds } }
-        });
+        const documentAccess = documents.flatMap((document: any) =>
+          inheritedFolderAccess
+            .filter((access) => access.userId !== document.ownerId)
+            .map((access) => ({
+              documentId: document.id,
+              userId: access.userId
+            }))
+        );
+
+        if (documentAccess.length > 0) {
+          await tx.documentAccess.createMany({
+            data: documentAccess,
+            skipDuplicates: true
+          });
+        }
       }
     }
 
@@ -466,6 +497,22 @@ export const getFolderPath = async (folderId: string) => {
  * Helper: Get ALL descendant folder IDs recursively (BFS approach)
  * Input: ['folder-a'] → Output: ['folder-a', 'folder-b', 'folder-c', ...]
  */
+function buildInheritedFolderAccessEntries(
+  parentAccess: Array<{ userId: string; role: AccessRoleFolder }>,
+  parentOwnerId: string,
+  ownerIdToExclude: string
+): Array<{ userId: string; role: AccessRoleFolder }> {
+  const inheritedAccess = new Map<string, AccessRoleFolder>();
+
+  parentAccess.forEach((access) => {
+    if (access.userId !== ownerIdToExclude) inheritedAccess.set(access.userId, access.role);
+  });
+
+  if (parentOwnerId !== ownerIdToExclude) inheritedAccess.set(parentOwnerId, 'EDITOR');
+
+  return Array.from(inheritedAccess.entries()).map(([userId, role]) => ({ userId, role }));
+}
+
 async function getAllDescendantFolderIds(
   tx: any, // Prisma.TransactionClient
   rootFolderIds: string[],
