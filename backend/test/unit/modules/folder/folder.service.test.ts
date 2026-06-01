@@ -186,6 +186,7 @@ describe('Feature: folder management behavior', () => {
       ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
     prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({
       id: 'a-parent',
@@ -207,6 +208,53 @@ describe('Feature: folder management behavior', () => {
     });
     expect(prisma.folder.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['b-folder'] }, ownerId: 'user-b' },
+      data: { isArchived: true, deletedAt: expect.any(Date) },
+    });
+  });
+
+  test('given user-owned folders and documents are inside another editor owned subfolder, when the editor archives that subfolder, then user content moves to the nearest owner folder', async () => {
+    const { archiveFolders } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'b-sub' }])
+      .mockResolvedValueOnce([{ id: 'b-child' }])
+      .mockResolvedValueOnce([{ id: 'a-child-folder' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'a-child-folder', name: 'A Child', ownerId: 'user-a', parentId: 'b-child' }])
+      .mockResolvedValueOnce([
+        { id: 'b-sub', ownerId: 'user-b', parentId: 'a-root' },
+        { id: 'b-child', ownerId: 'user-b', parentId: 'b-sub' },
+        { id: 'a-child-folder', ownerId: 'user-a', parentId: 'b-child' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({ id: 'a-root', ownerId: 'user-a', privacy: 'PRIVATE', sharedWith: [] }))
+      .mockResolvedValueOnce(folderFactory({ id: 'a-root', ownerId: 'user-a', privacy: 'PRIVATE', sharedWith: [] }));
+    prisma.document.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'a-doc', title: 'A Doc', ownerId: 'user-a', folderId: 'b-sub' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const result = await archiveFolders(['b-sub'], 'user-b');
+
+    expect(result).toEqual({ count: 1 });
+    expect(prisma.folder.update).toHaveBeenCalledWith({
+      where: { id: 'a-child-folder' },
+      data: { parentId: 'a-root', name: 'A Child', privacy: 'PRIVATE', shareToken: null },
+    });
+    expect(prisma.document.update).toHaveBeenCalledWith({
+      where: { id: 'a-doc' },
+      data: { folderId: 'a-root', title: 'A Doc', privacy: 'PRIVATE' },
+    });
+    expect(prisma.folder.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['b-sub', 'b-child'] }, ownerId: 'user-b' },
+      data: { isArchived: true, deletedAt: expect.any(Date) },
+    });
+    expect(prisma.document.updateMany).toHaveBeenCalledWith({
+      where: { folderId: { in: ['b-sub', 'b-child'] }, ownerId: 'user-b', isArchived: false },
       data: { isArchived: true, deletedAt: expect.any(Date) },
     });
   });

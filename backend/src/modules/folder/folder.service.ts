@@ -632,9 +632,14 @@ const relocateOwnedContentFromSharedSubtree = async (
     allSubtreeFolders.map(folder => [folder.id, folder])
   );
   const operationSubtreeIds = new Set(subtreeFolderIds);
+  const shouldRescueOwner = (ownerId: string) => onlyOwnerId ? ownerId === onlyOwnerId : ownerId !== rootOwnerId;
   const movedFolderSourceIds = new Set(foldersToMove.map((folder: any) => folder.id));
-  const topLevelFolders = foldersToMove.filter((folder: any) => !folder.parentId || !movedFolderSourceIds.has(folder.parentId));
-  const topLevelFolderIds = new Set(topLevelFolders.map((folder: any) => folder.id));
+  const topLevelFolders = foldersToMove.filter((folder: any) => {
+    if (!folder.parentId || !operationSubtreeIds.has(folder.parentId)) return true;
+
+    const parent = folderById.get(folder.parentId);
+    return !parent || !shouldRescueOwner(parent.ownerId);
+  });
   const movedFolderIds: string[] = [];
 
   const findNearestAccessibleParent = async (folderId: string | null, ownerId: string): Promise<RelocationTargetFolder | null> => {
@@ -739,7 +744,6 @@ const relocateOwnedContentFromSharedSubtree = async (
 
   for (const folder of rootOwnerFoldersToRescue) {
     if (!folder.parentId || !movedFolderSourceIds.has(folder.parentId)) continue;
-    if (!topLevelFolderIds.has(folder.id) && movedFolderSourceIds.has(folder.id)) continue;
 
     const targetParent = await findNearestAccessibleParent(folder.parentId, rootOwnerId);
     const newParentId = targetParent?.id ?? null;
