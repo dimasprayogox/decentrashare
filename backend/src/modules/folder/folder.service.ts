@@ -1629,7 +1629,7 @@ export const updateFoldersPrivacy = async (
       });
 
       let accessDeleted = 0;
-      if (item.newPrivacy !== 'SPECIFIC_USER') {
+      if (item.newPrivacy !== 'SPECIFIC_USER' && item.newPrivacy !== 'PUBLIC') {
         const deleted = await tx.folderAccess.deleteMany({
           where: { folderId: { in: remainingSubtreeFolderIds } }
         });
