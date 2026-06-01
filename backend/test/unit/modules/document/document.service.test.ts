@@ -167,6 +167,25 @@ describe('Feature: document privacy, access, and download behavior', () => {
     });
   });
 
+  test('given an editor moves another owner document, when the document is selected, then the document is rescued to its owner accessible parent', async () => {
+    const { moveMultipleDocuments } = await import('../../../../src/modules/document/document.service');
+    prisma.folder.findFirst.mockResolvedValue(folderFactory({ id: 'target-b', ownerId: 'user-b', privacy: 'PUBLIC', sharedWith: [] }));
+    prisma.document.findMany.mockResolvedValue([{ id: 'doc-a', title: 'A Report', folderId: 'b-folder', ownerId: 'user-a' }]);
+    prisma.document.findFirst.mockResolvedValue(null);
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({ id: 'b-folder', ownerId: 'user-b', parentId: 'a-parent', sharedWith: [] }))
+      .mockResolvedValueOnce(folderFactory({ id: 'a-parent', ownerId: 'user-a', privacy: 'PRIVATE', sharedWith: [] }));
+
+    const result = await moveMultipleDocuments(['doc-a'], 'user-b', 'target-b');
+
+    expect(result).toEqual({ count: 1, appliedPrivacy: 'PUBLIC', location: 'Folder' });
+    expect(prisma.document.update).toHaveBeenCalledWith({
+      where: { id: 'doc-a' },
+      data: { folderId: 'a-parent', title: 'A Report', privacy: 'PRIVATE' },
+    });
+    expect(prisma.document.updateMany).not.toHaveBeenCalled();
+  });
+
   test('given a short keyword, when public documents are searched, then no database lookup is performed', async () => {
     const { searchPublicDocuments } = await import('../../../../src/modules/document/document.service');
 

@@ -921,6 +921,74 @@ function buildDocumentMoveAccessEntries(
   return Array.from(inheritedUserIds);
 }
 
+async function getUniqueRootDocumentTitleForOwner(tx: Prisma.TransactionClient, ownerId: string, desiredTitle: string) {
+  let candidate = desiredTitle;
+  let counter = 1;
+
+  while (await tx.document.findFirst({
+    where: {
+      ownerId,
+      folderId: null,
+      isArchived: false,
+      deletedAt: null,
+      title: { equals: candidate, mode: 'insensitive' }
+    },
+    select: { id: true }
+  })) {
+    candidate = `${desiredTitle} (${counter})`;
+    counter += 1;
+  }
+
+  return candidate;
+}
+
+async function findNearestDocumentOwnerParent(
+  tx: Prisma.TransactionClient,
+  folderId: string | null,
+  ownerId: string
+): Promise<{ id: string; ownerId: string; privacy: PrivacyLevel; sharedWith: Array<{ userId: string }> } | null> {
+  let currentFolderId = folderId;
+
+  while (currentFolderId) {
+    const folder = await tx.folder.findUnique({
+      where: { id: currentFolderId },
+      include: { sharedWith: true }
+    });
+
+    if (!folder) return null;
+    if (!folder.isArchived && !folder.deletedAt) {
+      const canUseParent = folder.ownerId === ownerId || folder.sharedWith.some((access) => access.userId === ownerId && access.role === 'EDITOR');
+      if (canUseParent) return folder;
+    }
+
+    currentFolderId = folder.parentId;
+  }
+
+  return null;
+}
+
+async function syncMovedDocumentAccess(
+  tx: Prisma.TransactionClient,
+  document: { id: string; ownerId: string },
+  targetFolder: { ownerId: string; privacy: PrivacyLevel; sharedWith: Array<{ userId: string }> } | null
+) {
+  await tx.documentAccess.deleteMany({ where: { documentId: document.id } });
+
+  if (targetFolder?.privacy !== 'SPECIFIC_USER') return;
+
+  const inheritedUserIds = buildDocumentMoveAccessEntries(targetFolder);
+  const documentAccess = inheritedUserIds
+    .filter((accessUserId) => accessUserId !== document.ownerId)
+    .map((userId) => ({ documentId: document.id, userId }));
+
+  if (documentAccess.length > 0) {
+    await tx.documentAccess.createMany({
+      data: documentAccess,
+      skipDuplicates: true
+    });
+  }
+}
+
 export const moveMultipleDocuments = async (
   documentIds: string[], 
   userId: string, 
@@ -998,41 +1066,50 @@ export const moveMultipleDocuments = async (
       throw new Error(`Document "${duplicateDocument.title}" already exists in this location`);
     }
 
-    const movedDocumentIds = documents.map((document) => document.id);
+    const ownedDocuments = documents.filter((document) => document.ownerId === userId);
+    const rescueDocuments = documents.filter((document) => document.ownerId !== userId);
+    let movedCount = 0;
 
-    const result = await tx.document.updateMany({
-      where: {
-        id: { in: movedDocumentIds },
-        isArchived: false
-      },
-      data: {
-        folderId: targetFolderId,
-        privacy: targetPrivacy
-      }
-    });
+    if (ownedDocuments.length > 0) {
+      const ownedDocumentIds = ownedDocuments.map((document) => document.id);
+      const result = await tx.document.updateMany({
+        where: {
+          id: { in: ownedDocumentIds },
+          isArchived: false
+        },
+        data: {
+          folderId: targetFolderId,
+          privacy: targetPrivacy
+        }
+      });
+      movedCount += result.count;
 
-    await tx.documentAccess.deleteMany({
-      where: { documentId: { in: movedDocumentIds } }
-    });
-
-    if (targetPrivacy === 'SPECIFIC_USER') {
-      const inheritedUserIds = buildDocumentMoveAccessEntries(targetFolder);
-      const documentAccess = documents.flatMap((document) =>
-        inheritedUserIds
-          .filter((accessUserId) => accessUserId !== document.ownerId)
-          .map((userId) => ({ documentId: document.id, userId }))
-      );
-
-      if (documentAccess.length > 0) {
-        await tx.documentAccess.createMany({
-          data: documentAccess,
-          skipDuplicates: true
-        });
+      for (const document of ownedDocuments) {
+        await syncMovedDocumentAccess(tx, document, targetFolder);
       }
     }
 
+    for (const document of rescueDocuments) {
+      const rescueParent = await findNearestDocumentOwnerParent(tx, document.folderId, document.ownerId);
+      const rescueFolderId = rescueParent?.id ?? null;
+      const rescueTitle = rescueFolderId
+        ? document.title
+        : await getUniqueRootDocumentTitleForOwner(tx, document.ownerId, document.title);
+
+      await tx.document.update({
+        where: { id: document.id },
+        data: {
+          folderId: rescueFolderId,
+          title: rescueTitle,
+          privacy: rescueParent?.privacy ?? 'PRIVATE'
+        }
+      });
+      await syncMovedDocumentAccess(tx, document, rescueParent);
+      movedCount += 1;
+    }
+
     return {
-      count: result.count, 
+      count: movedCount,
       appliedPrivacy: targetPrivacy,
       location: targetFolderId ? "Folder" : "Root" 
     };

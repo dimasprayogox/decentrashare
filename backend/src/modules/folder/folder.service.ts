@@ -165,7 +165,7 @@ export const moveFolder = async (
     let targetPrivacy: 'PRIVATE' | 'PUBLIC' | 'LINK_ONLY' | 'SPECIFIC_USER' = 'PRIVATE';
     let location = 'Root';
     let inheritedFolderAccess: Array<{ userId: string; role: AccessRoleFolder }> = [];
-    const subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
+    let subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
 
     if (targetFolderId) {
       const targetFolder = await tx.folder.findUnique({
@@ -212,6 +212,11 @@ export const moveFolder = async (
       throw new Error(`Folder "${folder.name}" already exists in this location`);
     }
 
+    const relocation = await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: folder.ownerId });
+    if (relocation.movedFolderCount > 0 || relocation.movedDocumentCount > 0) {
+      subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
+    }
+
     await tx.folder.updateMany({
       where: { id: { in: subtreeFolderIds } },
       data: { privacy: targetPrivacy }
@@ -225,13 +230,14 @@ export const moveFolder = async (
       }
     });
 
-    const documents = await tx.document.findMany({
+    const documentsResult = await tx.document.findMany({
       where: {
         folderId: { in: subtreeFolderIds },
         isArchived: false
       },
       select: { id: true, ownerId: true }
     });
+    const documents = Array.isArray(documentsResult) ? documentsResult : [];
 
     const documentIds = documents.map((document: any) => document.id);
 
@@ -497,11 +503,22 @@ export const getFolderPath = async (folderId: string) => {
  * Helper: Get ALL descendant folder IDs recursively (BFS approach)
  * Input: ['folder-a'] → Output: ['folder-a', 'folder-b', 'folder-c', ...]
  */
+type FolderAccessEntry = { userId: string; role: AccessRoleFolder };
+type RelocationTargetFolder = {
+  id: string;
+  ownerId: string;
+  parentId: string | null;
+  privacy: PrivacyLevel;
+  isArchived: boolean;
+  deletedAt: Date | null;
+  sharedWith: FolderAccessEntry[];
+};
+
 function buildInheritedFolderAccessEntries(
-  parentAccess: Array<{ userId: string; role: AccessRoleFolder }>,
+  parentAccess: FolderAccessEntry[],
   parentOwnerId: string,
   ownerIdToExclude: string
-): Array<{ userId: string; role: AccessRoleFolder }> {
+): FolderAccessEntry[] {
   const inheritedAccess = new Map<string, AccessRoleFolder>();
 
   parentAccess.forEach((access) => {
@@ -523,13 +540,14 @@ async function getAllDescendantFolderIds(
 
   // Breadth-First Search: traverse folder tree level by level
   while (currentLevelIds.length > 0) {
-    const children = await tx.folder.findMany({
+    const childrenResult = await tx.folder.findMany({
       where: {
         parentId: { in: currentLevelIds },
         ...(archivedState === null ? {} : { isArchived: archivedState })
       },
       select: { id: true }
     });
+    const children = Array.isArray(childrenResult) ? childrenResult : [];
 
     const childIds = children.map((c: any) => c.id);
     const newIds = childIds.filter((id: string) => !allIds.has(id));
@@ -593,7 +611,7 @@ const relocateOwnedContentFromSharedSubtree = async (
   const { subtreeFolderIds, rootOwnerId, onlyOwnerId } = params;
   const ownerFilter = onlyOwnerId ? { ownerId: onlyOwnerId } : { ownerId: { not: rootOwnerId } };
 
-  const foldersToMove = await tx.folder.findMany({
+  const foldersToMoveResult = await tx.folder.findMany({
     where: {
       id: { in: subtreeFolderIds },
       isArchived: false,
@@ -601,31 +619,115 @@ const relocateOwnedContentFromSharedSubtree = async (
     },
     select: { id: true, name: true, ownerId: true, parentId: true }
   });
+  const foldersToMove = Array.isArray(foldersToMoveResult) ? foldersToMoveResult : [];
 
-  const allSubtreeFolders: Array<{ id: string; parentId: string | null; ownerId: string }> = await tx.folder.findMany({
+  const allSubtreeFoldersResult = await tx.folder.findMany({
     where: { id: { in: subtreeFolderIds }, isArchived: false },
     select: { id: true, parentId: true, ownerId: true }
   });
+  const allSubtreeFolders: Array<{ id: string; parentId: string | null; ownerId: string }> = Array.isArray(allSubtreeFoldersResult)
+    ? allSubtreeFoldersResult
+    : [];
   const folderById = new Map<string, { id: string; parentId: string | null; ownerId: string }>(
     allSubtreeFolders.map(folder => [folder.id, folder])
   );
+  const operationSubtreeIds = new Set(subtreeFolderIds);
   const movedFolderSourceIds = new Set(foldersToMove.map((folder: any) => folder.id));
   const topLevelFolders = foldersToMove.filter((folder: any) => !folder.parentId || !movedFolderSourceIds.has(folder.parentId));
   const topLevelFolderIds = new Set(topLevelFolders.map((folder: any) => folder.id));
   const movedFolderIds: string[] = [];
 
-  const findNearestRootOwnerParentId = (folderId: string | null) => {
+  const findNearestAccessibleParent = async (folderId: string | null, ownerId: string): Promise<RelocationTargetFolder | null> => {
     let currentFolderId = folderId;
+
     while (currentFolderId) {
-      const folder = folderById.get(currentFolderId);
+      if (operationSubtreeIds.has(currentFolderId)) {
+        currentFolderId = folderById.get(currentFolderId)?.parentId ?? null;
+        continue;
+      }
+
+      const folder = await tx.folder.findUnique({
+        where: { id: currentFolderId },
+        include: { sharedWith: true }
+      });
+
       if (!folder) return null;
-      if (folder.ownerId === rootOwnerId && !movedFolderSourceIds.has(folder.id)) return folder.id;
+      if (!folder.isArchived && !folder.deletedAt) {
+        if (folder.ownerId === ownerId || folder.sharedWith.some((access: any) => access.userId === ownerId && access.role === 'EDITOR')) {
+          return folder;
+        }
+      }
+
       currentFolderId = folder.parentId;
     }
+
     return null;
   };
 
-  const rootOwnerFoldersToRescue = await tx.folder.findMany({
+  const syncRescuedFolderSubtreeAccess = async (folderId: string, ownerId: string, targetParent: any | null) => {
+    const rescuedSubtreeIds = await getAllDescendantFolderIds(tx, [folderId]);
+    const rescuedDocuments = await tx.document.findMany({
+      where: { folderId: { in: rescuedSubtreeIds }, isArchived: false },
+      select: { id: true, ownerId: true }
+    });
+    const rescuedDocumentIds = rescuedDocuments.map((document: any) => document.id);
+    const privacy = targetParent?.privacy ?? 'PRIVATE';
+    const inheritedAccess = targetParent
+      ? buildInheritedFolderAccessEntries(targetParent.sharedWith, targetParent.ownerId, ownerId)
+      : [];
+
+    await tx.folder.updateMany({
+      where: { id: { in: rescuedSubtreeIds } },
+      data: { privacy, shareToken: privacy === 'LINK_ONLY' ? undefined : null }
+    });
+
+    await tx.folderAccess.deleteMany({ where: { folderId: { in: rescuedSubtreeIds } } });
+    if (rescuedDocumentIds.length > 0) {
+      await tx.document.updateMany({
+        where: { id: { in: rescuedDocumentIds } },
+        data: { privacy }
+      });
+      await tx.documentAccess.deleteMany({ where: { documentId: { in: rescuedDocumentIds } } });
+    }
+
+    if (privacy === 'SPECIFIC_USER' && inheritedAccess.length > 0) {
+      await tx.folderAccess.createMany({
+        data: rescuedSubtreeIds.flatMap((rescuedFolderId: string) =>
+          inheritedAccess.map((access) => ({ folderId: rescuedFolderId, userId: access.userId, role: access.role }))
+        ),
+        skipDuplicates: true
+      });
+
+      const documentAccess = rescuedDocuments.flatMap((document: any) =>
+        inheritedAccess
+          .filter((access) => access.userId !== document.ownerId)
+          .map((access) => ({ documentId: document.id, userId: access.userId }))
+      );
+
+      if (documentAccess.length > 0) {
+        await tx.documentAccess.createMany({ data: documentAccess, skipDuplicates: true });
+      }
+    }
+  };
+
+  const syncRescuedDocumentAccess = async (documentId: string, ownerId: string, targetParent: any | null) => {
+    const privacy = targetParent?.privacy ?? 'PRIVATE';
+    const inheritedAccess = targetParent
+      ? buildInheritedFolderAccessEntries(targetParent.sharedWith, targetParent.ownerId, ownerId)
+      : [];
+
+    await tx.document.update({ where: { id: documentId }, data: { privacy } });
+    await tx.documentAccess.deleteMany({ where: { documentId } });
+
+    if (privacy === 'SPECIFIC_USER' && inheritedAccess.length > 0) {
+      await tx.documentAccess.createMany({
+        data: inheritedAccess.map((access) => ({ documentId, userId: access.userId })),
+        skipDuplicates: true
+      });
+    }
+  };
+
+  const rootOwnerFoldersToRescueResult = await tx.folder.findMany({
     where: {
       id: { in: subtreeFolderIds },
       ownerId: rootOwnerId,
@@ -633,12 +735,14 @@ const relocateOwnedContentFromSharedSubtree = async (
     },
     select: { id: true, name: true, parentId: true }
   });
+  const rootOwnerFoldersToRescue = Array.isArray(rootOwnerFoldersToRescueResult) ? rootOwnerFoldersToRescueResult : [];
 
   for (const folder of rootOwnerFoldersToRescue) {
     if (!folder.parentId || !movedFolderSourceIds.has(folder.parentId)) continue;
     if (!topLevelFolderIds.has(folder.id) && movedFolderSourceIds.has(folder.id)) continue;
 
-    const newParentId = findNearestRootOwnerParentId(folder.parentId);
+    const targetParent = await findNearestAccessibleParent(folder.parentId, rootOwnerId);
+    const newParentId = targetParent?.id ?? null;
     const newName = newParentId
       ? folder.name
       : await getUniqueRootFolderName(tx, rootOwnerId, folder.name);
@@ -650,9 +754,10 @@ const relocateOwnedContentFromSharedSubtree = async (
         name: newName
       }
     });
+    await syncRescuedFolderSubtreeAccess(folder.id, rootOwnerId, targetParent);
   }
 
-  const rootOwnerDocumentsToRescue = await tx.document.findMany({
+  const rootOwnerDocumentsToRescueResult = await tx.document.findMany({
     where: {
       folderId: { in: Array.from(movedFolderSourceIds) },
       ownerId: rootOwnerId,
@@ -660,9 +765,11 @@ const relocateOwnedContentFromSharedSubtree = async (
     },
     select: { id: true, title: true, folderId: true }
   });
+  const rootOwnerDocumentsToRescue = Array.isArray(rootOwnerDocumentsToRescueResult) ? rootOwnerDocumentsToRescueResult : [];
 
   for (const document of rootOwnerDocumentsToRescue) {
-    const newFolderId = findNearestRootOwnerParentId(document.folderId);
+    const targetParent = await findNearestAccessibleParent(document.folderId, rootOwnerId);
+    const newFolderId = targetParent?.id ?? null;
     const newTitle = newFolderId
       ? document.title
       : await getUniqueRootDocumentTitle(tx, rootOwnerId, document.title);
@@ -674,85 +781,72 @@ const relocateOwnedContentFromSharedSubtree = async (
         title: newTitle
       }
     });
+    await syncRescuedDocumentAccess(document.id, rootOwnerId, targetParent);
   }
 
   for (const folder of topLevelFolders) {
-    const newName = await getUniqueRootFolderName(tx, folder.ownerId, folder.name);
+    const targetParent = await findNearestAccessibleParent(folder.parentId, folder.ownerId);
+    const newParentId = targetParent?.id ?? null;
+    const newName = newParentId
+      ? folder.name
+      : await getUniqueRootFolderName(tx, folder.ownerId, folder.name);
+
     await tx.folder.update({
       where: { id: folder.id },
       data: {
-        parentId: null,
+        parentId: newParentId,
         name: newName,
-        privacy: 'PRIVATE',
+        privacy: targetParent?.privacy ?? 'PRIVATE',
         shareToken: null
       }
     });
 
     const movedSubtreeIds = await getAllDescendantFolderIds(tx, [folder.id]);
     movedFolderIds.push(...movedSubtreeIds);
-
-    await tx.folder.updateMany({
-      where: { id: { in: movedSubtreeIds } },
-      data: { privacy: 'PRIVATE', shareToken: null }
-    });
-
-    await tx.document.updateMany({
-      where: { folderId: { in: movedSubtreeIds }, isArchived: false },
-      data: { privacy: 'PRIVATE' }
-    });
+    await syncRescuedFolderSubtreeAccess(folder.id, folder.ownerId, targetParent);
   }
 
   const movedFolderSet = new Set(movedFolderIds);
-  const documentsToMove = await tx.document.findMany({
+  const documentsToMoveResult = await tx.document.findMany({
     where: {
       folderId: { in: subtreeFolderIds.filter(folderId => !movedFolderSet.has(folderId)) },
       isArchived: false,
       ...ownerFilter
     },
-    select: { id: true, title: true, ownerId: true }
+    select: { id: true, title: true, ownerId: true, folderId: true }
   });
+  const documentsToMove = Array.isArray(documentsToMoveResult) ? documentsToMoveResult : [];
 
   for (const document of documentsToMove) {
-    const newTitle = await getUniqueRootDocumentTitle(tx, document.ownerId, document.title);
+    const targetParent = await findNearestAccessibleParent(document.folderId, document.ownerId);
+    const newFolderId = targetParent?.id ?? null;
+    const newTitle = newFolderId
+      ? document.title
+      : await getUniqueRootDocumentTitle(tx, document.ownerId, document.title);
+
     await tx.document.update({
       where: { id: document.id },
       data: {
-        folderId: null,
+        folderId: newFolderId,
         title: newTitle,
-        privacy: 'PRIVATE'
+        privacy: targetParent?.privacy ?? 'PRIVATE'
       }
     });
+    await syncRescuedDocumentAccess(document.id, document.ownerId, targetParent);
   }
 
   const movedDocumentIds = documentsToMove.map((document: any) => document.id);
-  const documentsInsideMovedFolders = movedFolderIds.length > 0
+  const documentsInsideMovedFoldersResult = movedFolderIds.length > 0
     ? await tx.document.findMany({
         where: { folderId: { in: movedFolderIds }, isArchived: false },
         select: { id: true }
       })
     : [];
+  const documentsInsideMovedFolders = Array.isArray(documentsInsideMovedFoldersResult) ? documentsInsideMovedFoldersResult : [];
   const allMovedDocumentIds = [
     ...movedDocumentIds,
     ...documentsInsideMovedFolders.map((document: any) => document.id)
   ];
-
-  if (movedFolderIds.length > 0) {
-    await tx.folderAccess.deleteMany({
-      where: {
-        folderId: { in: movedFolderIds },
-        userId: rootOwnerId
-      }
-    });
-  }
-
-  if (allMovedDocumentIds.length > 0) {
-    await tx.documentAccess.deleteMany({
-      where: {
-        documentId: { in: allMovedDocumentIds },
-        userId: rootOwnerId
-      }
-    });
-  }
 
   return {
     movedFolderCount: topLevelFolders.length,
@@ -919,22 +1013,26 @@ export const archiveFolders = async (folderIds: string[], userId: string) => {
     }
 
     const validRootFolderIds = folders.map((f: any) => f.id);
-    
+
     // 2. 🔄 Get ALL descendant folder IDs (recursive)
-    const allFolderIdsToArchive = await getAllDescendantFolderIds(tx, validRootFolderIds);
-    
-    // 3. Archive ALL folders (parent + all descendants)
+    let allFolderIdsToArchive = await getAllDescendantFolderIds(tx, validRootFolderIds);
+    const relocation = await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds: allFolderIdsToArchive, rootOwnerId: userId });
+    if (relocation.movedFolderCount > 0 || relocation.movedDocumentCount > 0) {
+      allFolderIdsToArchive = await getAllDescendantFolderIds(tx, validRootFolderIds);
+    }
+
+    // 3. Archive ALL folders owned by the actor (parent + owned descendants)
     await tx.folder.updateMany({
-      where: { id: { in: allFolderIdsToArchive } },
+      where: { id: { in: allFolderIdsToArchive }, ownerId: userId },
       data: {
         isArchived: true,
         deletedAt: new Date()
       }
     });
-    
-    // 4. 🔄 Archive ALL documents in ALL those folders (cascade)
+
+    // 4. 🔄 Archive ALL actor-owned documents in ALL those folders (cascade)
     await tx.document.updateMany({
-      where: { 
+      where: {
         folderId: { in: allFolderIdsToArchive },
         ownerId: userId,
         isArchived: false  // ← Only archive active documents
@@ -1018,16 +1116,27 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
     const validRootFolderIds = folders.map((f: any) => f.id);
     
     // 2. 🔄 Get ALL descendant folder IDs (recursive)
-    const allFolderIdsToDestroy = await getAllDescendantFolderIds(tx, validRootFolderIds, true);
-    
-    // 3. Delete all folderAccess relations first (foreign key constraint)
-    await tx.folderAccess.deleteMany({
-      where: { folderId: { in: allFolderIdsToDestroy } }
+    let allFolderIdsToDestroy = await getAllDescendantFolderIds(tx, validRootFolderIds, null);
+    await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds: allFolderIdsToDestroy, rootOwnerId: userId });
+    allFolderIdsToDestroy = await getAllDescendantFolderIds(tx, validRootFolderIds, true);
+
+    const ownedFolderIdsToDestroyResult = await tx.folder.findMany({
+      where: { id: { in: allFolderIdsToDestroy }, ownerId: userId, isArchived: true },
+      select: { id: true }
     });
-    
+    const ownedFolderIdsToDestroy = Array.isArray(ownedFolderIdsToDestroyResult) ? ownedFolderIdsToDestroyResult : [];
+    const ownedFolderIdValues = ownedFolderIdsToDestroy.length > 0
+      ? ownedFolderIdsToDestroy.map((folder: { id: string }) => folder.id)
+      : allFolderIdsToDestroy;
+
+    // 3. Delete all actor-owned folderAccess relations first (foreign key constraint)
+    await tx.folderAccess.deleteMany({
+      where: { folderId: { in: ownedFolderIdValues } }
+    });
+
     const documentsToDestroy = await tx.document.findMany({
       where: {
-        folderId: { in: allFolderIdsToDestroy },
+        folderId: { in: ownedFolderIdValues },
         ownerId: userId
       },
       select: { id: true }
@@ -1048,9 +1157,9 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
       });
     }
 
-    // 5. Delete ALL folders (cascade hard delete)
+    // 5. Delete only actor-owned folders (foreign-owned content is rescued before this point)
     await tx.folder.deleteMany({
-      where: { id: { in: allFolderIdsToDestroy } }
+      where: { id: { in: ownedFolderIdValues }, ownerId: userId }
     });
     
     return { count: validRootFolderIds.length };

@@ -164,11 +164,49 @@ describe('Feature: folder management behavior', () => {
 
     expect(result).toEqual({ count: 1 });
     expect(prisma.folder.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['root', 'child'] } },
+      where: { id: { in: ['root', 'child'] }, ownerId: 'user-1' },
       data: { isArchived: true, deletedAt: expect.any(Date) },
     });
     expect(prisma.document.updateMany).toHaveBeenCalledWith({
       where: { folderId: { in: ['root', 'child'] }, ownerId: 'user-1', isArchived: false },
+      data: { isArchived: true, deletedAt: expect.any(Date) },
+    });
+  });
+
+  test('given another owner has content inside an archived shared subtree, when the actor archives their folder, then the other owner content is rescued first', async () => {
+    const { archiveFolders } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'b-folder' }])
+      .mockResolvedValueOnce([{ id: 'a-child' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'a-child', name: 'A Child', ownerId: 'user-a', parentId: 'b-folder' }])
+      .mockResolvedValueOnce([
+        { id: 'b-folder', ownerId: 'user-b', parentId: 'a-parent' },
+        { id: 'a-child', ownerId: 'user-a', parentId: 'b-folder' },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({
+      id: 'a-parent',
+      ownerId: 'user-a',
+      privacy: 'PRIVATE',
+      sharedWith: [],
+    }));
+    prisma.document.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const result = await archiveFolders(['b-folder'], 'user-b');
+
+    expect(result).toEqual({ count: 1 });
+    expect(prisma.folder.update).toHaveBeenCalledWith({
+      where: { id: 'a-child' },
+      data: { parentId: 'a-parent', name: 'A Child', privacy: 'PRIVATE', shareToken: null },
+    });
+    expect(prisma.folder.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['b-folder'] }, ownerId: 'user-b' },
       data: { isArchived: true, deletedAt: expect.any(Date) },
     });
   });
@@ -206,7 +244,7 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.folderAccess.deleteMany).toHaveBeenCalledWith({ where: { folderId: { in: ['root'] } } });
     expect(prisma.documentAccess.deleteMany).toHaveBeenCalledWith({ where: { documentId: { in: ['doc-1'] } } });
     expect(prisma.document.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['doc-1'] }, ownerId: 'user-1' } });
-    expect(prisma.folder.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['root'] } } });
+    expect(prisma.folder.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['root'] }, ownerId: 'user-1' } });
   });
 
   test('given an owner shares a folder subtree, when flexible sharing runs, then access is cascaded to folders and documents and privacy becomes specific-user', async () => {
@@ -290,13 +328,17 @@ describe('Feature: folder management behavior', () => {
       .mockResolvedValueOnce(folderFactory({ id: 'target-1', ownerId: 'user-1', name: 'Target', privacy: 'PUBLIC', sharedWith: [] }));
     prisma.folder.findMany.mockResolvedValueOnce([]);
     given.noDuplicateFolder(prisma);
+    prisma.document.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'doc-1', ownerId: 'user-1' }]);
     prisma.folder.update.mockResolvedValue(folderFactory({ id: 'folder-1', parentId: 'target-1', privacy: 'PUBLIC' }));
 
     const result = await moveFolder('folder-1', 'user-1', 'target-1');
 
     expect(result).toEqual({ folder: expect.objectContaining({ id: 'folder-1' }), count: 1, appliedPrivacy: 'PUBLIC', location: 'Target' });
-    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['folder-1'] }, ownerId: 'user-1' }, data: { privacy: 'PUBLIC' } });
-    expect(prisma.document.updateMany).toHaveBeenCalledWith({ where: { folderId: { in: ['folder-1'] }, ownerId: 'user-1', isArchived: false }, data: { privacy: 'PUBLIC' } });
+    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['folder-1'] } }, data: { privacy: 'PUBLIC' } });
+    expect(prisma.document.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['doc-1'] }, isArchived: false }, data: { privacy: 'PUBLIC' } });
   });
 
   test('given a link-only folder token is valid, when the folder is opened by token, then the folder and safe document fields are returned', async () => {
