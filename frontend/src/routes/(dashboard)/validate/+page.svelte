@@ -65,37 +65,28 @@
     <p class="mt-2 max-w-2xl text-sm text-gray-500">Check an original file against the blockchain record without uploading it.</p>
   </header>
 
-  <section class="rounded-[32px] border border-white/10 bg-white/[0.03] p-5 shadow-xl shadow-black/10 md:p-8">
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-      <div>
-        <h2 class="text-xl font-black text-white">Original File Check</h2>
-        <p class="mt-2 text-sm leading-6 text-gray-400">Select the original document. DecentraShare will calculate its SHA-256 hash locally in your browser, then check whether that hash is already recorded on-chain.</p>
+  <section class="max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-xl shadow-black/10 md:p-6">
+    <div class="space-y-4">
+      <label class="relative flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-4 text-sm text-gray-300 transition-colors hover:border-white/20 hover:bg-white/[0.03]">
+        <span class="truncate">{validationFile ? validationFile.name : 'Select original file'}</span>
+        <span class="shrink-0 rounded-xl bg-white/10 px-3 py-1 text-xs font-semibold text-white">Browse</span>
+        <input
+          type="file"
+          class="absolute inset-0 cursor-pointer opacity-0"
+          disabled={isValidatingDocument}
+          onchange={(event) => {
+            validationFile = event.currentTarget.files?.[0] ?? null;
+            validationResult = null;
+            validationError = '';
+          }}
+        />
+      </label>
 
-        <div class="mt-6 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100">
-          This validation does not upload your file. Only the SHA-256 hash is sent to the backend for blockchain verification.
-        </div>
-      </div>
+      <button onclick={validateDocumentOnChain} disabled={!validationFile || isValidatingDocument} class="h-12 w-full rounded-2xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-gray-500">
+        {isValidatingDocument ? 'Checking blockchain...' : 'Check File'}
+      </button>
 
-      <div class="space-y-3">
-        <label class="relative flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-4 text-sm text-gray-300 transition-colors hover:border-white/20 hover:bg-white/[0.03]">
-          <span class="truncate">{validationFile ? validationFile.name : 'Select original file'}</span>
-          <span class="shrink-0 rounded-xl bg-white/10 px-3 py-1 text-xs font-semibold text-white">Browse</span>
-          <input
-            type="file"
-            class="absolute inset-0 cursor-pointer opacity-0"
-            disabled={isValidatingDocument}
-            onchange={(event) => {
-              validationFile = event.currentTarget.files?.[0] ?? null;
-              validationResult = null;
-              validationError = '';
-            }}
-          />
-        </label>
-
-        <button onclick={validateDocumentOnChain} disabled={!validationFile || isValidatingDocument} class="h-12 w-full rounded-2xl bg-blue-600 px-5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-gray-500">
-          {isValidatingDocument ? 'Checking blockchain...' : 'Validate Document'}
-        </button>
-      </div>
+      <p class="text-xs text-gray-500">The file is not uploaded. Only its SHA-256 hash is checked against the smart contract.</p>
     </div>
 
     {#if validationError}
@@ -103,10 +94,11 @@
     {/if}
 
     {#if validationResult}
-      <div class="mt-6 rounded-2xl border {validationResult.existsOnChain ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-yellow-500/20 bg-yellow-500/10'} p-5">
-        <p class="text-base font-bold {validationResult.existsOnChain ? 'text-emerald-300' : 'text-yellow-300'}">
-          {validationResult.existsOnChain ? 'Document is recorded on blockchain' : 'Document is not recorded on blockchain'}
+      <div class="mt-6 rounded-2xl border {validationResult.error ? 'border-red-500/20 bg-red-500/10' : validationResult.existsOnChain ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-yellow-500/20 bg-yellow-500/10'} p-5">
+        <p class="text-base font-bold {validationResult.error ? 'text-red-300' : validationResult.existsOnChain ? 'text-emerald-300' : 'text-yellow-300'}">
+          {validationResult.error ? 'Unable to check blockchain status' : validationResult.existsOnChain ? 'File found on blockchain' : 'File not found on blockchain'}
         </p>
+        {#if validationResult.error}<p class="mt-1 text-sm text-red-200/80">{validationResult.error}</p>{/if}
         <p class="mt-2 break-all font-mono text-xs text-gray-400">SHA-256: {validationResult.hash}</p>
 
         {#if validationResult.document}

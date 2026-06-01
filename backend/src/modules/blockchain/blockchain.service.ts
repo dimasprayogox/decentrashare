@@ -152,7 +152,17 @@ class BlockchainService {
 
   async checkFileExistsOnChain(fileHash: string): Promise<boolean> {
     const contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
-    return Boolean(await contract.checkFileExists(fileHash.trim().toLowerCase()));
+    const normalizedHash = fileHash.trim().toLowerCase();
+
+    try {
+      return Boolean(await contract.checkFileExists(normalizedHash));
+    } catch (error) {
+      logger.warn('[Blockchain] checkFileExists failed, falling back to isFileExists getter', {
+        fileHash: normalizedHash,
+        error: error instanceof Error ? error.message : 'unknown'
+      });
+      return Boolean(await contract.isFileExists(normalizedHash));
+    }
   }
 
   async checkFilesExistOnChain(fileHashes: string[]) {
