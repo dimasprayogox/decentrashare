@@ -56,6 +56,17 @@
     }
   }
 
+  function getProfileUrl(userId: string) {
+    const currentPath = window.location.pathname;
+    const origin = currentPath.startsWith('/storage') ? 'storage'
+      : currentPath.startsWith('/explore') ? 'explore'
+      : currentPath.startsWith('/shared') ? 'shared'
+      : currentPath.startsWith('/trash') ? 'trash'
+      : '';
+
+    return origin ? `/profile/${userId}?from=${origin}` : `/profile/${userId}`;
+  }
+
   // ✅ Keyboard: ESC to close
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && isOpen) {
@@ -140,7 +151,7 @@
 
               {#if item.bio}<div class="mb-5 px-2"><p class="text-gray-300 text-sm text-center leading-relaxed">{item.bio}</p></div>{/if}
 
-              <button onclick={() => { window.location.href = `/profile/${item.id}`; }} class="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-500 hover:to-purple-500 active:scale-[0.98] transition-all duration-150 font-medium text-sm flex items-center justify-center gap-2">
+              <button onclick={() => { window.location.href = getProfileUrl(item.id); }} class="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-500 hover:to-purple-500 active:scale-[0.98] transition-all duration-150 font-medium text-sm flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                 View Profile
               </button>

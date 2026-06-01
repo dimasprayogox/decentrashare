@@ -303,9 +303,10 @@
     }
   }
 
-  async function loadSharedFolderContents(folderId: string) {
+  async function loadSharedFolderContents(folderId: string, refresh = false) {
     try {
-      isLoading = true;
+      isLoading = !refresh;
+      isRefreshing = refresh;
       errorMessage = '';
 
       const [pathResponse, folderResponse, documentResponse] = await Promise.all([
@@ -340,14 +341,13 @@
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared folder contents.';
     } finally {
       isLoading = false;
+      isRefreshing = false;
     }
   }
 
   async function refreshSharedItems() {
     if (currentFolder) {
-      isRefreshing = true;
-      await loadSharedFolderContents(currentFolder.id);
-      isRefreshing = false;
+      await loadSharedFolderContents(currentFolder.id, true);
       return;
     }
 
@@ -455,7 +455,7 @@
         {#if currentFolder}
           <Breadcrumbs {breadcrumbs} {currentFolder} navigateTo={openFolder} />
         {:else}
-          <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Shared with me</p>
+          <p class="text-xs font-black uppercase tracking-[0.35em] text-blue-400/80 mb-2">Shared with me</p>
         {/if}
         <div class="flex items-center gap-3">
           <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight truncate">{currentFolder ? currentFolder.name : 'Shared'}</h2>
@@ -467,33 +467,24 @@
     <div class="flex gap-3 w-full sm:w-auto">
       <button
         onclick={toggleSelectMode}
-        disabled={totalCount === 0}
-        class="flex-1 sm:w-32 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
+        class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center gap-2 disabled:opacity-50 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
+        disabled={isLoading || totalCount === 0 || isProcessing}
         title={selectionMode ? 'Exit selection mode' : 'Select items'}
       >
         <span class="relative">
-          <svg class="w-4 h-4 transition-all duration-300 {selectionMode ? 'drop-shadow-[0_0_8px_rgba(248,113,113,0.6)]' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {#if selectionMode}
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
             {:else}
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             {/if}
           </svg>
-          {#if selectionMode}
-            <span class="absolute inset-0 rounded-full bg-blue-500/40 blur-md animate-ping opacity-70"></span>
-          {/if}
+          {#if selectionMode}<span class="absolute inset-0 rounded-full bg-blue-500/40 blur-md animate-ping opacity-70"></span>{/if}
         </span>
-        <span class="hidden sm:inline transition-colors duration-300 {selectionMode ? 'text-blue-100 font-semibold' : ''}">
-          {selectionMode ? 'Cancel' : 'Select'}
-        </span>
+        <span class="hidden sm:inline transition-colors duration-300 {selectionMode ? 'text-blue-100 font-semibold' : ''}">{selectionMode ? 'Cancel' : 'Select'}</span>
       </button>
 
-      <button onclick={refreshSharedItems} class="flex-1 sm:w-32 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2" disabled={isLoading || isRefreshing}>
-        <svg class="w-4 h-4 {isRefreshing ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        Refresh
-      </button>
+      <button onclick={refreshSharedItems} class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all disabled:opacity-50" disabled={isLoading || isRefreshing || isProcessing}>Refresh</button>
 
       {#if canEditCurrentFolder}
         <button onclick={() => showFolder = true} class="flex-1 sm:w-32 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-bold text-sm hover:bg-white/10 transition-all flex items-center justify-center gap-2">
@@ -579,10 +570,10 @@
     />
   {/if}
 
-  {#if isLoading}
+  {#if isLoading || isRefreshing}
     <div class="flex flex-col items-center justify-center rounded-[32px] border border-white/5 bg-white/[0.01] py-24 text-center">
       <div class="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-      <p class="text-gray-400">Wait a minute...</p>
+      <p class="text-gray-400">Loading shared items...</p>
     </div>
   {:else if visibleCount === 0}
     <div class="flex flex-col items-center justify-center rounded-[32px] border border-white/5 bg-white/[0.01] py-24 text-center">

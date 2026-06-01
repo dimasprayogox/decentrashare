@@ -289,10 +289,64 @@
           <button onclick={() => performSearch(query)} class="mt-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-200 border border-red-500/20 hover:bg-red-500/20 transition-colors">Try again</button>
         </div>
       {:else if resultCount > 0}
-        {#if viewMode === 3}
-          <FileGrid
+        {#if viewMode === 1}
+          <section class="mb-10">
+            <div class="mb-4 flex items-center justify-between">
+              <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Folders</h3>
+              <span class="text-[10px] text-gray-600">{sortedFolders.length} item{sortedFolders.length === 1 ? '' : 's'}</span>
+            </div>
+            {#if sortedFolders.length > 0}
+              <FileGrid
+                folders={sortedFolders}
+                items={[]}
+                {openFolder}
+                handleDeleteFolder={noop}
+                handleDelete={noop}
+                {getFileTheme}
+                onDownload={handleDownload}
+                selectedItems={[]}
+                selectionMode={false}
+                currentUserId={currentUser?.id}
+                onToggleSelect={noop}
+                onRefresh={() => performSearch(query)}
+                publicExploreMode={true}
+              />
+            {:else}
+              <p class="pl-2 text-sm italic text-gray-600">No folders yet</p>
+            {/if}
+          </section>
+
+          <section>
+            <div class="mb-4 flex items-center justify-between">
+              <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Documents</h3>
+              <span class="text-[10px] text-gray-600">{sortedItems.length} item{sortedItems.length === 1 ? '' : 's'}</span>
+            </div>
+            {#if sortedItems.length > 0}
+              <FileTable
+                folders={[]}
+                items={sortedItems}
+                viewMode={1}
+                {openFolder}
+                handleDeleteFolder={noop}
+                handleDelete={noop}
+                {getFileTheme}
+                onDownload={handleDownload}
+                selectedItems={[]}
+                selectionMode={false}
+                currentUserId={currentUser?.id}
+                onToggleSelect={noop}
+                onRefresh={() => performSearch(query)}
+                publicExploreMode={true}
+              />
+            {:else}
+              <p class="pl-2 text-sm italic text-gray-600">No documents yet</p>
+            {/if}
+          </section>
+        {:else if viewMode === 2}
+          <FileTable
             folders={sortedFolders}
             items={sortedItems}
+            viewMode={2}
             {openFolder}
             handleDeleteFolder={noop}
             handleDelete={noop}
@@ -306,10 +360,9 @@
             publicExploreMode={true}
           />
         {:else}
-          <FileTable
+          <FileGrid
             folders={sortedFolders}
             items={sortedItems}
-            viewMode={2}
             {openFolder}
             handleDeleteFolder={noop}
             handleDelete={noop}

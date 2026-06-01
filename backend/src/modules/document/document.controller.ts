@@ -43,6 +43,75 @@ export const handleSearchPublicDocuments = async (req: AuthRequest, res: Respons
   }
 };
 
+export const handleCheckHashesOnChain = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { hashes } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!Array.isArray(hashes) || hashes.length === 0) {
+      return res.status(400).json({ success: false, message: 'hashes must be a non-empty array' });
+    }
+
+    if (hashes.length > 50) {
+      return res.status(400).json({ success: false, message: 'Maximum 50 hashes per check' });
+    }
+
+    const normalizedHashes = hashes.map(hash => String(hash).trim().toLowerCase());
+    const invalidHash = normalizedHashes.find(hash => !/^[a-f0-9]{64}$/.test(hash));
+
+    if (invalidHash) {
+      return res.status(400).json({ success: false, message: 'Each hash must be a valid SHA-256 hex string' });
+    }
+
+    const chainResults = await blockchainService.checkFilesExistOnChain(normalizedHashes);
+    const documents = await prisma.document.findMany({
+      where: { fileHash: { in: normalizedHashes } },
+      include: {
+        owner: { select: { id: true, username: true, email: true, walletAddress: true, avatarUrl: true } }
+      }
+    });
+    const documentByHash = new Map(documents.map(document => [document.fileHash, document]));
+    const data = chainResults.map(result => {
+      const document = documentByHash.get(result.hash);
+      return {
+        ...result,
+        document: document ? {
+          id: document.id,
+          title: document.title,
+          fileName: document.fileName,
+          fileHash: document.fileHash,
+          ipfsHash: document.ipfsHash,
+          blockchainTx: document.blockchainTx,
+          isOnChain: document.isOnChain,
+          uploadedAt: document.createdAt,
+          owner: document.owner
+        } : null
+      };
+    });
+    const exists = data.filter(item => item.existsOnChain).length;
+    const failed = data.filter(item => item.error).length;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Blockchain file hashes checked successfully.',
+      data,
+      summary: {
+        total: data.length,
+        exists,
+        notExists: data.length - exists - failed,
+        failed
+      }
+    });
+  } catch (error: any) {
+    logger.error('Failed to check file hashes on-chain', { error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to check file hashes on-chain' });
+  }
+};
+
 export const handleGetDocumentDetail = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

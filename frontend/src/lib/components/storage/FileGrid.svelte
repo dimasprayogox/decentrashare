@@ -614,7 +614,7 @@ $effect(() => {
         {@const primaryOwner = folderOwners[0] || folder.owner}
         {@const primaryAvatar = getOwnerAvatar(primaryOwner)}
         <button
-          class="absolute top-5 left-5 z-30 h-8 w-8 opacity-100 transition-all duration-200 hover:scale-105"
+          class="absolute top-5 left-5 z-30 h-8 w-8 transition-all duration-200 hover:scale-105 {isMobile ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'}"
           title={formatFolderOwnerTitle(folder)}
           data-owner-profile
           onclick={(e) => {
@@ -888,7 +888,7 @@ $effect(() => {
         {#if publicExploreMode || item.owner}
           {@const documentAvatar = getOwnerAvatar(item.owner)}
           <button
-            class="absolute top-2 left-2 z-20 w-7 h-7 rounded-full border border-white/20 bg-gradient-to-br from-blue-500 to-purple-600 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white backdrop-blur-sm hover:border-blue-400/60 hover:scale-105 transition-all"
+            class="absolute top-2 left-2 z-20 flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-gradient-to-br from-blue-500 to-purple-600 text-[10px] font-bold text-white backdrop-blur-sm transition-all hover:scale-105 hover:border-blue-400/60 {isMobile ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'}"
             onclick={(e) => {
               e.stopPropagation();
               openProfileModal(item.owner, item.ownerId);

@@ -37,6 +37,21 @@
   let fileErrors = $state<Record<number, string>>({});
   let fileStatuses = $state<Record<number, 'ready' | 'uploaded' | 'duplicate' | 'error'>>({});
   let uploadStatus = $state("");
+  type BlockchainCheckStatus = {
+    hash?: string;
+    checking?: boolean;
+    existsOnChain?: boolean;
+    error?: string;
+    document?: {
+      title?: string;
+      fileName?: string;
+      blockchainTx?: string | null;
+      uploadedAt?: string | Date;
+      owner?: { username?: string | null; email?: string | null; walletAddress?: string | null };
+    } | null;
+  };
+  let blockchainChecks = $state<Record<string, BlockchainCheckStatus>>({});
+  let isCheckingBlockchain = $state(false);
   
   // ✅ NEW: Batch confirmation state
   let isConfirmingBatch = $state(false);
@@ -107,6 +122,69 @@
     fileStatuses = {};
   }
 
+  function getFileKey(file: File) {
+    return `${file.name}_${file.size}_${file.lastModified}`;
+  }
+
+  async function calculateFileHash(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(digest))
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  function formatOwner(owner?: { username?: string | null; email?: string | null; walletAddress?: string | null } | null) {
+    if (!owner) return 'Unknown owner';
+    return owner.username || owner.email || (owner.walletAddress ? `${owner.walletAddress.slice(0, 8)}...${owner.walletAddress.slice(-6)}` : 'Unknown owner');
+  }
+
+  function formatDate(value?: string | Date | null) {
+    if (!value) return 'Unknown date';
+    return new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  async function checkFilesOnChain(filesToCheck = files) {
+    if (filesToCheck.length === 0) return;
+
+    try {
+      isCheckingBlockchain = true;
+      const hashPairs = await Promise.all(filesToCheck.map(async (file) => {
+        const key = getFileKey(file);
+        blockchainChecks[key] = { ...blockchainChecks[key], checking: true, error: undefined };
+        return { key, hash: await calculateFileHash(file) };
+      }));
+
+      const response = await storageService.checkHashesOnChain(hashPairs.map(pair => pair.hash));
+      const resultByHash = new Map((response.data || []).map(result => [result.hash, result]));
+
+      blockchainChecks = {
+        ...blockchainChecks,
+        ...Object.fromEntries(hashPairs.map(({ key, hash }) => {
+          const result = resultByHash.get(hash);
+          return [key, {
+            hash,
+            checking: false,
+            existsOnChain: result?.existsOnChain ?? false,
+            error: result?.error,
+            document: result?.document ?? null
+          }];
+        }))
+      };
+    } catch (error) {
+      blockchainChecks = {
+        ...blockchainChecks,
+        ...Object.fromEntries(filesToCheck.map(file => [getFileKey(file), {
+          ...blockchainChecks[getFileKey(file)],
+          checking: false,
+          error: error instanceof Error ? error.message : 'Unable to check blockchain'
+        }]))
+      };
+    } finally {
+      isCheckingBlockchain = false;
+    }
+  }
+
   function formatSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -145,7 +223,10 @@
       }
     });
     
-    if (validFiles.length > 0) files = [...files, ...validFiles];
+    if (validFiles.length > 0) {
+      files = [...files, ...validFiles];
+      void checkFilesOnChain(validFiles);
+    }
     
     const rejected = array.length - validFiles.length;
     if (rejected > 0) {
@@ -171,10 +252,11 @@
 
   function removeFile(index: number) {
     const file = files[index];
-    const metaKey = `${file.name}_${file.size}_${file.lastModified}`;
-    
+    const metaKey = getFileKey(file);
+
     files = files.filter((_, i) => i !== index);
     delete fileMetadata[metaKey];
+    delete blockchainChecks[metaKey];
     
     const newErrors = { ...fileErrors };
     delete newErrors[index];
@@ -192,6 +274,7 @@
   function clearAllFiles() {
     files = [];
     fileMetadata = {};
+    blockchainChecks = {};
     fileErrors = {};
     fileStatuses = {};
     clearFeedback();
@@ -209,14 +292,34 @@
       
       const rawFiles = $state.snapshot(files);
       const rawMetadata = $state.snapshot(fileMetadata);
-      
+      let rawChecks = $state.snapshot(blockchainChecks);
+
+      const uncheckedFiles = rawFiles.filter(file => !rawChecks[getFileKey(file)]?.hash && !rawChecks[getFileKey(file)]?.error);
+      if (uncheckedFiles.length > 0) {
+        setUploadStatus('Checking blockchain duplicates...');
+        await checkFilesOnChain(uncheckedFiles);
+        rawChecks = $state.snapshot(blockchainChecks);
+      }
+
+      const duplicateFiles = rawFiles.filter(file => rawChecks[getFileKey(file)]?.existsOnChain);
+      const uploadableFiles = rawFiles.filter(file => !rawChecks[getFileKey(file)]?.existsOnChain);
+
+      if (uploadableFiles.length === 0) {
+        setUploadError(`${duplicateFiles.length} file${duplicateFiles.length === 1 ? '' : 's'} already recorded on-chain and cannot be uploaded again.`);
+        return;
+      }
+
+      if (duplicateFiles.length > 0) {
+        setUploadSuccess(`${duplicateFiles.length} duplicate file${duplicateFiles.length === 1 ? '' : 's'} skipped because already recorded on-chain.`);
+      }
+
       // ── PHASE 1: Upload ke Backend/IPFS ───────────────────
       const formData = new FormData();
-      rawFiles.forEach(file => formData.append('files', file));
+      uploadableFiles.forEach(file => formData.append('files', file));
       if (folderId) formData.append('folderId', folderId);
 
-      const metadataArray = rawFiles.map(file => {
-        const metaKey = `${file.name}_${file.size}_${file.lastModified}`;
+      const metadataArray = uploadableFiles.map(file => {
+        const metaKey = getFileKey(file);
         const meta = rawMetadata[metaKey] || { title: '', description: '' };
         return { fileName: file.name, title: meta.title?.trim(), description: meta.description?.trim() };
       });
@@ -519,15 +622,15 @@ if (payload.length === 1) {
                ondrop={handleDrop}
                class="group border-2 border-dashed {isDragging ? 'border-blue-500 bg-blue-500/5' : 'border-white/10 hover:border-white/20'} rounded-2xl p-8 md:p-10 text-center transition-all cursor-pointer block relative disabled:opacity-50"
                aria-disabled={isUploading || isConfirmingBatch || files.length >= MAX_FILES}>
-          <input type="file" 
-                 multiple 
-                 disabled={isUploading || isConfirmingBatch || files.length >= MAX_FILES}
+          <input type="file"
+                 multiple
+                 disabled={isUploading || isConfirmingBatch || isCheckingBlockchain || files.length >= MAX_FILES}
                  class="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" 
                  onchange={(e) => handleFiles(e.currentTarget.files)} 
                  aria-label="Select files"/>
           
           <div class="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500 group-hover:scale-110 transition-transform">
-            {#if isUploading || isConfirmingBatch}
+            {#if isUploading || isConfirmingBatch || isCheckingBlockchain}
               <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -538,7 +641,10 @@ if (payload.length === 1) {
               </svg>
             {/if}
           </div>
-          {#if isConfirmingBatch}
+          {#if isCheckingBlockchain}
+            <p class="text-white font-medium">Checking blockchain...</p>
+            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Detecting duplicate content</p>
+          {:else if isConfirmingBatch}
             <p class="text-white font-medium">Confirming on blockchain...</p>
             <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">1 wallet signature for all files</p>
           {:else if isUploading}
@@ -563,7 +669,7 @@ if (payload.length === 1) {
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-sm font-medium text-gray-300">{files.length} file{files.length > 1 ? 's' : ''} selected</h4>
               <button onclick={clearAllFiles} 
-                      disabled={isUploading || isConfirmingBatch} 
+                      disabled={isUploading || isConfirmingBatch || isCheckingBlockchain}
                       class="text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50">
                 Clear all
               </button>
@@ -581,8 +687,9 @@ if (payload.length === 1) {
             
             <div class="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
               {#each files as file, i (file.name + file.size + file.lastModified)}
-                {@const metaKey = `${file.name}_${file.size}_${file.lastModified}`}
+                {@const metaKey = getFileKey(file)}
                 {@const meta = fileMetadata[metaKey] || { title: '', description: '' }}
+                {@const chainStatus = blockchainChecks[metaKey]}
                  
                 <div transition:slide={{ axis: 'y', duration: 150, easing: cubicOut }}
                      class="flex flex-col p-3 bg-white/[0.03] border {fileStatuses[i] === 'duplicate' ? 'border-yellow-500/30' : fileStatuses[i] === 'error' ? 'border-red-500/30' : 'border-white/5'} rounded-xl">
@@ -615,7 +722,15 @@ if (payload.length === 1) {
                       <div class="truncate min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                           <p class="text-sm text-gray-200 truncate">{file.name}</p>
-                          {#if fileStatuses[i] === 'duplicate'}
+                          {#if chainStatus?.checking}
+                            <span class="px-1.5 py-0.5 bg-blue-500/20 text-blue-300 text-[8px] rounded border border-blue-500/30">Checking chain</span>
+                          {:else if chainStatus?.existsOnChain}
+                            <span class="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[8px] rounded border border-yellow-500/30">On-chain duplicate</span>
+                          {:else if chainStatus?.hash && !chainStatus?.error}
+                            <span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[8px] rounded border border-emerald-500/30">New on-chain</span>
+                          {:else if chainStatus?.error}
+                            <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] rounded border border-red-500/30">Check failed</span>
+                          {:else if fileStatuses[i] === 'duplicate'}
                             <span class="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[8px] rounded border border-yellow-500/30">Duplicate</span>
                           {:else if fileStatuses[i] === 'error'}
                             <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] rounded border border-red-500/30">Error</span>
@@ -633,7 +748,7 @@ if (payload.length === 1) {
                     
                     <!-- Remove Button -->
                     <button onclick={() => { removeFile(i); delete fileMetadata[metaKey]; }} 
-                            disabled={isUploading || isConfirmingBatch} 
+                            disabled={isUploading || isConfirmingBatch || isCheckingBlockchain}
                             class="p-2 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50" 
                             aria-label={`Remove ${file.name}`}>
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -642,6 +757,23 @@ if (payload.length === 1) {
                     </button>
                   </div>
                   
+                  {#if chainStatus?.existsOnChain || chainStatus?.error}
+                    <div class="mt-3 rounded-lg border p-3 text-[11px] {chainStatus?.existsOnChain ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-100' : 'border-red-500/20 bg-red-500/10 text-red-200'}">
+                      {#if chainStatus?.existsOnChain}
+                        <p class="font-semibold">This file is already recorded on-chain and will be skipped.</p>
+                        {#if chainStatus.document}
+                          <div class="mt-2 space-y-1 text-yellow-200/80">
+                            <p>Owner: {formatOwner(chainStatus.document.owner)}</p>
+                            <p>Uploaded: {formatDate(chainStatus.document.uploadedAt)}</p>
+                            {#if chainStatus.document.blockchainTx}<p class="truncate">Tx: {chainStatus.document.blockchainTx}</p>{/if}
+                          </div>
+                        {/if}
+                      {:else}
+                        <p>{chainStatus.error}</p>
+                      {/if}
+                    </div>
+                  {/if}
+
                   <!-- ✅ Expandable Metadata Inputs -->
                   <div class="mt-3 pt-3 border-t border-white/5">
                     <!-- Title Input -->
@@ -698,7 +830,7 @@ if (payload.length === 1) {
         {/if}
 
         <!-- Upload Button -->
-        <button disabled={files.length === 0 || isUploading || isConfirmingBatch} 
+        <button disabled={files.length === 0 || isUploading || isConfirmingBatch || isCheckingBlockchain}
                 onclick={startUpload}
                 class="w-full mt-8 h-14 bg-blue-600 disabled:bg-white/5 disabled:text-gray-500 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 disabled:cursor-not-allowed">
           {#if isConfirmingBatch}

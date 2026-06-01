@@ -5,7 +5,7 @@ import { getActiveNav } from '$lib/utils/getActiveNav';
 
 
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
-    const { active, subActive } = getActiveNav(url.pathname);
+    const { active, subActive } = getActiveNav(url.pathname, url.searchParams);
     
     const session = cookies.get('session_token');
 

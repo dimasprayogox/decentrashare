@@ -290,6 +290,24 @@ export interface GetPublicProfileResponse extends StorageApiResponse {
   };
 }
 
+export interface CheckHashesOnChainResponse extends StorageApiResponse {
+  data: Array<{
+    hash: string;
+    existsOnChain: boolean;
+    error?: string;
+    document?: (Pick<Document, 'id' | 'title' | 'fileName' | 'fileHash' | 'ipfsHash' | 'blockchainTx' | 'isOnChain'> & {
+      uploadedAt?: string | Date;
+      owner?: Pick<AuthUser, 'id' | 'username' | 'email' | 'walletAddress' | 'avatarUrl'>;
+    }) | null;
+  }>;
+  summary: {
+    total: number;
+    exists: number;
+    notExists: number;
+    failed: number;
+  };
+}
+
 export interface DownloadResponse {
   success: boolean;
   fileName: string;

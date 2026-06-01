@@ -9,6 +9,7 @@ import type {
   SearchPublicFoldersResponse,
   GetPublicFolderContentsResponse,
   GetPublicProfileResponse,
+  CheckHashesOnChainResponse,
   UploadFilesResponse,
   MoveDocumentsResponse,
   MoveFolderResponse,
@@ -144,6 +145,14 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
 
   getPublicProfile: async (userId: string) => {
     return apiClient<GetPublicProfileResponse>(`/users/${userId}/public-profile`, { method: 'GET' });
+  },
+
+  checkHashesOnChain: async (hashes: string[]) => {
+    return apiClient<CheckHashesOnChainResponse>('/documents/check-hashes-onchain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hashes })
+    });
   },
 
   searchUsersForShare: async (query: string, options?: {

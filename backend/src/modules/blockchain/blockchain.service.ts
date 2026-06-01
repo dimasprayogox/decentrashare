@@ -150,6 +150,28 @@ class BlockchainService {
     }
   }
 
+  async checkFileExistsOnChain(fileHash: string): Promise<boolean> {
+    const contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
+    return Boolean(await contract.isFileExists(fileHash.trim().toLowerCase()));
+  }
+
+  async checkFilesExistOnChain(fileHashes: string[]) {
+    const uniqueHashes = [...new Set(fileHashes.map(hash => hash.trim().toLowerCase()))];
+    const results = await Promise.all(uniqueHashes.map(async (hash) => {
+      try {
+        return { hash, existsOnChain: await this.checkFileExistsOnChain(hash) };
+      } catch (error) {
+        logger.warn('[Blockchain] Failed to check file hash on-chain', {
+          fileHash: hash,
+          error: error instanceof Error ? error.message : 'unknown'
+        });
+        return { hash, existsOnChain: false, error: 'Unable to check blockchain status' };
+      }
+    }));
+
+    return results;
+  }
+
   /**
    * ✅ NEW: Filter files that are already on-chain before preparing batch
    */

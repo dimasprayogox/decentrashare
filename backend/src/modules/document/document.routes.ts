@@ -25,7 +25,8 @@ import {
   confirmDocumentOnChain,
   triggerBlockchainConfirmation,
   confirmBatchComplete,
-  triggerBatchBlockchainConfirmation
+  triggerBatchBlockchainConfirmation,
+  handleCheckHashesOnChain
 } from "./document.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requireAdmin } from "../../middlewares/role.middleware";
@@ -62,6 +63,7 @@ router.get("/shared-with-me", handleGetSharedWithMe);
 
 router.post("/batch/confirm-complete", confirmBatchComplete);
 router.post("/batch/trigger-blockchain", triggerBatchBlockchainConfirmation);
+router.post("/check-hashes-onchain", handleCheckHashesOnChain);
 
 router.get('/logs', handleGetActivityLogs);
 router.post('/bulk-download', handleBulkDownloadDocuments);
