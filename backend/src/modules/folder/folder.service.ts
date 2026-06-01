@@ -1029,6 +1029,7 @@ export const archiveFolders = async (folderIds: string[], userId: string) => {
     await tx.folder.updateMany({
       where: { id: { in: allFolderIdsToArchive }, ownerId: userId },
       data: {
+        parentId: null,
         isArchived: true,
         deletedAt: new Date()
       }

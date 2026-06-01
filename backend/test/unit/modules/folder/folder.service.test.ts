@@ -165,7 +165,7 @@ describe('Feature: folder management behavior', () => {
     expect(result).toEqual({ count: 1 });
     expect(prisma.folder.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['root', 'child'] }, ownerId: 'user-1' },
-      data: { isArchived: true, deletedAt: expect.any(Date) },
+      data: { parentId: null, isArchived: true, deletedAt: expect.any(Date) },
     });
     expect(prisma.document.updateMany).toHaveBeenCalledWith({
       where: { folderId: { in: ['root', 'child'] }, ownerId: 'user-1', isArchived: false },
