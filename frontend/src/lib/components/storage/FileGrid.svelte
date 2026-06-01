@@ -74,7 +74,7 @@ $effect(() => {
   
   // Profile Modal
   let showProfileModal = $state(false);
-  let selectedProfile = $state<{
+  type OwnerProfile = {
     id: string;
     username?: string | null;
     email?: string | null;
@@ -83,7 +83,11 @@ $effect(() => {
     bio?: string | null;
     website?: string | null;
     joinedAt?: string | Date;
-  } | null>(null);
+  };
+
+  let selectedProfile = $state<OwnerProfile | null>(null);
+  let showOwnerListModal = $state(false);
+  let selectedOwnerProfiles = $state<OwnerProfile[]>([]);
 
   // File Preview Modal
   let showFilePreview = $state(false);
@@ -150,6 +154,7 @@ $effect(() => {
 
   function getOwnerAvatar(owner: {
     username?: string | null;
+    email?: string | null;
     avatarUrl?: string | null;
     walletAddress: string;
   } | null | undefined): { type: 'image' | 'initial'; value: string } {
@@ -157,6 +162,18 @@ $effect(() => {
     if (owner.avatarUrl) return { type: 'image', value: owner.avatarUrl };
     const initial = (owner.username?.trim()?.[0] || owner.email?.trim()?.[0] || owner.walletAddress[0] || '?').toUpperCase();
     return { type: 'initial', value: initial };
+  }
+
+  function getFolderOwners(folder: Folder) {
+    const owners = folder.owners?.length ? folder.owners : folder.contributors;
+    if (owners?.length) return owners;
+    return folder.owner ? [folder.owner] : [];
+  }
+
+  function formatFolderOwnerTitle(folder: Folder): string {
+    const owners = getFolderOwners(folder);
+    if (owners.length === 0) return formatOwnerName(folder.owner, currentUserId || undefined, folder.ownerId);
+    return owners.map(owner => formatOwnerName(owner, currentUserId || undefined, owner.id)).join(', ');
   }
 
   function formatFileSize(bytes: number | null | undefined): string {
@@ -291,7 +308,7 @@ async function loadPreviewForItem(item: Document) {
     previewUrls[id] = blobUrl;
 
   } catch (err) {
-    console.warn('⚠️ Failed to load preview for:', id, err);
+    console.warn('Failed to load preview for:', id, err);
     previewErrors[id] = err instanceof Error ? err.message : 'Failed to load';
 
   } finally {
@@ -430,9 +447,26 @@ function openFilePreview(item: Document) {
     showProfileModal = true;
   }
 
+  function openOwnerListModal(owners: Array<Folder['owner']>) {
+    selectedOwnerProfiles = owners
+      .filter((owner): owner is NonNullable<Folder['owner']> => Boolean(owner))
+      .map(owner => ({
+        id: owner.id,
+        username: owner.username,
+        walletAddress: owner.walletAddress,
+        avatarUrl: owner.avatarUrl
+      }));
+    showOwnerListModal = selectedOwnerProfiles.length > 0;
+  }
+
   function closeProfileModal() {
     showProfileModal = false;
     selectedProfile = null;
+  }
+
+  function closeOwnerListModal() {
+    showOwnerListModal = false;
+    selectedOwnerProfiles = [];
   }
 
   // ✅✅✅ OPEN EDIT MODAL (SAMA PERSIS FILETABLE - DIRECT ASSIGNMENT)
@@ -575,6 +609,34 @@ $effect(() => {
         openFolder(folder);
       }}
     >
+      {#if publicExploreMode || folder.owner}
+        {@const folderOwners = getFolderOwners(folder)}
+        {@const primaryOwner = folderOwners[0] || folder.owner}
+        {@const primaryAvatar = getOwnerAvatar(primaryOwner)}
+        <button
+          class="absolute top-5 left-5 z-30 h-8 w-8 opacity-100 transition-all duration-200 hover:scale-105"
+          title={formatFolderOwnerTitle(folder)}
+          data-owner-profile
+          onclick={(e) => {
+            e.stopPropagation();
+            openOwnerListModal(folderOwners.length ? folderOwners : [folder.owner]);
+          }}
+        >
+          <span class="absolute left-0 top-0 flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border-2 border-[#1a1a1e] bg-gradient-to-br from-blue-500 to-purple-600 text-[10px] font-bold text-white shadow-[0_8px_20px_rgba(0,0,0,0.55)]">
+            {#if primaryAvatar.type === 'image'}
+              <img src={primaryAvatar.value} alt={formatOwnerName(primaryOwner, currentUserId || undefined, primaryOwner?.id)} class="h-full w-full object-cover" />
+            {:else}
+              {primaryAvatar.value}
+            {/if}
+          </span>
+          {#if folderOwners.length > 1}
+            <span class="absolute  -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#1a1a1e] bg-blue-700 px-1 text-[8px] font-black text-white">
+              +{folderOwners.length - 1}
+            </span>
+          {/if}
+        </button>
+      {/if}
+
       <!-- ✨ Checkbox (tetap sama) -->
       {#if selectionMode}
         <div class="absolute top-3 left-3 z-40">
@@ -823,6 +885,23 @@ $effect(() => {
             {#if previewErrors[item.id]}<span class="text-[10px] text-gray-500">Preview unavailable</span>{/if}
           </div>
         {/if}
+        {#if publicExploreMode || item.owner}
+          {@const documentAvatar = getOwnerAvatar(item.owner)}
+          <button
+            class="absolute top-2 left-2 z-20 w-7 h-7 rounded-full border border-white/20 bg-gradient-to-br from-blue-500 to-purple-600 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white backdrop-blur-sm hover:border-blue-400/60 hover:scale-105 transition-all"
+            onclick={(e) => {
+              e.stopPropagation();
+              openProfileModal(item.owner, item.ownerId);
+            }}
+            title={formatOwnerName(item.owner, currentUserId || undefined, item.ownerId)}
+          >
+            {#if documentAvatar.type === 'image'}
+              <img src={documentAvatar.value} alt={formatOwnerName(item.owner, currentUserId || undefined, item.ownerId)} class="w-full h-full object-cover" />
+            {:else}
+              {documentAvatar.value}
+            {/if}
+          </button>
+        {/if}
         <span class="absolute top-2 right-2 z-20 text-[8px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-sm {isImageMimeType(item.mimeType) ? 'bg-black/60 text-white border-white/10' : previewMeta.badge}">
           {isImageMimeType(item.mimeType) ? 'IMG' : previewMeta.label}
         </span>
@@ -849,9 +928,10 @@ $effect(() => {
 
 <!-- ✅ MODALS - WAJIB DI LUAR {#each} LOOP (DESAIN + FUNGSI FILETABLE) -->
 <ProfilePreviewModal
-  isOpen={showProfileModal}
-  onClose={closeProfileModal}
+  isOpen={showProfileModal || showOwnerListModal}
+  onClose={showOwnerListModal ? closeOwnerListModal : closeProfileModal}
   profile={selectedProfile}
+  profiles={showOwnerListModal ? selectedOwnerProfiles : undefined}
   {currentUserId}
 />
 

@@ -18,7 +18,7 @@
   let browseFolders = $state<Folder[]>([]);
   let browseItems = $state<Document[]>([]);
   let breadcrumbs = $state<Array<{ id: string; name: string }>>([]);
-  let currentFolder = $state<{ id: string; name: string; parentId: string | null } | null>(null);
+  let currentFolder = $state<(Pick<Folder, 'id' | 'name' | 'parentId' | 'owner'> & { owners?: Folder['owner'][] }) | null>(null);
   let isSearching = $state(false);
   let isFolderLoading = $state(false);
   let searchError = $state('');
@@ -32,8 +32,8 @@
     direction: 'desc'
   });
 
-  const publicFolders = $derived(folders.filter(folder => folder.privacy === 'PUBLIC' && folder.ownerId !== currentUser?.id));
-  const publicItems = $derived(items.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id));
+  const publicFolders = $derived(folders.filter(folder => folder.privacy === 'PUBLIC'));
+  const publicItems = $derived(items.filter(item => item.privacy === 'PUBLIC'));
   const activeFolders = $derived(currentFolder ? browseFolders : publicFolders);
   const activeItems = $derived(currentFolder ? browseItems : publicItems);
   const sortedFolders = $derived(sortItems(activeFolders, sortOption));
@@ -119,10 +119,10 @@
       ]);
       if (currentSeq !== requestSeq) return;
       items = documentsResponse.success && documentsResponse.data
-        ? documentsResponse.data.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id)
+        ? documentsResponse.data.filter(item => item.privacy === 'PUBLIC')
         : [];
       folders = foldersResponse.success && foldersResponse.data
-        ? foldersResponse.data.filter(folder => folder.privacy === 'PUBLIC' && folder.ownerId !== currentUser?.id)
+        ? foldersResponse.data.filter(folder => folder.privacy === 'PUBLIC')
         : [];
     } catch (error: unknown) {
       if (currentSeq !== requestSeq) return;
@@ -172,8 +172,8 @@
 
       currentFolder = response.data.currentFolder;
       breadcrumbs = response.data.breadcrumbs;
-      browseFolders = response.data.folders.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id);
-      browseItems = response.data.documents.filter(item => item.privacy === 'PUBLIC' && item.ownerId !== currentUser?.id);
+      browseFolders = response.data.folders.filter(item => item.privacy === 'PUBLIC');
+      browseItems = response.data.documents.filter(item => item.privacy === 'PUBLIC');
     } catch (error: unknown) {
       searchError = error instanceof Error ? error.message : 'Failed to open public folder.';
     } finally {
@@ -281,7 +281,7 @@
             <svg class="w-7 h-7 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
           </div>
           <p class="text-white font-bold">Type at least 2 characters to search public folders and documents.</p>
-          <p class="text-gray-500 text-sm mt-1">Results only show public content owned by other users.</p>
+          <p class="text-gray-500 text-sm mt-1">Results show public content from every owner, including your own.</p>
         </div>
       {:else if searchError}
         <div class="py-20 text-center border border-red-500/20 rounded-[32px] bg-red-500/[0.03]">
@@ -325,7 +325,7 @@
         {/if}
       {:else}
         <div class="text-center py-20 border border-white/5 rounded-[32px] bg-white/[0.01]">
-          <p class="text-white font-bold">No public folders or documents from other users found.</p>
+          <p class="text-white font-bold">No public folders or documents found.</p>
           <p class="text-gray-500 text-sm mt-1">Try another keyword or make sure the content you are looking for is public.</p>
         </div>
       {/if}

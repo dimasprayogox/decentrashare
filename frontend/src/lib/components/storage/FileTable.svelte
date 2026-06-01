@@ -60,7 +60,7 @@
   
   // Profile Modal
   let showProfileModal = $state(false);
-  let selectedProfile = $state<{
+  type OwnerProfile = {
     id: string;
     username?: string | null;
     email?: string | null;
@@ -69,7 +69,10 @@
     bio?: string | null;
     website?: string | null;
     joinedAt?: string | Date;
-  } | null>(null);
+  };
+
+  let selectedProfile = $state<OwnerProfile | null>(null);
+  let selectedOwnerProfiles = $state<OwnerProfile[]>([]);
 
   // File Preview Modal
   let showFilePreview = $state(false);
@@ -135,6 +138,27 @@
     if (owner.username) return owner.username;
     if (owner.email) return owner.email;
     return `${owner.walletAddress.slice(0, 6)}...${owner.walletAddress.slice(-4)}`;
+  }
+
+  function getFolderOwners(folder: Folder) {
+    const owners = folder.owners?.length ? folder.owners : folder.contributors;
+    if (owners?.length) return owners;
+    return folder.owner ? [folder.owner] : [];
+  }
+
+  function formatOwnerList(folder: Folder): string {
+    const owners = getFolderOwners(folder);
+    if (owners.length === 0) return formatOwnerName(folder.owner, currentUserId || undefined, folder.ownerId);
+    if (owners.length === 1) return formatOwnerName(owners[0], currentUserId || undefined, owners[0]?.id || folder.ownerId);
+
+    const [firstOwner, ...otherOwners] = owners;
+    return `${formatOwnerName(firstOwner, currentUserId || undefined, firstOwner?.id)} +${otherOwners.length}`;
+  }
+
+  function formatOwnerListTitle(folder: Folder): string {
+    const owners = getFolderOwners(folder);
+    if (owners.length === 0) return folder.owner?.walletAddress || folder.ownerId;
+    return owners.map(owner => formatOwnerName(owner, currentUserId || undefined, owner.id)).join(', ');
   }
 
   // ✅ Get avatar URL or initial (INI YANG MISSING!)
@@ -311,10 +335,24 @@
     showProfileModal = true;
   }
 
+  function openFolderOwnerProfiles(owners: Array<Folder['owner']>) {
+    selectedOwnerProfiles = owners
+      .filter((owner): owner is NonNullable<Folder['owner']> => Boolean(owner))
+      .map(owner => ({
+        id: owner.id,
+        username: owner.username,
+        walletAddress: owner.walletAddress,
+        avatarUrl: owner.avatarUrl
+      }));
+    selectedProfile = null;
+    showProfileModal = selectedOwnerProfiles.length > 0;
+  }
+
   // ✅ Close profile modal
   function closeProfileModal() {
     showProfileModal = false;
     selectedProfile = null;
+    selectedOwnerProfiles = [];
   }
 
   // ✅ Open edit modal for document
@@ -804,58 +842,70 @@ async function handleConfirmBlockchain(item: Document) {
 
             <!-- Owner -->
             <td class="hidden xl:table-cell px-4 py-4 text-center">
-              {#if folder.owner || folder.ownerId}  
-                {@const avatar = getOwnerAvatar(folder.owner)}  
-                {@const isCurrentUser = currentUserId && folder.ownerId && currentUserId === folder.ownerId}  
-                
-                <button 
-                  class="group/owner flex items-center justify-center gap-2 
-                         hover:scale-[1.02] active:scale-[0.98] 
-                         hover:bg-white/5 hover:rounded-lg 
+              {#if folder.owner || folder.ownerId}
+                {@const folderOwners = getFolderOwners(folder)}
+                {@const primaryOwner = folderOwners[0] || folder.owner}
+                {@const avatar = getOwnerAvatar(primaryOwner)}
+                {@const isCurrentUser = currentUserId && folder.ownerId && currentUserId === folder.ownerId}
+
+                <button
+                  class="group/owner flex items-center justify-center gap-2
+                         hover:scale-[1.02] active:scale-[0.98]
+                         hover:bg-white/5 hover:rounded-lg
                          transition-all duration-200 ease-out
                          focus:outline-none focus:ring-2 focus:ring-blue-500/50
                          text-left w-full"
-                  title={folder.owner?.walletAddress || folder.ownerId}  
+                  title={formatOwnerListTitle(folder)}
                   onclick={(e) => {
                     e.stopPropagation();
-                    openProfileModal(folder.owner, folder.ownerId);  
+                    if (folderOwners.length > 1) {
+                      openFolderOwnerProfiles(folderOwners);
+                    } else {
+                      openProfileModal(primaryOwner, primaryOwner?.id || folder.ownerId);
+                    }
                   }}
                 >
                   <div class="relative">
                     {#if avatar.type === 'image'}
-                      <img 
-                        src={avatar.value} 
-                        alt={formatOwnerName(folder.owner, currentUserId, folder.ownerId)}  
-                        class="w-6 h-6 rounded-full object-cover border border-white/10 
+                      <img
+                        src={avatar.value}
+                        alt={formatOwnerList(folder)}
+                        class="w-6 h-6 rounded-full object-cover border border-white/10
                                group-hover/owner:border-blue-400/50 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
                                transition-all duration-200"
-                        onerror={(e) => { 
+                        onerror={(e) => {
                           const el = e.target as HTMLImageElement;
                           el.style.display = 'none';
                           el.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <div class="hidden w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 
+                      <div class="hidden w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600
                                   flex items-center justify-center text-[10px] font-bold text-white
                                   group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
                                   transition-shadow duration-200">
                         {avatar.value}
                       </div>
                     {:else}
-                      <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 
+                      <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600
                                   flex items-center justify-center text-[10px] font-bold text-white
                                   group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
                                   transition-shadow duration-200">
                         {avatar.value}
                       </div>
                     {/if}
-                    <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full 
-                                 bg-blue-500 border-2 border-[#1a1a1e] opacity-0 
-                                 group-hover/owner:opacity-100 transition-opacity duration-200"></span>
+                    {#if folderOwners.length > 1}
+                      <span class="absolute -bottom-1 -right-1 min-w-4 h-4 rounded-full bg-blue-600 border-2 border-[#1a1a1e] px-1 text-[8px] font-black text-white leading-3">
+                        +{folderOwners.length - 1}
+                      </span>
+                    {:else}
+                      <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full
+                                   bg-blue-500 border-2 border-[#1a1a1e] opacity-0
+                                   group-hover/owner:opacity-100 transition-opacity duration-200"></span>
+                    {/if}
                   </div>
-                  
+
                   <span class="text-xs truncate max-w-[100px] transition-colors duration-200 {isCurrentUser ? 'text-blue-400 font-semibold' : 'text-gray-300 group-hover/owner:text-blue-300 group-hover/owner:font-medium'}">
-                    {formatOwnerName(folder.owner, currentUserId, folder.ownerId)}
+                    {formatOwnerList(folder)}
                   </span>
                 </button>
               {:else}
@@ -1237,6 +1287,7 @@ async function handleConfirmBlockchain(item: Document) {
     isOpen={showProfileModal}
     onClose={closeProfileModal}
     profile={selectedProfile}
+    profiles={selectedOwnerProfiles.length > 0 ? selectedOwnerProfiles : undefined}
     {currentUserId}
   />
   <FilePreviewModal

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middlewares/auth.middleware';
-import { handleGetMe, handleUpdateProfile, handleUpdateAvatar, handleSearchUsersForShare } from './user.controller';
+import { handleGetMe, handleGetPublicProfile, handleUpdateProfile, handleUpdateAvatar, handleSearchUsersForShare } from './user.controller';
 import { uploadMiddleware } from '../../middlewares/upload.middleware';
 
 const router = Router();
@@ -8,6 +8,7 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
+router.get('/:userId/public-profile', handleGetPublicProfile);
 router.get('/me', handleGetMe);
 router.put('/me', handleUpdateProfile);
 router.patch('/me/avatar', uploadMiddleware.single('avatar'), handleUpdateAvatar);

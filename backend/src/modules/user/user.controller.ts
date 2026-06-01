@@ -4,6 +4,23 @@ import { userService } from './user.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import { logger } from '../../utils/logger.js';
 
+export const handleGetPublicProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'User ID is required' });
+    }
+
+    const profile = await userService.getPublicProfile(userId);
+    return res.status(200).json({ success: true, data: profile });
+  } catch (error: any) {
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    next(error);
+  }
+};
+
 // GET /api/user/me
 export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

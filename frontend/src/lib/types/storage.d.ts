@@ -136,6 +136,8 @@ export interface Folder {
   // Optional computed fields (from Prisma includes)
   _count?: { documents: number };
   owner?: Pick<AuthUser, 'id' | 'username' | 'walletAddress' | 'avatarUrl'>;
+  owners?: Pick<AuthUser, 'id' | 'username' | 'walletAddress' | 'avatarUrl'>[];
+  contributors?: Pick<AuthUser, 'id' | 'username' | 'walletAddress' | 'avatarUrl'>[];
   parent?: Pick<Folder, 'id' | 'name' | 'parentId'>;
   sharedWith?: FolderAccess[];
   accessRole?: 'VIEWER' | 'EDITOR' | 'ADMIN';
@@ -275,8 +277,16 @@ export interface GetPublicFolderContentsResponse extends StorageApiResponse {
   data: {
     folders: Folder[];
     documents: Document[];
-    currentFolder: { id: string; name: string; parentId: string | null };
+    currentFolder: Pick<Folder, 'id' | 'name' | 'parentId' | 'owner' | 'owners'>;
     breadcrumbs: Array<{ id: string; name: string }>;
+  };
+}
+
+export interface GetPublicProfileResponse extends StorageApiResponse {
+  data: {
+    user: AuthUser & { bio?: string | null; website?: string | null; createdAt?: string };
+    folders: Folder[];
+    documents: Document[];
   };
 }
 

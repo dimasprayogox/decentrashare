@@ -37,7 +37,46 @@ export const userService = {
 
     if (!user) throw new Error('User not found');
     return user;
-  }, 
+  },
+
+  async getPublicProfile(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        walletAddress: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        bio: true,
+        website: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) throw new Error('User not found');
+
+    const [folders, documents] = await Promise.all([
+      prisma.folder.findMany({
+        where: { ownerId: userId, privacy: 'PUBLIC', isArchived: false, deletedAt: null },
+        include: {
+          owner: { select: { id: true, username: true, email: true, walletAddress: true, avatarUrl: true } },
+          _count: { select: { documents: true } }
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
+      }),
+      prisma.document.findMany({
+        where: { ownerId: userId, privacy: 'PUBLIC', isArchived: false, deletedAt: null },
+        include: {
+          folder: true,
+          owner: { select: { id: true, username: true, email: true, walletAddress: true, avatarUrl: true } }
+        },
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
+      })
+    ]);
+
+    return { user, folders, documents };
+  },
 
 async searchUsersForShare({
   query,
