@@ -4,6 +4,7 @@
   import { onDestroy, onMount } from 'svelte';
   import mammoth from 'mammoth/mammoth.browser';
   import * as XLSX from 'xlsx';
+  import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
   import { storageService } from '$lib/services/storage/storage';
   import type { Document } from '$lib/types/storage';
 
@@ -12,6 +13,7 @@
   let documentDetail = $state<Document | null>(null);
   let isLoading = $state(true);
   let isPreviewLoading = $state(false);
+  let isDownloading = $state(false);
   let errorMessage = $state('');
   let previewError = $state('');
   let previewBlobUrl = $state<string | null>(null);
@@ -32,6 +34,7 @@
   let publicSearchError = $state('');
   let hasPublicSearchSubmitted = $state(false);
   let publicSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+  let showProfileModal = $state(false);
 
   const documentId = $derived(page.params.id);
 
@@ -207,8 +210,14 @@
   }
 
   async function downloadDocument() {
-    if (!documentDetail) return;
-    await storageService.downloadDocument(documentDetail.id, documentDetail.fileName);
+    if (!documentDetail || isDownloading) return;
+
+    try {
+      isDownloading = true;
+      await storageService.downloadDocument(documentDetail.id, documentDetail.fileName);
+    } finally {
+      isDownloading = false;
+    }
   }
 
   async function searchPublicDocuments() {
@@ -256,6 +265,15 @@
     goto(`/storage/document/${id}`);
   }
 
+  function goBackToOrigin() {
+    if (window.history.length > 1) {
+      history.back();
+      return;
+    }
+
+    goto('/storage');
+  }
+
   $effect(() => {
     pdfPage;
     zoomLevel;
@@ -277,18 +295,22 @@
 <main class="min-h-full p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <button onclick={() => goto('/storage')} class="mb-4 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+      <button onclick={goBackToOrigin} class="mb-4 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-        Back to Storage
+        Back
       </button>
       <h1 class="text-2xl md:text-3xl font-black text-white tracking-tight">Document Preview</h1>
-      <p class="text-sm text-gray-500 mt-1">Preview file content with document metadata and blockchain information.</p>
     </div>
 
     {#if documentDetail}
-      <button onclick={downloadDocument} class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-        Download
+      <button onclick={downloadDocument} disabled={isDownloading} class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:bg-blue-600/60">
+        {#if isDownloading}
+          <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          Downloading...
+        {:else}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          Download
+        {/if}
       </button>
     {/if}
   </div>
@@ -301,7 +323,7 @@
   {:else if errorMessage}
     <div class="min-h-[420px] flex flex-col items-center justify-center rounded-[32px] border border-red-500/20 bg-red-500/10 text-center px-6">
       <p class="text-red-400 font-semibold mb-2">{errorMessage}</p>
-      <button onclick={() => goto('/storage')} class="text-sm text-blue-400 hover:underline">Return to storage</button>
+      <button onclick={goBackToOrigin} class="text-sm text-blue-400 hover:underline">Go back</button>
     </div>
   {:else if documentDetail}
     {@const category = getFileCategory(documentDetail.mimeType, documentDetail.fileName)}
@@ -312,7 +334,6 @@
         <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div class="min-w-0">
             <h2 class="text-white font-bold truncate">{documentDetail.title}</h2>
-            <p class="text-xs text-gray-500 truncate">{documentDetail.fileName}</p>
           </div>
           <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide {privacyStyle.bg} {privacyStyle.text}">{privacyStyle.label}</span>
         </div>
@@ -405,50 +426,70 @@
       </section>
 
       <aside class="space-y-4">
-        <section class="rounded-[28px] border border-white/10 bg-[#111115] p-5">
-          <h2 class="text-white font-bold mb-4">Document Info</h2>
-          <div class="space-y-3 text-sm">
-            <div><p class="text-gray-500 text-xs">Title</p><p class="text-white break-words">{documentDetail.title}</p></div>
-            <div><p class="text-gray-500 text-xs">Filename</p><p class="text-gray-300 break-all">{documentDetail.fileName}</p></div>
+        <section class="overflow-hidden rounded-[28px] border border-white/10 bg-[#111115] shadow-xl shadow-black/20">
+          <div class="border-b border-white/10 bg-white/[0.03] px-3 py-3">
+            <h2 class="mt-1 text-lg font-black text-white">Document Info</h2>
+          </div>
+
+          <div class="space-y-4 p-5">
+            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Title</p>
+              <p class="mt-2 break-words text-sm font-semibold leading-6 text-white">{documentDetail.title}</p>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
-              <div><p class="text-gray-500 text-xs">Size</p><p class="text-gray-300">{formatFileSize(documentDetail.fileSize)}</p></div>
-              <div><p class="text-gray-500 text-xs">Type</p><p class="text-gray-300">{documentDetail.mimeType || getFileExtension(documentDetail.fileName)}</p></div>
+              <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Size</p>
+                <p class="mt-2 text-sm font-semibold text-gray-200">{formatFileSize(documentDetail.fileSize)}</p>
+              </div>
+              <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Type</p>
+                <p class="mt-2 truncate text-sm font-semibold text-gray-200" title={documentDetail.mimeType || getFileExtension(documentDetail.fileName)}>{getFileExtension(documentDetail.fileName)}</p>
+              </div>
             </div>
-            <div><p class="text-gray-500 text-xs">Folder</p><p class="text-gray-300">{documentDetail.folder?.name || 'Root'}</p></div>
-            <div><p class="text-gray-500 text-xs">Created</p><p class="text-gray-300">{formatDate(documentDetail.createdAt)}</p></div>
-            <div><p class="text-gray-500 text-xs">Updated</p><p class="text-gray-300">{formatDate(documentDetail.updatedAt)}</p></div>
-          </div>
-        </section>
 
-        <section class="rounded-[28px] border border-white/10 bg-[#111115] p-5">
-          <h2 class="text-white font-bold mb-4">Owner</h2>
-          <div class="flex items-center gap-3">
-            {#if documentDetail.owner?.avatarUrl}
-              <img src={documentDetail.owner.avatarUrl} alt={getOwnerName(documentDetail.owner)} class="w-11 h-11 rounded-full object-cover" />
-            {:else}
-              <div class="w-11 h-11 rounded-full bg-blue-500/15 text-blue-300 flex items-center justify-center font-bold">{getOwnerName(documentDetail.owner).slice(0, 1).toUpperCase()}</div>
-            {/if}
-            <div class="min-w-0">
-              <p class="text-white font-medium truncate">{getOwnerName(documentDetail.owner)}</p>
-              <p class="text-xs text-gray-500 truncate">{shortAddress(documentDetail.owner?.walletAddress)}</p>
+            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Created</p>
+              <p class="mt-2 text-sm font-semibold text-gray-200">{formatDate(documentDetail.createdAt)}</p>
+            </div>
+
+            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Owner</p>
+              <button onclick={() => showProfileModal = true} class="group mt-3 flex w-full items-center gap-3 rounded-xl text-left transition-colors hover:bg-blue-500/10" disabled={!documentDetail.owner}>
+                {#if documentDetail.owner?.avatarUrl}
+                  <img src={documentDetail.owner.avatarUrl} alt={getOwnerName(documentDetail.owner)} class="h-11 w-11 rounded-full object-cover ring-2 ring-white/10 transition-all group-hover:ring-blue-400/60 group-hover:shadow-[0_0_14px_rgba(59,130,246,0.35)]" />
+                {:else}
+                  <div class="flex h-11 w-11 items-center justify-center rounded-full bg-blue-500/15 font-bold text-blue-300 ring-2 ring-white/10 transition-all group-hover:ring-blue-400/60 group-hover:shadow-[0_0_14px_rgba(59,130,246,0.35)]">{getOwnerName(documentDetail.owner).slice(0, 1).toUpperCase()}</div>
+                {/if}
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-white transition-colors group-hover:text-blue-200">{getOwnerName(documentDetail.owner)}</p>
+                  <p class="truncate text-xs text-gray-500">{shortAddress(documentDetail.owner?.walletAddress)}</p>
+                </div>
+              </button>
+            </div>
+
+            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Blockchain</p>
+                {#if documentDetail.blockchainTx}
+                  <span class="rounded-full border border-green-500/20 bg-green-500/10 px-2 py-1 text-[10px] font-bold text-green-400">Confirmed</span>
+                {:else if documentDetail.pendingOnChainUntil && !documentDetail.isOnChain}
+                  <span class="rounded-full border border-yellow-500/20 bg-yellow-500/10 px-2 py-1 text-[10px] font-bold text-yellow-400">Pending</span>
+                {/if}
+              </div>
+              {#if documentDetail.blockchainTx}
+                <a href={`https://sepolia.etherscan.io/tx/${documentDetail.blockchainTx}`} target="_blank" rel="noopener noreferrer" class="inline-flex max-w-full items-center gap-2 text-sm font-semibold text-blue-400 transition-colors hover:text-blue-300">
+                  <span class="truncate font-mono">{shortAddress(documentDetail.blockchainTx)}</span>
+                  <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+              {:else if documentDetail.pendingOnChainUntil && !documentDetail.isOnChain}
+                <p class="text-sm font-semibold text-yellow-300">Waiting for confirmation</p>
+                <p class="mt-1 text-xs text-gray-500">Deadline: {formatDate(documentDetail.pendingOnChainUntil)}</p>
+              {:else}
+                <p class="text-sm text-gray-500">No blockchain transaction recorded.</p>
+              {/if}
             </div>
           </div>
-        </section>
-
-        <section class="rounded-[28px] border border-white/10 bg-[#111115] p-5">
-          <h2 class="text-white font-bold mb-4">Blockchain</h2>
-          {#if documentDetail.blockchainTx}
-            <a href={`https://sepolia.etherscan.io/tx/${documentDetail.blockchainTx}`} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 break-all">
-              <span>{shortAddress(documentDetail.blockchainTx)}</span>
-              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-            </a>
-            <p class="mt-2 inline-flex rounded-full bg-green-500/10 px-2 py-1 text-[10px] font-medium text-green-400 border border-green-500/20">Confirmed on-chain</p>
-          {:else if documentDetail.pendingOnChainUntil && !documentDetail.isOnChain}
-            <p class="text-sm text-yellow-400">Waiting for blockchain confirmation</p>
-            <p class="text-xs text-gray-500 mt-1">Deadline: {formatDate(documentDetail.pendingOnChainUntil)}</p>
-          {:else}
-            <p class="text-sm text-gray-500">No blockchain transaction recorded.</p>
-          {/if}
         </section>
 
         {#if documentDetail.description}
@@ -457,82 +498,21 @@
             <p class="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{documentDetail.description}</p>
           </section>
         {/if}
-
-        <section class="rounded-[28px] border border-blue-500/20 bg-gradient-to-br from-blue-500/10 via-[#111115] to-purple-500/10 p-5 shadow-2xl shadow-blue-950/20">
-          <div class="mb-4 flex items-start gap-3">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/20">
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-            </div>
-            <div>
-              <h2 class="text-white font-bold">Discover public documents</h2>
-              <p class="mt-1 text-xs leading-relaxed text-gray-400">Search public files shared by other DecentraShare users.</p>
-            </div>
-          </div>
-
-          <div class="relative">
-            <span class="absolute inset-y-0 left-4 flex items-center text-gray-500">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </span>
-            <input
-              type="search"
-              bind:value={publicSearchQuery}
-              oninput={handlePublicSearchInput}
-              onkeydown={(event) => { if (event.key === 'Enter') void searchPublicDocuments(); }}
-              placeholder="Search public documents..."
-              class="w-full rounded-2xl border border-white/10 bg-black/30 py-3 pl-11 pr-11 text-sm text-white outline-none transition-all placeholder:text-gray-600 focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20"
-            />
-            {#if publicSearchQuery}
-              <button onclick={clearPublicSearch} class="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-white" aria-label="Clear public document search">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            {/if}
-          </div>
-
-          {#if publicSearchError}
-            <div class="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">{publicSearchError}</div>
-          {/if}
-
-          <div class="mt-4 space-y-3">
-            {#if isPublicSearchLoading}
-              {#each Array(3) as _}
-                <div class="h-20 animate-pulse rounded-2xl border border-white/5 bg-white/[0.04]"></div>
-              {/each}
-            {:else if publicSearchResults.length > 0}
-              {#each publicSearchResults as result (result.id)}
-                <button onclick={() => openPublicDocument(result.id)} class="group w-full rounded-2xl border border-white/10 bg-black/20 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-blue-400/40 hover:bg-blue-500/10">
-                  <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-xs font-black text-blue-300 ring-1 ring-white/10">{getFileTypeLabel(result)}</div>
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2">
-                        <p class="truncate text-sm font-semibold text-white group-hover:text-blue-200">{result.title}</p>
-                        <span class="shrink-0 rounded-full bg-green-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-green-300">Public</span>
-                      </div>
-                      <p class="mt-0.5 truncate text-xs text-gray-500">{result.fileName}</p>
-                      <div class="mt-2 flex items-center gap-2 text-[11px] text-gray-500">
-                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/15 text-[10px] font-bold text-blue-300">{getResultOwnerInitial(result.owner)}</span>
-                        <span class="truncate">{getOwnerName(result.owner)}</span>
-                        <span>•</span>
-                        <span>{formatFileSize(result.fileSize)}</span>
-                      </div>
-                    </div>
-                    <svg class="mt-1 h-4 w-4 shrink-0 text-gray-600 transition group-hover:translate-x-0.5 group-hover:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                  </div>
-                </button>
-              {/each}
-            {:else if hasPublicSearchSubmitted && publicSearchQuery.trim().length >= 2}
-              <div class="rounded-2xl border border-white/10 bg-black/20 p-5 text-center">
-                <p class="text-sm font-medium text-white">No public documents found</p>
-                <p class="mt-1 text-xs text-gray-500">Try a different title, file name, type, or owner.</p>
-              </div>
-            {:else}
-              <div class="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-center">
-                <p class="text-sm text-gray-400">Start typing to discover public documents.</p>
-                <p class="mt-1 text-xs text-gray-600">Results only include files marked as Public by other users.</p>
-              </div>
-            {/if}
-          </div>
-        </section>
       </aside>
     </div>
   {/if}
 </main>
+
+<ProfilePreviewModal
+  isOpen={showProfileModal}
+  onClose={() => showProfileModal = false}
+  profile={documentDetail?.owner ? {
+    id: documentDetail.owner.id,
+    username: documentDetail.owner.username,
+    email: documentDetail.owner.email,
+    walletAddress: documentDetail.owner.walletAddress,
+    avatarUrl: documentDetail.owner.avatarUrl,
+    bio: documentDetail.owner.bio,
+    website: documentDetail.owner.website
+  } : null}
+/>

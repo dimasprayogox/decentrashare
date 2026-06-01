@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   handleUpload,
   handleGetMyDocuments,
+  handleGetMyStorageUsage,
   handlePreviewDocument,
   handleDownloadDocument,
   handleBulkDownloadDocuments,
@@ -41,6 +42,7 @@ router.post("/upload", uploadMiddleware.array("files", 10), handleUpload);
 
 // GET /api/documents/me
 router.get("/", handleGetMyDocuments);
+router.get("/me/storage-usage", handleGetMyStorageUsage);
 
 
 // Rute massal (statis) di atas

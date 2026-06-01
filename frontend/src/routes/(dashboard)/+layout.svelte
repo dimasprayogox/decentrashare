@@ -9,9 +9,10 @@
 
 <div class="min-h-screen bg-[#0a0a0c] lg:flex">
   
-  <Sidebar 
-    active={data?.active ?? 'dashboard'} 
-    subActive={data?.subActive ?? ''} 
+  <Sidebar
+    active={data?.active ?? 'dashboard'}
+    subActive={data?.subActive ?? ''}
+    storageUsage={data?.storageUsage}
   />
   
   <div class="flex-1 flex flex-col min-w-0 overflow-x-hidden">

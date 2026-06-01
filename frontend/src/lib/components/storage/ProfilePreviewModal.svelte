@@ -61,6 +61,7 @@
     const origin = currentPath.startsWith('/storage') ? 'storage'
       : currentPath.startsWith('/explore') ? 'explore'
       : currentPath.startsWith('/shared') ? 'shared'
+      : currentPath.startsWith('/validate') ? 'validate'
       : currentPath.startsWith('/trash') ? 'trash'
       : '';
 

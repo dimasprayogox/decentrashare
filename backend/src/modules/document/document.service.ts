@@ -1695,6 +1695,25 @@ export const getSystemStatsForAdmin = async () => {
   return { totalFiles, totalUsers }
 }
 
+export const getMyStorageUsage = async (userId: string) => {
+  const quotaBytes = 5 * 1024 * 1024 * 1024;
+  const result = await prisma.document.aggregate({
+    where: {
+      ownerId: userId,
+      isArchived: false,
+      deletedAt: null
+    },
+    _sum: {
+      fileSize: true
+    }
+  });
+
+  const usedBytes = result._sum.fileSize ?? 0;
+  const usagePercent = quotaBytes > 0 ? Math.min(100, (usedBytes / quotaBytes) * 100) : 0;
+
+  return { usedBytes, quotaBytes, usagePercent };
+}
+
 /**
  * Mengambil daftar dokumen milik orang lain yang dibagikan ke saya (Versi Tanpa Error createdAt)
  */

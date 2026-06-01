@@ -290,6 +290,14 @@ export interface GetPublicProfileResponse extends StorageApiResponse {
   };
 }
 
+export interface GetStorageUsageResponse extends StorageApiResponse {
+  data: {
+    usedBytes: number;
+    quotaBytes: number;
+    usagePercent: number;
+  };
+}
+
 export interface CheckHashesOnChainResponse extends StorageApiResponse {
   data: Array<{
     hash: string;

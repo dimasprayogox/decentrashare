@@ -9,6 +9,7 @@ import type {
   SearchPublicFoldersResponse,
   GetPublicFolderContentsResponse,
   GetPublicProfileResponse,
+  GetStorageUsageResponse,
   CheckHashesOnChainResponse,
   UploadFilesResponse,
   MoveDocumentsResponse,
@@ -153,6 +154,10 @@ fetchImagePreview: async (documentId: string): Promise<string> => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hashes })
     });
+  },
+
+  getMyStorageUsage: async () => {
+    return apiClient<GetStorageUsageResponse>('/documents/me/storage-usage', { method: 'GET' });
   },
 
   searchUsersForShare: async (query: string, options?: {

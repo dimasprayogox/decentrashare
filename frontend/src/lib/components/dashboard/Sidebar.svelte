@@ -3,15 +3,29 @@
   import type { AuthUser } from '$lib/types/auth';
   
   // ── Props ──
-  let { 
-    active = 'dashboard', 
+  let {
+    active = 'dashboard',
     subActive = '',
-    currentUser = null 
-  }: { 
-    active?: string; 
-    subActive?: string; 
+    currentUser = null,
+    storageUsage = { usedBytes: 0, quotaBytes: 5 * 1024 * 1024 * 1024, usagePercent: 0 }
+  }: {
+    active?: string;
+    subActive?: string;
     currentUser?: AuthUser | null;
+    storageUsage?: { usedBytes: number; quotaBytes: number; usagePercent: number };
   } = $props();
+
+  function formatBytes(bytes: number) {
+    if (!bytes) return '0 KB';
+    if (bytes < 1024 * 1024) return `${Math.max(1, bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+
+  const storagePercent = $derived(Math.min(100, Math.max(0, storageUsage.usagePercent || 0)));
+  const storagePercentLabel = $derived(`${Math.round(storagePercent)}%`);
+  const storageUsedLabel = $derived(formatBytes(storageUsage.usedBytes));
+  const storageQuotaLabel = $derived(formatBytes(storageUsage.quotaBytes));
   
   // ── Internal State ──
   let isMobileOpen = $state(false);
@@ -292,19 +306,19 @@
         <div>
           <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Storage</p>
           <p class="text-sm font-bold text-white">
-            1.2 GB <span class="text-gray-500 font-normal">/ 5GB</span>
+            {storageUsedLabel} <span class="text-gray-500 font-normal">/ {storageQuotaLabel}</span>
           </p>
         </div>
         <span class="text-[10px] text-blue-400 font-mono bg-blue-400/10 px-2 py-0.5 rounded-full
                      border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-          24%
+          {storagePercentLabel}
         </span>
       </div>
       
       <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
         <div class="h-full bg-gradient-to-r from-blue-600 via-blue-400 to-cyan-400 rounded-full 
                     relative overflow-hidden" 
-             style="width: 24%">
+             style="width: {storagePercent}%">
           <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
                        animate-shimmer"></span>
         </div>

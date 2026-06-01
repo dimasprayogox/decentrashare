@@ -7,7 +7,7 @@ export function getActiveNav(pathname: string, searchParams?: URLSearchParams): 
 
   if (path.startsWith('/profile/')) {
     const from = searchParams?.get('from');
-    if (from === 'storage' || from === 'explore' || from === 'shared' || from === 'trash') {
+    if (from === 'storage' || from === 'explore' || from === 'shared' || from === 'validate' || from === 'trash') {
       return { active: from, subActive: '' };
     }
   }

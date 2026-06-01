@@ -867,6 +867,24 @@ export const handleGetMyDocuments = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const handleGetMyStorageUsage = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const usage = await documentService.getMyStorageUsage(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Storage usage fetched successfully.',
+      data: usage
+    });
+  } catch (error: any) {
+    logger.error('Failed to fetch storage usage', { error: error.message });
+    return res.status(500).json({ success: false, message: 'Failed to fetch storage usage' });
+  }
+};
+
 export const handleArchiveDocuments = async (req: AuthRequest, res: Response) => {
   try {
     const { documentIds } = req.body;
