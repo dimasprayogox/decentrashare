@@ -1169,7 +1169,59 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
   });
 };
 
+const getPublicContributorFolderIds = async (userId: string) => {
+  const [ownedFolders, ownedDocuments] = await Promise.all([
+    prisma.folder.findMany({
+      where: { ownerId: userId, isArchived: false, deletedAt: null },
+      select: { parentId: true }
+    }),
+    prisma.document.findMany({
+      where: { ownerId: userId, isArchived: false, deletedAt: null, folderId: { not: null } },
+      select: { folderId: true }
+    })
+  ]);
+
+  const folderIdsToInspect = new Set<string>();
+  ownedFolders.forEach((folder: { parentId: string | null }) => {
+    if (folder.parentId) folderIdsToInspect.add(folder.parentId);
+  });
+  ownedDocuments.forEach((document: { folderId: string | null }) => {
+    if (document.folderId) folderIdsToInspect.add(document.folderId);
+  });
+
+  const contributorFolderIds = new Set<string>();
+  const inspectedFolderIds = new Set<string>();
+
+  for (const folderId of folderIdsToInspect) {
+    let currentFolderId: string | null = folderId;
+    let publicAncestorId: string | null = null;
+
+    while (currentFolderId && !inspectedFolderIds.has(currentFolderId)) {
+      inspectedFolderIds.add(currentFolderId);
+      const folder = await prisma.folder.findUnique({
+        where: { id: currentFolderId },
+        select: { id: true, parentId: true, ownerId: true, privacy: true, isArchived: true, deletedAt: true }
+      });
+
+      if (!folder || folder.isArchived || folder.deletedAt) break;
+      if (folder.privacy === 'PUBLIC' && folder.ownerId !== userId) publicAncestorId = folder.id;
+      currentFolderId = folder.parentId;
+    }
+
+    if (publicAncestorId) contributorFolderIds.add(publicAncestorId);
+  }
+
+  return Array.from(contributorFolderIds);
+};
+
 export const getUserFolders = async (userId: string, parentId: string | null = null) => {
+  const publicContributorFolderIds = parentId ? [] : await getPublicContributorFolderIds(userId);
+  const publicFolderAccessConditions = parentId
+    ? [{ privacy: 'PUBLIC' }]
+    : publicContributorFolderIds.length > 0
+      ? [{ id: { in: publicContributorFolderIds } }]
+      : [];
+
   const folders = await prisma.folder.findMany({
     where: {
       parentId: parentId,
@@ -1177,7 +1229,8 @@ export const getUserFolders = async (userId: string, parentId: string | null = n
       OR: [
         { ownerId: userId },
         { sharedWith: { some: { userId } } },
-        { parent: { ownerId: userId } }
+        { parent: { ownerId: userId } },
+        ...publicFolderAccessConditions
       ]
     },
     include: {
