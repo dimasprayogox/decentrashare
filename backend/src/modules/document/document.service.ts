@@ -1128,7 +1128,6 @@ export const searchPublicDocuments = async (userId: string, query: string, limit
   const docs = await prisma.document.findMany({
     where: {
       privacy: 'PUBLIC',
-      ownerId: { not: userId },
       isArchived: false,
       deletedAt: null,
       OR: [

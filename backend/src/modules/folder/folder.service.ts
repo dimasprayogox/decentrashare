@@ -21,6 +21,7 @@ export const createFolder = async (
 
   const ownerId = userId;
   let parentOwnerId: string | null = null;
+  let parentPrivacy: PrivacyLevel | null = null;
 
   if (parentId) {
     const parentFolder = await prisma.folder.findUnique({
@@ -37,6 +38,7 @@ export const createFolder = async (
       throw error;
     }
     parentOwnerId = parentFolder.ownerId;
+    parentPrivacy = parentFolder.privacy;
   }
 
   const existingFolder = await prisma.folder.findFirst({
@@ -61,7 +63,7 @@ export const createFolder = async (
       name: folderName,
       ownerId,
       parentId: parentId || null,
-      privacy: parentId ? 'SPECIFIC_USER' : 'PRIVATE'
+      privacy: parentId ? parentPrivacy ?? 'SPECIFIC_USER' : 'PRIVATE'
     },
     include: {
       owner: {
@@ -341,7 +343,7 @@ const getPublicFolderContributorOwners = async (folderIds: string[]) => {
   return contributorsByFolderId;
 };
 
-export const searchPublicFolders = async (userId: string, query: string, limit = 12) => {
+export const searchPublicFolders = async (_userId: string, query: string, limit = 12) => {
   const searchQuery = query.trim();
   const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 30);
 
@@ -350,7 +352,6 @@ export const searchPublicFolders = async (userId: string, query: string, limit =
   const folders = await prisma.folder.findMany({
     where: {
       privacy: 'PUBLIC',
-      ownerId: { not: userId },
       isArchived: false,
       deletedAt: null,
       OR: [
