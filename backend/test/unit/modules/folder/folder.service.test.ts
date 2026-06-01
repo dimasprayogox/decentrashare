@@ -126,13 +126,13 @@ describe('Feature: folder management behavior', () => {
     await expect(getPublicFolderContents('folder-1', 'user-2')).rejects.toThrow('Folder is not publicly accessible.');
   });
 
-  test('given a public folder with public children and documents, when contents are requested, then visible children, sanitized documents, and breadcrumbs are returned', async () => {
+  test('given a public folder with public children and documents, when contents are requested, then all public items, owner metadata, sanitized documents, and breadcrumbs are returned', async () => {
     const { getPublicFolderContents } = await import('../../../../src/modules/folder/folder.service');
     prisma.folder.findUnique
       .mockResolvedValueOnce(folderFactory({ id: 'folder-1', name: 'Public', privacy: 'PUBLIC' }))
       .mockResolvedValueOnce({ id: 'folder-1', name: 'Public', parentId: null, privacy: 'PUBLIC', isArchived: false, deletedAt: null });
-    given.foldersFound(prisma, [folderFactory({ id: 'child-1', privacy: 'PUBLIC' })]);
-    given.documentsFound(prisma, [documentFactory({ id: 'doc-1', privacy: 'PUBLIC', ipfsHash: 'hidden' })]);
+    given.foldersFound(prisma, [folderFactory({ id: 'child-1', privacy: 'PUBLIC', ownerId: 'user-2' })]);
+    given.documentsFound(prisma, [documentFactory({ id: 'doc-1', privacy: 'PUBLIC', ownerId: 'user-2', ipfsHash: 'hidden' })]);
 
     const result = await getPublicFolderContents('folder-1', 'user-2');
 
@@ -140,6 +140,12 @@ describe('Feature: folder management behavior', () => {
     expect(result.folders).toHaveLength(1);
     expect(result.documents[0].ipfsHash).toBeUndefined();
     expect(result.breadcrumbs).toEqual([{ id: 'folder-1', name: 'Public' }]);
+    expect(prisma.folder.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { parentId: 'folder-1', privacy: 'PUBLIC', isArchived: false, deletedAt: null },
+    }));
+    expect(prisma.document.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { folderId: 'folder-1', privacy: 'PUBLIC', isArchived: false, deletedAt: null },
+    }));
   });
 
   test('given no owned active folders match an archive request, when folders are archived, then no cascade is executed', async () => {
@@ -208,7 +214,7 @@ describe('Feature: folder management behavior', () => {
     });
     expect(prisma.folder.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['b-folder'] }, ownerId: 'user-b' },
-      data: { isArchived: true, deletedAt: expect.any(Date) },
+      data: { parentId: null, isArchived: true, deletedAt: expect.any(Date) },
     });
   });
 
@@ -251,7 +257,7 @@ describe('Feature: folder management behavior', () => {
     });
     expect(prisma.folder.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ['b-sub', 'b-child'] }, ownerId: 'user-b' },
-      data: { isArchived: true, deletedAt: expect.any(Date) },
+      data: { parentId: null, isArchived: true, deletedAt: expect.any(Date) },
     });
     expect(prisma.document.updateMany).toHaveBeenCalledWith({
       where: { folderId: { in: ['b-sub', 'b-child'] }, ownerId: 'user-b', isArchived: false },
@@ -415,7 +421,29 @@ describe('Feature: folder management behavior', () => {
     const result = await updateFoldersPrivacy('owner-1', [{ folderId: 'root', newPrivacy: 'PUBLIC' as any }]);
 
     expect(result).toEqual([{ folderId: 'root', status: 'updated', newPrivacy: 'PUBLIC', accessRevoked: 3, cascadedFolders: 1, movedFolderCount: 0, movedDocumentCount: 0 }]);
-    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['root'] }, ownerId: 'owner-1' }, data: { privacy: 'PUBLIC' } });
+    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['root'] } }, data: { privacy: 'PUBLIC' } });
+    expect(prisma.document.findMany).toHaveBeenCalledWith({ where: { folderId: { in: ['root'] } }, select: { id: true } });
     expect(prisma.document.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['doc-1'] } }, data: { privacy: 'PUBLIC' } });
+  });
+
+  test('given a specific-user mixed-owner folder changes to public, when privacy is updated, then mixed-owner content stays in place and becomes public', async () => {
+    const { updateFoldersPrivacy } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findFirst.mockResolvedValue(folderFactory({ id: 'root', ownerId: 'owner-1', privacy: 'SPECIFIC_USER' }));
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'foreign-child' }])
+      .mockResolvedValueOnce([]);
+    prisma.folder.updateMany.mockResolvedValue({ count: 2 });
+    prisma.document.findMany.mockResolvedValue([{ id: 'owner-doc' }, { id: 'foreign-doc' }]);
+    prisma.folderAccess.deleteMany.mockResolvedValue({ count: 1 });
+    prisma.documentAccess.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await updateFoldersPrivacy('owner-1', [{ folderId: 'root', newPrivacy: 'PUBLIC' as any }]);
+
+    expect(result).toEqual([{ folderId: 'root', status: 'updated', newPrivacy: 'PUBLIC', accessRevoked: 2, cascadedFolders: 2, movedFolderCount: 0, movedDocumentCount: 0 }]);
+    expect(prisma.folder.update).not.toHaveBeenCalled();
+    expect(prisma.document.update).not.toHaveBeenCalled();
+    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['root', 'foreign-child'] } }, data: { privacy: 'PUBLIC' } });
+    expect(prisma.document.findMany).toHaveBeenCalledWith({ where: { folderId: { in: ['root', 'foreign-child'] } }, select: { id: true } });
+    expect(prisma.document.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['owner-doc', 'foreign-doc'] } }, data: { privacy: 'PUBLIC' } });
   });
 });

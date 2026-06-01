@@ -375,7 +375,6 @@ export const getPublicFolderContents = async (folderId: string, userId: string) 
       where: {
         parentId: folderId,
         privacy: 'PUBLIC',
-        ownerId: { not: userId },
         isArchived: false,
         deletedAt: null
       },
@@ -400,7 +399,6 @@ export const getPublicFolderContents = async (folderId: string, userId: string) 
       where: {
         folderId,
         privacy: 'PUBLIC',
-        ownerId: { not: userId },
         isArchived: false,
         deletedAt: null
       },
@@ -1548,19 +1546,27 @@ export const updateFoldersPrivacy = async (
       }
 
       const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
-      const relocation = folder.privacy === 'SPECIFIC_USER' && item.newPrivacy !== 'SPECIFIC_USER'
+      const shouldRelocateMixedOwnerContent = folder.privacy === 'SPECIFIC_USER'
+        && item.newPrivacy !== 'SPECIFIC_USER'
+        && item.newPrivacy !== 'PUBLIC';
+      const relocation = shouldRelocateMixedOwnerContent
         ? await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: ownerId })
         : { movedFolderCount: 0, movedDocumentCount: 0 };
 
       const remainingSubtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
+      const publicCascade = item.newPrivacy === 'PUBLIC';
 
       const folderUpdate = await tx.folder.updateMany({
-        where: { id: { in: remainingSubtreeFolderIds }, ownerId },
+        where: publicCascade
+          ? { id: { in: remainingSubtreeFolderIds } }
+          : { id: { in: remainingSubtreeFolderIds }, ownerId },
         data: { privacy: item.newPrivacy }
       });
 
       const updatedDocuments = await tx.document.findMany({
-        where: { folderId: { in: remainingSubtreeFolderIds }, ownerId },
+        where: publicCascade
+          ? { folderId: { in: remainingSubtreeFolderIds } }
+          : { folderId: { in: remainingSubtreeFolderIds }, ownerId },
         select: { id: true }
       });
 
