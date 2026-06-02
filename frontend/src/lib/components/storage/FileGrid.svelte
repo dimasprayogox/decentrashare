@@ -609,7 +609,7 @@ $effect(() => {
         openFolder(folder);
       }}
     >
-      {#if publicExploreMode || folder.owner}
+      {#if !selectionMode && (publicExploreMode || folder.owner)}
         {@const folderOwners = getFolderOwners(folder)}
         {@const primaryOwner = folderOwners[0] || folder.owner}
         {@const primaryAvatar = getOwnerAvatar(primaryOwner)}
@@ -885,7 +885,7 @@ $effect(() => {
             {#if previewErrors[item.id]}<span class="text-[10px] text-gray-500">Preview unavailable</span>{/if}
           </div>
         {/if}
-        {#if publicExploreMode || item.owner}
+        {#if !selectionMode && (publicExploreMode || item.owner)}
           {@const documentAvatar = getOwnerAvatar(item.owner)}
           <button
             class="absolute top-2 left-2 z-20 flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-gradient-to-br from-blue-500 to-purple-600 text-[10px] font-bold text-white backdrop-blur-sm transition-all hover:scale-105 hover:border-blue-400/60 {isMobile ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'}"

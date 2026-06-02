@@ -1,7 +1,7 @@
 // src/lib/types/storage.d.ts
 
 // ── Base Types ─────────────────────────────────────────────
-export type PrivacyLevel = 'PRIVATE' | 'PUBLIC' | 'SPECIFIC_USER';
+export type PrivacyLevel = 'PRIVATE' | 'PUBLIC' | 'LINK_ONLY' | 'SPECIFIC_USER';
 import type { ContractInterface } from 'ethers'; 
 
 export interface StorageApiResponse<T = any> {

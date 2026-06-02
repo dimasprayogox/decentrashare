@@ -16,6 +16,8 @@
   import FolderModal from '$lib/components/storage/FolderModal.svelte';
   import BulkActionBar from '$lib/components/storage/BulkActionBar.svelte';
   import ShareModal from '$lib/components/storage/ShareModal.svelte';
+  import BulkShareModal from '$lib/components/storage/BulkShareModal.svelte';
+  import MoveItemsModal from '$lib/components/storage/MoveItemsModal.svelte';
 
   // Composables
   import { useSelection } from '$lib/composables/useSelection.svelte';
@@ -104,17 +106,135 @@
   } | null>(null);
 
   let showBulkShareModal = $state(false);
-  let bulkShareTargets = $state<Array<{ id: string; type: 'folder' | 'document'; name: string }>>([]);
+  let bulkShareTargets = $state<Array<{ id: string; type: 'folder' | 'document'; name: string; privacy: PrivacyLevel }>>([]);
+  let bulkShareTargetPrivacy = $state<Record<string, PrivacyLevel>>({});
   let bulkShareSearchQuery = $state('');
   let bulkShareSearchResults = $state<ShareableUser[]>([]);
   let bulkShareSelectedUsers = $state<ShareableUser[]>([]);
   let bulkSharePrivacy = $state<PrivacyLevel>('SPECIFIC_USER');
   let bulkShareRole = $state<'VIEWER' | 'EDITOR'>('VIEWER');
+  let bulkShareUserRoles = $state<Record<string, 'VIEWER' | 'EDITOR'>>({});
+  let bulkShareAccessMode = $state<'all' | 'individual'>('all');
+  let bulkShareActiveTargetId = $state<string | null>(null);
+  let bulkShareTargetUsers = $state<Record<string, ShareableUser[]>>({});
+  let bulkShareTargetUserRoles = $state<Record<string, Record<string, 'VIEWER' | 'EDITOR'>>>({});
   let bulkShareError = $state('');
   let bulkShareSuccess = $state('');
   let isBulkShareSearching = $state(false);
   let isBulkShareProcessing = $state(false);
   let bulkShareSearchTimeout: ReturnType<typeof setTimeout>;
+
+  const bulkSharePrivacyConfig: Record<PrivacyLevel, {
+    icon: string;
+    label: string;
+    description: string;
+    color: string;
+    gradient: string;
+  }> = {
+    PRIVATE: {
+      icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>`,
+      label: 'Private',
+      description: 'Only owners can access',
+      color: 'text-gray-400',
+      gradient: 'from-gray-500/20 to-slate-500/20'
+    },
+    PUBLIC: {
+      icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+      label: 'Public',
+      description: 'Anyone can view & download',
+      color: 'text-emerald-400',
+      gradient: 'from-emerald-500/20 to-green-500/20'
+    },
+    LINK_ONLY: {
+      icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+      label: 'Link Only',
+      description: 'Only people with the link',
+      color: 'text-blue-400',
+      gradient: 'from-blue-500/20 to-cyan-500/20'
+    },
+    SPECIFIC_USER: {
+      icon: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+      label: 'Specific Users',
+      description: 'Share with selected people only',
+      color: 'text-violet-400',
+      gradient: 'from-violet-500/20 to-purple-500/20'
+    }
+  };
+
+  const currentBulkShareConfig = $derived(bulkSharePrivacyConfig[bulkSharePrivacy]);
+  const bulkShareFolderCount = $derived(bulkShareTargets.filter(target => target.type === 'folder').length);
+  const bulkShareDocumentCount = $derived(bulkShareTargets.filter(target => target.type === 'document').length);
+  const bulkShareHasFolders = $derived(bulkShareFolderCount > 0);
+  const bulkShareHasDocuments = $derived(bulkShareDocumentCount > 0);
+  const bulkShareIsMixed = $derived(bulkShareHasFolders && bulkShareHasDocuments);
+  const bulkShareHasSpecificUserItems = $derived(bulkShareTargets.some(target => getBulkShareTargetPrivacy(target.id) === 'SPECIFIC_USER'));
+  const bulkShareSpecificUserFolderCount = $derived(bulkShareTargets.filter(target => target.type === 'folder' && getBulkShareTargetPrivacy(target.id) === 'SPECIFIC_USER').length);
+  const bulkShareHasSpecificUserFolders = $derived(bulkShareSpecificUserFolderCount > 0);
+  const bulkShareSpecificTargets = $derived(bulkShareTargets.filter(target => getBulkShareTargetPrivacy(target.id) === 'SPECIFIC_USER'));
+  const bulkShareActiveTarget = $derived(bulkShareTargets.find(target => target.id === bulkShareActiveTargetId) || bulkShareSpecificTargets[0] || null);
+
+  function getBulkShareUserInitial(username?: string): string {
+    return username?.charAt(0).toUpperCase() || '?';
+  }
+
+  function getBulkShareUserRole(userId: string): 'VIEWER' | 'EDITOR' {
+    return bulkShareUserRoles[userId] || bulkShareRole || 'VIEWER';
+  }
+
+  function setBulkShareUserRole(userId: string, role: 'VIEWER' | 'EDITOR') {
+    bulkShareUserRoles = { ...bulkShareUserRoles, [userId]: role };
+  }
+
+  function getBulkShareTargetUsers(targetId: string): ShareableUser[] {
+    return bulkShareTargetUsers[targetId] || [];
+  }
+
+  function getBulkShareTargetUserRole(targetId: string, userId: string): 'VIEWER' | 'EDITOR' {
+    return bulkShareTargetUserRoles[targetId]?.[userId] || 'VIEWER';
+  }
+
+  function setBulkShareTargetUserRole(targetId: string, userId: string, role: 'VIEWER' | 'EDITOR') {
+    bulkShareTargetUserRoles = {
+      ...bulkShareTargetUserRoles,
+      [targetId]: {
+        ...(bulkShareTargetUserRoles[targetId] || {}),
+        [userId]: role
+      }
+    };
+  }
+
+  function toggleBulkShareTargetUser(targetId: string, user: ShareableUser) {
+    const users = getBulkShareTargetUsers(targetId);
+    if (users.some(selected => selected.id === user.id)) {
+      bulkShareTargetUsers = { ...bulkShareTargetUsers, [targetId]: users.filter(selected => selected.id !== user.id) };
+      const targetRoles = { ...(bulkShareTargetUserRoles[targetId] || {}) };
+      delete targetRoles[user.id];
+      bulkShareTargetUserRoles = { ...bulkShareTargetUserRoles, [targetId]: targetRoles };
+      return;
+    }
+
+    bulkShareTargetUsers = { ...bulkShareTargetUsers, [targetId]: [...users, user] };
+    if (bulkShareTargets.find(target => target.id === targetId)?.type === 'folder') {
+      setBulkShareTargetUserRole(targetId, user.id, 'VIEWER');
+    }
+  }
+
+  function getBulkShareSpecificTargetsWithoutUsers(): string[] {
+    if (bulkShareAccessMode === 'all') return bulkShareHasSpecificUserItems && bulkShareSelectedUsers.length === 0 ? ['all'] : [];
+    return bulkShareSpecificTargets.filter(target => getBulkShareTargetUsers(target.id).length === 0).map(target => target.name);
+  }
+
+  function getBulkShareTargetIcon(type: 'folder' | 'document') {
+    return type === 'folder' ? '📁' : '📄';
+  }
+
+  function getBulkShareTargetPrivacy(targetId: string): PrivacyLevel {
+    return bulkShareTargetPrivacy[targetId] || bulkShareTargets.find(target => target.id === targetId)?.privacy || 'PRIVATE';
+  }
+
+  function setBulkShareTargetPrivacy(targetId: string, privacy: PrivacyLevel) {
+    bulkShareTargetPrivacy = { ...bulkShareTargetPrivacy, [targetId]: privacy };
+  }
 
   // ✅ TAMBAHKAN: Current user state
   let currentUser = $state<{ 
@@ -724,19 +844,29 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   function resetBulkShareState() {
     showBulkShareModal = false;
     bulkShareTargets = [];
+    bulkShareTargetPrivacy = {};
     bulkShareSearchQuery = '';
     bulkShareSearchResults = [];
     bulkShareSelectedUsers = [];
     bulkSharePrivacy = 'SPECIFIC_USER';
     bulkShareRole = 'VIEWER';
+    bulkShareUserRoles = {};
+    bulkShareAccessMode = 'all';
+    bulkShareActiveTargetId = null;
+    bulkShareTargetUsers = {};
+    bulkShareTargetUserRoles = {};
     bulkShareError = '';
   }
 
   function toggleBulkShareUser(user: ShareableUser) {
     if (bulkShareSelectedUsers.some(selected => selected.id === user.id)) {
       bulkShareSelectedUsers = bulkShareSelectedUsers.filter(selected => selected.id !== user.id);
+      const nextRoles = { ...bulkShareUserRoles };
+      delete nextRoles[user.id];
+      bulkShareUserRoles = nextRoles;
     } else {
       bulkShareSelectedUsers = [...bulkShareSelectedUsers, user];
+      if (bulkShareHasFolders) setBulkShareUserRole(user.id, bulkShareRole);
       bulkShareSearchResults = bulkShareSearchResults.filter(result => result.id !== user.id);
     }
   }
@@ -770,8 +900,8 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
 
   function handleBulkManageAccess() {
     const targets = [
-      ...getSelectedFolders(folders).map(folder => ({ id: folder.id, type: 'folder' as const, name: folder.name })),
-      ...getSelectedDocuments(items).map(document => ({ id: document.id, type: 'document' as const, name: document.title }))
+      ...getSelectedFolders(folders).map(folder => ({ id: folder.id, type: 'folder' as const, name: folder.name, privacy: folder.privacy })),
+      ...getSelectedDocuments(items).map(document => ({ id: document.id, type: 'document' as const, name: document.title, privacy: document.privacy }))
     ];
 
     if (targets.length === 0) {
@@ -785,25 +915,36 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     }
 
     bulkShareTargets = targets;
+    bulkShareTargetPrivacy = Object.fromEntries(targets.map(target => [target.id, target.privacy]));
+    bulkShareActiveTargetId = targets[0]?.id ?? null;
+    bulkShareTargetUsers = {};
+    bulkShareTargetUserRoles = {};
     bulkShareSearchQuery = '';
     bulkShareSearchResults = [];
     bulkShareSelectedUsers = [];
     bulkSharePrivacy = 'SPECIFIC_USER';
     bulkShareRole = 'VIEWER';
+    bulkShareUserRoles = {};
+    bulkShareAccessMode = 'all';
     bulkShareError = '';
     bulkShareSuccess = '';
     showBulkShareModal = true;
   }
 
   async function handleExecuteBulkShare() {
-    if (bulkSharePrivacy === 'SPECIFIC_USER' && bulkShareSelectedUsers.length === 0) {
-      bulkShareError = 'Pilih minimal satu user tujuan untuk Specific User.';
+    const missingSpecificTargets = getBulkShareSpecificTargetsWithoutUsers();
+    if (missingSpecificTargets.length > 0) {
+      bulkShareError = bulkShareAccessMode === 'all'
+        ? 'Pilih minimal satu user tujuan untuk item Specific Users.'
+        : `Pilih minimal satu user untuk: ${missingSpecificTargets.join(', ')}`;
       return;
     }
 
     const selectedUserIds = bulkShareSelectedUsers.map(user => user.id);
     const folderTargets = bulkShareTargets.filter(target => target.type === 'folder');
     const documentTargets = bulkShareTargets.filter(target => target.type === 'document');
+    const specificDocumentTargets = documentTargets.filter(target => getBulkShareTargetPrivacy(target.id) === 'SPECIFIC_USER');
+    const specificFolderTargets = folderTargets.filter(target => getBulkShareTargetPrivacy(target.id) === 'SPECIFIC_USER');
 
     try {
       isBulkShareProcessing = true;
@@ -812,37 +953,45 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       if (documentTargets.length > 0) {
         await storageService.updateDocumentsPrivacy(documentTargets.map(target => ({
           documentId: target.id,
-          newPrivacy: bulkSharePrivacy
+          newPrivacy: getBulkShareTargetPrivacy(target.id)
         })));
       }
 
       if (folderTargets.length > 0) {
         await Promise.all(folderTargets.map(target =>
-          storageService.updateFolderPrivacy(target.id, { newPrivacy: bulkSharePrivacy })
+          storageService.updateFolderPrivacy(target.id, { newPrivacy: getBulkShareTargetPrivacy(target.id) })
         ));
       }
 
-      if (bulkSharePrivacy === 'SPECIFIC_USER') {
-        if (documentTargets.length > 0) {
-          await storageService.shareDocuments(documentTargets.map(target => ({
-            documentId: target.id,
-            targetUsers: selectedUserIds
-          })));
-        }
+      if (specificDocumentTargets.length > 0) {
+        await storageService.shareDocuments(specificDocumentTargets.map(target => ({
+          documentId: target.id,
+          targetUsers: bulkShareAccessMode === 'all'
+            ? selectedUserIds
+            : getBulkShareTargetUsers(target.id).map(user => user.id)
+        })));
+      }
 
-        if (folderTargets.length > 0) {
-          await storageService.shareFolders(folderTargets.map(target => ({
+      if (specificFolderTargets.length > 0) {
+        await storageService.shareFolders(specificFolderTargets.map(target => {
+          const users = bulkShareAccessMode === 'all' ? bulkShareSelectedUsers : getBulkShareTargetUsers(target.id);
+          return {
             itemId: target.id,
             itemType: 'folder',
-            targetUsers: selectedUserIds.map(userId => ({ userId, role: bulkShareRole }))
-          })));
-        }
+            targetUsers: users.map(user => ({
+              userId: user.id,
+              role: bulkShareAccessMode === 'all'
+                ? getBulkShareUserRole(user.id)
+                : getBulkShareTargetUserRole(target.id, user.id)
+            }))
+          };
+        }));
       }
 
       const parts = [];
       if (folderTargets.length > 0) parts.push(`${folderTargets.length} folder`);
       if (documentTargets.length > 0) parts.push(`${documentTargets.length} dokumen`);
-      bulkShareSuccess = `${parts.join(' dan ')} berhasil diupdate ke ${bulkSharePrivacy}.`;
+      bulkShareSuccess = `${parts.join(' dan ')} berhasil diupdate.`;
       showBulkShareModal = false;
       clearSelection();
       selectionMode = false;
@@ -1248,193 +1397,294 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   </div>
 {/if}
 
-{#if showMoveModal}
-  <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
-    <div class="bg-[#111115] rounded-[32px] border border-white/10 shadow-2xl shadow-black/60 w-full max-w-2xl max-h-[86vh] overflow-hidden" in:scale>
-      <div class="p-6 border-b border-white/10 bg-gradient-to-br from-blue-600/15 via-white/[0.03] to-transparent">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex items-center gap-4 min-w-0">
-            <div class="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center shrink-0">
-              <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+<MoveItemsModal
+  isOpen={showMoveModal}
+  targets={moveTargets}
+  destinationLabel={getMoveDestinationLabel()}
+  targetLabel={getMoveTargetLabel()}
+  targetFolderId={moveTargetFolderId}
+  visibleFolders={visibleMoveFolders}
+  isProcessing={isMoveProcessing}
+  error={moveError}
+  notice={moveNotice}
+  isInvalidDestination={isInvalidMoveDestination}
+  isFolderExpanded={isMoveFolderExpanded}
+  isFolderLoading={isMoveFolderLoading}
+  getDestinationMeta={getMoveDestinationMeta}
+  getDestinationDisabledReason={getMoveDestinationDisabledReason}
+  getChildren={getMoveChildren}
+  onSelectRoot={() => { moveTargetFolderId = null; }}
+  onToggleFolder={toggleMoveFolder}
+  onSelectFolder={(folder, disabled, reason) => { if (disabled) { moveError = reason || 'Invalid destination'; return; } moveTargetFolderId = folder.id; moveError = ''; }}
+  onCancel={handleCancelMove}
+  onMove={handleExecuteMove}
+/>
+
+  <BulkShareModal
+    isOpen={showBulkShareModal}
+    targets={bulkShareTargets}
+    onClose={resetBulkShareState}
+    onCompleted={async (message) => {
+      bulkShareSuccess = message;
+      showBulkShareModal = false;
+      clearSelection();
+      selectionMode = false;
+      await refreshStorage();
+      setTimeout(() => {
+        bulkShareSuccess = '';
+      }, 4000);
+    }}
+  />
+
+  {#if false && showBulkShareModal}
+    <div class="fixed inset-0 z-[10000] flex items-center justify-center p-4" role="dialog" aria-modal="true" transition:fade>
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick={resetBulkShareState}></div>
+      <div class="relative bg-[#1a1a1e] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" in:scale>
+        <div class="flex items-center justify-between p-4 border-b border-white/10 bg-gradient-to-br from-violet-600/10 via-white/[0.03] to-transparent">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center flex-shrink-0 text-violet-300">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
             <div class="min-w-0">
-              <h3 class="text-white font-black text-xl tracking-tight">Move Item</h3>
-              <p class="text-sm text-gray-400 truncate">{getMoveTargetLabel()}</p>
+              <h3 class="text-lg font-semibold text-white truncate">Bulk Share</h3>
+              <p class="text-xs text-gray-500">
+                {bulkShareFolderCount} folder · {bulkShareDocumentCount} document
+              </p>
             </div>
           </div>
-          <button onclick={handleCancelMove} class="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-colors" disabled={isMoveProcessing} aria-label="Close move modal">
+          <button onclick={resetBulkShareState} class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors flex-shrink-0" disabled={isBulkShareProcessing} aria-label="Close bulk share modal" title="Close">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Items</p><p class="text-white font-semibold mt-1">{moveTargets.length}</p></div>
-          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Destination</p><p class="text-white font-semibold mt-1 truncate">{getMoveDestinationLabel()}</p></div>
-          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Privacy</p><p class="text-blue-300 font-semibold mt-1">Auto sync</p></div>
-        </div>
-      </div>
 
-      <div class="p-6 space-y-4 overflow-y-auto max-h-[calc(86vh-220px)]">
-
-      {#if moveNotice}
-        <p class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-3" role="status">{moveNotice}</p>
-      {/if}
-
-      <div class="space-y-2 max-h-72 overflow-y-auto mb-4 pr-1">
-        <button onclick={() => moveTargetFolderId = null} class="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-colors {moveTargetFolderId === null ? 'bg-blue-600/20 border-blue-500/50 text-white' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing}>
-          <span>
-            <span class="block font-medium">Root</span>
-            <span class="block text-xs text-gray-500">Privacy akan menjadi PRIVATE</span>
-          </span>
-          {#if moveTargetFolderId === null}<span class="text-blue-400">Selected</span>{/if}
-        </button>
-
-        {#if visibleMoveFolders.length === 0}
-          <div class="px-4 py-6 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
-            <p class="text-sm text-gray-400">Belum ada folder tujuan.</p>
-            <p class="text-xs text-gray-600 mt-1">Pilih Root atau buat folder baru terlebih dahulu.</p>
-          </div>
-        {/if}
-
-        {#each visibleMoveFolders as row (row.folder.id)}
-          {@const invalidDestination = isInvalidMoveDestination(row.folder.id)}
-          {@const permissionError = getMoveDestinationDisabledReason(row.folder)}
-          {@const disabledDestination = invalidDestination || Boolean(permissionError)}
-          <div class="flex items-stretch gap-2" style={`margin-left: ${row.depth * 1.25}rem`}>
-            <button onclick={() => toggleMoveFolder(row.folder.id)} class="w-11 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center" disabled={isMoveProcessing} title="Show subfolders">
-              {#if isMoveFolderLoading(row.folder.id)}
-                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              {:else}
-                <svg class="w-4 h-4 transition-transform {isMoveFolderExpanded(row.folder.id) ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-              {/if}
-            </button>
-            <button onclick={() => { if (disabledDestination) { moveError = permissionError || 'Invalid destination'; return; } moveTargetFolderId = row.folder.id; moveError = ''; }} class="flex-1 flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all {disabledDestination ? 'bg-red-500/5 border-red-500/20 text-gray-600 cursor-not-allowed' : moveTargetFolderId === row.folder.id ? 'bg-blue-600/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isMoveProcessing || disabledDestination}>
-              <span class="min-w-0">
-                <span class="flex items-center gap-2 font-medium truncate"><svg class="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>{row.folder.name}</span>
-                <span class="block text-xs text-gray-500">Level {row.depth + 1} · {invalidDestination ? 'Invalid destination' : permissionError || getMoveDestinationMeta(row.folder)}</span>
-              </span>
-              {#if moveTargetFolderId === row.folder.id}<span class="text-blue-400 text-xs font-semibold">Selected</span>{/if}
-            </button>
-          </div>
-
-          {#if isMoveFolderExpanded(row.folder.id) && getMoveChildren(row.folder.id).length === 0 && !isMoveFolderLoading(row.folder.id)}
-            <p class="py-1 text-xs text-gray-600 italic" style={`margin-left: ${(row.depth + 1) * 1.25 + 3.5}rem`}>Tidak ada subfolder</p>
-          {/if}
-        {/each}
-      </div>
-
-      {#if moveError}
-        <p class="text-xs text-red-400 ml-1 mb-4 flex items-center gap-1" role="alert" aria-live="polite">
-          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span>{moveError}</span>
-        </p>
-      {/if}
-
-      <div class="flex gap-3">
-        <button onclick={handleCancelMove} class="flex-1 h-10 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50" disabled={isMoveProcessing}>Cancel</button>
-        <button onclick={handleExecuteMove} class="flex-1 h-10 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-bold" disabled={isMoveProcessing || isInvalidMoveDestination(moveTargetFolderId)}>
-          {#if isMoveProcessing}<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{:else}Move Here{/if}
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-{/if}
-
-  {#if showBulkShareModal}
-    <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-md px-4" transition:fade>
-      <div class="w-full max-w-lg rounded-[28px] border border-white/10 bg-[#111115] shadow-2xl shadow-black/60 overflow-hidden" in:scale>
-        <div class="p-6 border-b border-white/10 bg-gradient-to-br from-violet-600/15 via-white/[0.03] to-transparent">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <h3 class="text-white font-black text-xl">Bulk Share</h3>
-              <p class="text-sm text-gray-400">
-                {bulkShareTargets.filter(target => target.type === 'folder').length} folder · {bulkShareTargets.filter(target => target.type === 'document').length} dokumen
-              </p>
-            </div>
-            <button onclick={resetBulkShareState} class="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-colors" disabled={isBulkShareProcessing} aria-label="Close bulk share modal">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="p-6 space-y-4">
+        <div class="p-4 space-y-5 max-h-[70vh] overflow-y-auto">
           <div>
-            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Privacy Level</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {#each ['PRIVATE', 'PUBLIC', 'SPECIFIC_USER'] as level (level)}
-                <button onclick={() => bulkSharePrivacy = level as PrivacyLevel} class="px-4 py-3 rounded-2xl border text-left transition-all {bulkSharePrivacy === level ? 'bg-violet-600/20 border-violet-500/60 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}" disabled={isBulkShareProcessing}>
-                  <span class="block text-sm font-bold">{level === 'SPECIFIC_USER' ? 'Specific User' : level.charAt(0) + level.slice(1).toLowerCase()}</span>
-                  <span class="block text-xs text-gray-500 mt-1">{level === 'SPECIFIC_USER' ? 'Pilih user tertentu' : level === 'PUBLIC' ? 'Semua orang bisa akses' : 'Hanya owner'}</span>
-                </button>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Selected items & privacy</label>
+            <div class="max-h-64 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] divide-y divide-white/5">
+              {#each bulkShareTargets as target (target.id)}
+                {@const targetPrivacy = getBulkShareTargetPrivacy(target.id)}
+                {@const targetConfig = bulkSharePrivacyConfig[targetPrivacy]}
+                <div class="px-3 py-3 space-y-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm shrink-0">{getBulkShareTargetIcon(target.type)}</div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm text-white font-medium truncate">{target.name}</p>
+                      <p class="text-[10px] text-gray-500 capitalize">{target.type}</p>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold {targetConfig.color}">
+                      <span class="w-4 h-4 flex items-center justify-center">{@html targetConfig.icon}</span>
+                      {targetConfig.label}
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {#each Object.entries(bulkSharePrivacyConfig) as [level, config] (level)}
+                      <button onclick={() => setBulkShareTargetPrivacy(target.id, level as PrivacyLevel)} class="px-3 py-2.5 rounded-xl border text-left transition-all {targetPrivacy === level ? 'bg-blue-500/10 border-blue-500/50 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}" disabled={isBulkShareProcessing}>
+                        <div class="flex items-center gap-2">
+                          <span class="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br {config.gradient} {config.color}">{@html config.icon}</span>
+                          <span class="text-[11px] font-bold truncate">{config.label}</span>
+                        </div>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
               {/each}
             </div>
           </div>
 
-          {#if bulkShareTargets.some(target => target.type === 'folder') && bulkShareTargets.some(target => target.type === 'document')}
-            <p class="text-xs text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-2xl px-4 py-3">
-              Mixed selection: privacy diterapkan ke folder dan dokumen. Role hanya berlaku untuk folder; dokumen hanya menerima user.
-            </p>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Privacy summary</label>
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] divide-y divide-white/5">
+              {#each bulkShareTargets as target (target.id)}
+                {@const targetPrivacy = getBulkShareTargetPrivacy(target.id)}
+                {@const targetConfig = bulkSharePrivacyConfig[targetPrivacy]}
+                <div class="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <span class="text-xs text-gray-300 truncate">{target.name}</span>
+                  <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold {targetConfig.color}">
+                    <span class="w-4 h-4 flex items-center justify-center">{@html targetConfig.icon}</span>
+                    {targetConfig.label}
+                  </span>
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          {#if bulkShareIsMixed}
+            <div class="flex gap-3 rounded-xl bg-blue-500/10 border border-blue-500/20 px-4 py-3 text-xs text-blue-200">
+              <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Mixed selection: privacy applies to folders and documents. Role only applies to folders; documents only receive selected users.</span>
+            </div>
           {/if}
 
-          {#if bulkSharePrivacy === 'SPECIFIC_USER'}
-            <div>
-              <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Cari user</label>
-              <input bind:value={bulkShareSearchQuery} oninput={handleBulkShareSearchInput} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-violet-500" placeholder="Username atau wallet address" disabled={isBulkShareProcessing} />
-            </div>
-
-            {#if isBulkShareSearching}
-              <p class="text-sm text-gray-500">Searching...</p>
-            {:else if bulkShareSearchResults.length > 0}
-              <div class="max-h-44 overflow-y-auto rounded-2xl border border-white/10 bg-black/20">
-                {#each bulkShareSearchResults as user (user.id)}
-                  <button onclick={() => toggleBulkShareUser(user)} class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors">
-                    <span class="min-w-0">
-                      <span class="block text-sm text-white font-medium truncate">{user.username}</span>
-                      <span class="block text-xs text-gray-500 truncate">{user.walletAddress}</span>
+          {#if bulkShareHasSpecificUserItems}
+            <div class="space-y-4 pt-2 border-t border-white/10">
+              <div class="relative">
+                <div class="absolute inset-0 bg-gradient-to-r from-violet-500/20 via-purple-500/10 to-transparent blur-xl opacity-50"></div>
+                <div class="relative flex items-center justify-between py-3 border-b border-white/10">
+                  <div class="flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 text-violet-300 ring-1 ring-violet-500/30">
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-semibold text-white">People with access</h4>
+                      <p class="text-[10px] text-gray-500">Choose users for selected items</p>
+                    </div>
+                  </div>
+                  {#if bulkShareSelectedUsers.length > 0}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 text-xs font-medium text-violet-200">
+                      {bulkShareSelectedUsers.length}
+                      <span class="ml-1 text-gray-400">{bulkShareSelectedUsers.length === 1 ? 'user' : 'users'}</span>
                     </span>
-                    <span class="text-violet-300 text-xs font-bold">Add</span>
-                  </button>
-                {/each}
+                  {/if}
+                </div>
               </div>
-            {/if}
 
-            {#if bulkShareSelectedUsers.length > 0}
-              <div class="flex flex-wrap gap-2">
-                {#each bulkShareSelectedUsers as user (user.id)}
-                  <button onclick={() => toggleBulkShareUser(user)} class="px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-200 text-xs hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-300 transition-colors">
-                    {user.username} ×
-                  </button>
-                {/each}
+              <div class="grid grid-cols-2 gap-2 rounded-xl bg-white/[0.03] p-1 border border-white/10">
+                <button onclick={() => bulkShareAccessMode = 'all'} class="px-3 py-2 rounded-lg text-xs font-semibold transition-all {bulkShareAccessMode === 'all' ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isBulkShareProcessing}>Apply to all</button>
+                <button onclick={() => bulkShareAccessMode = 'individual'} class="px-3 py-2 rounded-lg text-xs font-semibold transition-all {bulkShareAccessMode === 'individual' ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isBulkShareProcessing}>Set per item</button>
               </div>
-            {/if}
 
-            {#if bulkShareTargets.some(target => target.type === 'folder')}
-              <div>
-                <label class="text-xs font-bold uppercase tracking-wider text-gray-500">Folder role</label>
-                <select bind:value={bulkShareRole} class="mt-2 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-violet-500" disabled={isBulkShareProcessing}>
-                  <option value="VIEWER" class="bg-[#111115]">Viewer</option>
-                  <option value="EDITOR" class="bg-[#111115]">Editor</option>
-                </select>
+              {#if bulkShareAccessMode === 'individual'}
+                <div class="space-y-2">
+                  <p class="text-xs font-medium text-gray-400">Choose item first:</p>
+                  <div class="max-h-32 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] divide-y divide-white/5">
+                    {#each bulkShareSpecificTargets as target (target.id)}
+                      <button onclick={() => bulkShareActiveTargetId = target.id} class="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-white/5 transition-colors {bulkShareActiveTarget?.id === target.id ? 'bg-violet-500/10 text-violet-200' : 'text-gray-300'}" disabled={isBulkShareProcessing}>
+                        <span class="flex items-center gap-2 min-w-0">
+                          <span>{getBulkShareTargetIcon(target.type)}</span>
+                          <span class="text-xs font-medium truncate">{target.name}</span>
+                        </span>
+                        <span class="text-[10px] text-gray-500">{getBulkShareTargetUsers(target.id).length} user</span>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+
+              {#if bulkShareAccessMode === 'all' && bulkShareSelectedUsers.length > 0}
+                <div>
+                  <p class="text-xs font-medium text-gray-400 mb-2">Will share with all Specific Users items:</p>
+                  <div class="space-y-2">
+                    {#each bulkShareSelectedUsers as user (user.id)}
+                      <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 overflow-hidden">
+                          {#if user.avatarUrl}<img src={user.avatarUrl} alt={user.username} class="w-full h-full rounded-full object-cover" />{:else}{getBulkShareUserInitial(user.username)}{/if}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <p class="text-sm font-semibold text-white truncate">{user.username}</p>
+                          <p class="text-[10px] text-gray-500 font-mono truncate">{user.walletAddress}</p>
+                        </div>
+                        {#if bulkShareHasFolders}
+                          <div class="relative inline-flex items-center flex-shrink-0">
+                            <select value={getBulkShareUserRole(user.id)} onchange={(event) => setBulkShareUserRole(user.id, event.currentTarget.value as 'VIEWER' | 'EDITOR')} class="appearance-none h-8 pl-3 pr-7 rounded-full text-[10px] font-semibold bg-white/5 border border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 cursor-pointer hover:bg-white/10 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled={isBulkShareProcessing} title="Folder access role">
+                              <option value="VIEWER" class="bg-[#1a1a1e] text-gray-300">Viewer</option>
+                              <option value="EDITOR" class="bg-[#1a1a1e] text-violet-300">Editor</option>
+                            </select>
+                            <svg class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                          </div>
+                        {/if}
+                        <button onclick={() => toggleBulkShareUser(user)} class="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all" aria-label="Remove {user.username}">
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+
+              {#if bulkShareAccessMode === 'individual' && bulkShareActiveTarget}
+                <div>
+                  <p class="text-xs font-medium text-gray-400 mb-2">Users for {bulkShareActiveTarget.name}:</p>
+                  {#if getBulkShareTargetUsers(bulkShareActiveTarget.id).length > 0}
+                    <div class="space-y-2 mb-3">
+                      {#each getBulkShareTargetUsers(bulkShareActiveTarget.id) as user (user.id)}
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5">
+                          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 overflow-hidden">
+                            {#if user.avatarUrl}<img src={user.avatarUrl} alt={user.username} class="w-full h-full rounded-full object-cover" />{:else}{getBulkShareUserInitial(user.username)}{/if}
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-white truncate">{user.username}</p>
+                            <p class="text-[10px] text-gray-500 font-mono truncate">{user.walletAddress}</p>
+                          </div>
+                          {#if bulkShareActiveTarget.type === 'folder'}
+                            <div class="relative inline-flex items-center flex-shrink-0">
+                              <select value={getBulkShareTargetUserRole(bulkShareActiveTarget.id, user.id)} onchange={(event) => setBulkShareTargetUserRole(bulkShareActiveTarget.id, user.id, event.currentTarget.value as 'VIEWER' | 'EDITOR')} class="appearance-none h-8 pl-3 pr-7 rounded-full text-[10px] font-semibold bg-white/5 border border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 cursor-pointer hover:bg-white/10 hover:text-white transition-all" disabled={isBulkShareProcessing}>
+                                <option value="VIEWER" class="bg-[#1a1a1e] text-gray-300">Viewer</option>
+                                <option value="EDITOR" class="bg-[#1a1a1e] text-violet-300">Editor</option>
+                              </select>
+                              <svg class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                          {/if}
+                          <button onclick={() => toggleBulkShareTargetUser(bulkShareActiveTarget.id, user)} class="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all" aria-label="Remove {user.username}">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    <p class="text-xs text-gray-500 mb-3">No users selected for this item.</p>
+                  {/if}
+                </div>
+              {/if}
+
+              <div class="relative">
+                <input bind:value={bulkShareSearchQuery} oninput={handleBulkShareSearchInput} class="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all" placeholder={bulkShareAccessMode === 'individual' && bulkShareActiveTarget ? `Search users for ${bulkShareActiveTarget.name}...` : 'Search users by username or wallet...'} disabled={isBulkShareProcessing || (bulkShareAccessMode === 'individual' && !bulkShareActiveTarget)} autocomplete="off" />
+                {#if isBulkShareSearching}
+                  <div class="absolute right-3 top-1/2 -translate-y-1/2"><div class="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div></div>
+                {/if}
               </div>
-            {/if}
+
+              {#if bulkShareSearchResults.length > 0}
+                <div class="border border-white/10 rounded-lg max-h-44 overflow-y-auto bg-black/10">
+                  {#each bulkShareSearchResults as user (user.id)}
+                    <button onclick={() => bulkShareAccessMode === 'individual' && bulkShareActiveTarget ? toggleBulkShareTargetUser(bulkShareActiveTarget.id, user) : toggleBulkShareUser(user)} class="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white flex-shrink-0 overflow-hidden">
+                        {#if user.avatarUrl}<img src={user.avatarUrl} alt={user.username} class="w-full h-full rounded-full object-cover" />{:else}{getBulkShareUserInitial(user.username)}{/if}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium text-white truncate">{user.username}</p>
+                        <p class="text-xs text-gray-500 truncate">{user.walletAddress}</p>
+                      </div>
+                      <svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </button>
+                  {/each}
+                </div>
+              {:else if bulkShareSearchQuery.trim().length >= 2 && !isBulkShareSearching}
+                <p class="text-sm text-gray-500 text-center py-2">No users found</p>
+              {/if}
+
+              {#if bulkShareHasFolders && bulkShareSelectedUsers.length > 0}
+                <div class="rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-3 text-xs text-violet-200">
+                  Set Viewer/Editor per user above. Role applies only to folders{bulkShareHasDocuments ? '; documents only receive user access.' : '.'}
+                </div>
+              {/if}
+            </div>
           {:else}
-            <p class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3">
-              User selection tidak diperlukan. Jika privacy bukan Specific User, akses user spesifik akan dibersihkan oleh backend.
-            </p>
+            <div class="flex gap-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-xs text-amber-200">
+              <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>User selection is not required. Backend will clean specific-user access when privacy is not Specific Users.</span>
+            </div>
           {/if}
 
           {#if bulkShareError}
-            <p class="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3" role="alert">{bulkShareError}</p>
+            <div class="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 flex items-start gap-2" role="alert">
+              <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>{bulkShareError}</span>
+            </div>
           {/if}
         </div>
 
-        <div class="p-5 border-t border-white/10 flex gap-3">
-          <button onclick={resetBulkShareState} class="flex-1 h-11 rounded-2xl bg-white/5 text-white hover:bg-white/10 transition-colors" disabled={isBulkShareProcessing}>Cancel</button>
-          <button onclick={handleExecuteBulkShare} class="flex-1 h-11 rounded-2xl bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors" disabled={isBulkShareProcessing || (bulkSharePrivacy === 'SPECIFIC_USER' && bulkShareSelectedUsers.length === 0)}>
-            {isBulkShareProcessing ? 'Saving...' : 'Save Changes'}
-          </button>
+        <div class="flex items-center justify-between p-4 border-t border-white/10 bg-[#151518]">
+          <div class="text-[10px] text-gray-500">
+            {bulkShareTargets.length} selected item{bulkShareTargets.length === 1 ? '' : 's'}
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick={resetBulkShareState} disabled={isBulkShareProcessing} class="px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+            <button onclick={handleExecuteBulkShare} disabled={isBulkShareProcessing || getBulkShareSpecificTargetsWithoutUsers().length > 0} class="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 disabled:from-gray-600 disabled:to-gray-600 text-white rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:shadow-none">
+              {#if isBulkShareProcessing}<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>Saving...{:else}<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Save Changes{/if}
+            </button>
+          </div>
         </div>
       </div>
     </div>

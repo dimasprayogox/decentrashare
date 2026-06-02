@@ -654,7 +654,13 @@ async function handleUpdateUserRoles(): Promise<boolean> {
       <div class="absolute inset-0 bg-gradient-to-r from-violet-500/20 via-purple-500/10 to-transparent blur-xl opacity-50"></div>
       <div class="relative flex items-center justify-between py-3 border-b border-white/10">
         <div class="flex items-center gap-2.5">
-          
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 text-violet-300 ring-1 ring-violet-500/30">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" stroke-width="2" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          </div>
           <div>
             <h4 class="text-sm font-semibold text-white">
               {privacyLevel === 'SPECIFIC_USER' ? 'People with access' : 'Shared with'}

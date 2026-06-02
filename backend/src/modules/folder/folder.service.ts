@@ -1450,6 +1450,15 @@ export const revokeFoldersAccess = async (
       if (!folder || folder.ownerId !== ownerId) continue;
 
       const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
+      const relocations = [];
+
+      for (const targetUserId of item.targetUserIds) {
+        relocations.push(await relocateOwnedContentFromSharedSubtree(tx, {
+          subtreeFolderIds,
+          rootOwnerId: ownerId,
+          onlyOwnerId: targetUserId
+        }));
+      }
 
       const deleteResult = await tx.folderAccess.deleteMany({
         where: {
