@@ -33,7 +33,16 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: config.cors.origin,
+  origin: function (origin, callback) {
+    const allowedOrigins = config.cors.origin;
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.error(`[CORS Blocked] Origin not allowed: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-callback-token'],

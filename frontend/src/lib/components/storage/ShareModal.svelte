@@ -802,7 +802,22 @@ async function handleUpdateUserRoles(): Promise<boolean> {
             {/if}
             <div class="relative"><input type="text" bind:value={searchQuery} placeholder="Search users by username or wallet..." class="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all" autocomplete="off"/>{#if isSearching}<div class="absolute right-3 top-1/2 -translate-y-1/2"><div class="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div></div>{/if}</div>
             {#if searchResults.length > 0}
-              <div class="border border-white/10 rounded-lg max-h-40 overflow-y-auto">{#each searchResults as user}<button onclick={() => toggleUser(user.id)} class="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">{user.avatarUrl ? `<img src="${user.avatarUrl}" class="w-full h-full rounded-full object-cover" />` : getUserInitial(user.username)}</div><div class="min-w-0 flex-1"><p class="text-sm font-medium text-white truncate">{user.username}</p><p class="text-xs text-gray-500 truncate">{user.walletAddress}</p></div>{#if itemType === 'folder' && selectedUsers.includes(user.id)}<select value={getUserRole(user.id)} oninput={(e) => setUserRole(user.id, e.currentTarget.value as 'VIEWER' | 'EDITOR')} onclick={(e) => e.stopPropagation()} class="text-xs bg-violet-500/20 border border-violet-500/30 rounded px-2 py-1 text-violet-200 focus:outline-none focus:ring-1 focus:ring-violet-400 cursor-pointer hover:bg-violet-500/30 transition-colors"><option value="VIEWER" class="bg-[#1a1a1e]">Viewer</option><option value="EDITOR" class="bg-[#1a1a1e]">Editor</option></select>{/if}{#if selectedUsers.includes(user.id)}<svg class="w-5 h-5 text-violet-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>{:else}<svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>{/if}</button>{/each}</div>
+              <div class="border border-white/10 rounded-lg max-h-40 overflow-y-auto">
+                {#each searchResults as user (user.id)}
+                  <button onclick={() => toggleUser(user.id)} class="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white flex-shrink-0 overflow-hidden">
+                      {#if user.avatarUrl}
+                        <img src={user.avatarUrl} alt={user.username} class="w-full h-full object-cover" onerror={(e) => handleAvatarError(e, user.username)} />
+                      {:else}
+                        {getUserInitial(user.username)}
+                      {/if}
+                    </div>
+                    <div class="min-w-0 flex-1"><p class="text-sm font-medium text-white truncate">{user.username}</p><p class="text-xs text-gray-500 truncate">{user.walletAddress}</p></div>
+                    {#if itemType === 'folder' && selectedUsers.includes(user.id)}<select value={getUserRole(user.id)} oninput={(e) => setUserRole(user.id, e.currentTarget.value as 'VIEWER' | 'EDITOR')} onclick={(e) => e.stopPropagation()} class="text-xs bg-violet-500/20 border border-violet-500/30 rounded px-2 py-1 text-violet-200 focus:outline-none focus:ring-1 focus:ring-violet-400 cursor-pointer hover:bg-violet-500/30 transition-colors"><option value="VIEWER" class="bg-[#1a1a1e]">Viewer</option><option value="EDITOR" class="bg-[#1a1a1e]">Editor</option></select>{/if}
+                    {#if selectedUsers.includes(user.id)}<svg class="w-5 h-5 text-violet-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>{:else}<svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>{/if}
+                  </button>
+                {/each}
+              </div>
             {:else if searchQuery.trim().length >= 2 && !isSearching}<p class="text-sm text-gray-500 text-center py-2">No users found</p>{/if}
           </div>
         {/if}

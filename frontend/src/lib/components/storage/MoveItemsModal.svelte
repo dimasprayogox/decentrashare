@@ -61,17 +61,12 @@
             </div>
             <div class="min-w-0">
               <h3 class="text-white font-black text-xl tracking-tight">Move Item</h3>
-              <p class="text-sm text-gray-400 truncate">{targetLabel}</p>
+              <p class="text-sm text-gray-400 truncate">{targetLabel} -> {destinationLabel}</p>
             </div>
           </div>
           <button onclick={onCancel} class="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/10 transition-colors" disabled={isProcessing} aria-label="Close move modal">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
-        </div>
-        <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Items</p><p class="text-white font-semibold mt-1">{targets.length}</p></div>
-          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Destination</p><p class="text-white font-semibold mt-1 truncate">{destinationLabel}</p></div>
-          <div class="rounded-2xl bg-white/5 border border-white/10 px-4 py-3"><p class="text-gray-500 uppercase tracking-wider font-bold">Privacy</p><p class="text-blue-300 font-semibold mt-1">Auto sync</p></div>
         </div>
       </div>
 
@@ -82,12 +77,12 @@
 
         <div class="space-y-2 max-h-72 overflow-y-auto mb-4 pr-1">
           <button onclick={onSelectRoot} class="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-colors {targetFolderId === null ? 'bg-blue-600/20 border-blue-500/50 text-white' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isProcessing}>
-            <span><span class="block font-medium">Root</span><span class="block text-xs text-gray-500">Privacy akan menjadi PRIVATE</span></span>
+            <span><span class="block font-medium">Root</span><span class="block text-xs text-gray-500">Privacy will be set to PRIVATE</span></span>
             {#if targetFolderId === null}<span class="text-blue-400">Selected</span>{/if}
           </button>
 
           {#if visibleFolders.length === 0}
-            <div class="px-4 py-6 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.02]"><p class="text-sm text-gray-400">Belum ada folder tujuan.</p><p class="text-xs text-gray-600 mt-1">Pilih Root atau buat folder baru terlebih dahulu.</p></div>
+            <div class="px-4 py-6 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.02]"><p class="text-sm text-gray-400">No destination folders found.</p><p class="text-xs text-gray-600 mt-1">Choose Root or create a folder first.</p></div>
           {/if}
 
           {#each visibleFolders as row (row.folder.id)}
@@ -99,11 +94,11 @@
                 {#if isFolderLoading(row.folder.id)}<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{:else}<svg class="w-4 h-4 transition-transform {isFolderExpanded(row.folder.id) ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>{/if}
               </button>
               <button onclick={() => onSelectFolder(row.folder, disabledDestination, permissionError)} class="flex-1 flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all {disabledDestination ? 'bg-red-500/5 border-red-500/20 text-gray-600 cursor-not-allowed' : targetFolderId === row.folder.id ? 'bg-blue-600/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isProcessing || disabledDestination}>
-                <span class="min-w-0"><span class="flex items-center gap-2 font-medium truncate"><svg class="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>{row.folder.name}</span><span class="block text-xs text-gray-500">Level {row.depth + 1} · {invalidDestination ? 'Invalid destination' : permissionError || getDestinationMeta(row.folder)}</span></span>
+                <span class="min-w-0"><span class="flex items-center gap-2 font-medium truncate"><svg class="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>{row.folder.name}</span><span class="block text-xs text-gray-500">{invalidDestination ? 'Invalid destination' : permissionError || getDestinationMeta(row.folder)}</span></span>
                 {#if targetFolderId === row.folder.id}<span class="text-blue-400 text-xs font-semibold">Selected</span>{/if}
               </button>
             </div>
-            {#if isFolderExpanded(row.folder.id) && getChildren(row.folder.id).length === 0 && !isFolderLoading(row.folder.id)}<p class="py-1 text-xs text-gray-600 italic" style={`margin-left: ${(row.depth + 1) * 1.25 + 3.5}rem`}>Tidak ada subfolder</p>{/if}
+            {#if isFolderExpanded(row.folder.id) && getChildren(row.folder.id).length === 0 && !isFolderLoading(row.folder.id)}<p class="py-1 text-xs text-gray-600 italic" style={`margin-left: ${(row.depth + 1) * 1.25 + 3.5}rem`}>No subfolders</p>{/if}
           {/each}
         </div>
 

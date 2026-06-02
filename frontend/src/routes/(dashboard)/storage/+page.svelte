@@ -320,10 +320,10 @@
   }
 
   function getMoveDestinationMeta(folder: Folder): string {
-    if (isOwnedByCurrentUser(folder)) return `Privacy tujuan: ${folder.privacy}`;
+    if (isOwnedByCurrentUser(folder)) return `Privacy: ${folder.privacy}`;
     if (folder.accessRole === 'EDITOR' || folder.accessRole === 'ADMIN') return `Shared · ${folder.accessRole === 'ADMIN' ? 'Admin' : 'Editor'}`;
     if (folder.accessRole === 'VIEWER') return 'Shared · Viewer only';
-    return `Privacy tujuan: ${folder.privacy}`;
+    return `Privacy: ${folder.privacy}`;
   }
 
   type DocumentWithTxFallbacks = Document & {

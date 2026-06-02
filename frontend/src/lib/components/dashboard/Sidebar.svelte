@@ -1,7 +1,8 @@
 <script lang="ts">
   import { authService } from '$lib/services/auth/auth';
   import type { AuthUser } from '$lib/types/auth';
-  
+  import logo from '$lib/assets/logo.png';
+
   // ── Props ──
   let {
     active = 'dashboard',
@@ -25,7 +26,6 @@
   const storagePercent = $derived(Math.min(100, Math.max(0, storageUsage.usagePercent || 0)));
   const storagePercentLabel = $derived(`${Math.round(storagePercent)}%`);
   const storageUsedLabel = $derived(formatBytes(storageUsage.usedBytes));
-  const storageQuotaLabel = $derived(formatBytes(storageUsage.quotaBytes));
   
   // ── Internal State ──
   let isMobileOpen = $state(false);
@@ -131,11 +131,8 @@
   
   <!-- Logo with Active Glow -->
   <div class="flex items-center gap-3 mb-12 px-2">
-    <div class="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 
-                flex items-center justify-center font-bold text-white 
-                shadow-lg shadow-blue-500/30 ring-1 ring-white/20
-                after:absolute after:inset-0 after:rounded-xl after:shadow-[inset_0_0_20px_rgba(255,255,255,0.1)]">
-      D
+    <div class="relative w-10 h-10 rounded-xl overflow-hidden">
+      <img src={logo} alt="DecentraShare Logo" class="w-full h-full object-cover" />
     </div>
     <span class="text-2xl font-bold tracking-tighter text-white">
       Decentra<span class="text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]">Share</span>
@@ -237,28 +234,7 @@
             Profile Setting
           </a>
           
-          <a href="/settings/security" 
-             class="group relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium 
-                    transition-all duration-200 
-                    {(active === 'settings' && subActive === 'security') ? STYLES.subActive : STYLES.subInactive}">
-            {#if active === 'settings' && subActive === 'security'}
-              <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r animate-pulse"></span>
-            {/if}
-            {@html Icons.Security((active === 'settings' && subActive === 'security'))}
-            Security
-          </a>
-          
-          <a href="/settings/notifications" 
-             class="group relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium 
-                    transition-all duration-200 
-                    {(active === 'settings' && subActive === 'notifications') ? STYLES.subActive : STYLES.subInactive}">
-            {#if active === 'settings' && subActive === 'notifications'}
-              <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r animate-pulse"></span>
-            {/if}
-            {@html Icons.Notifications((active === 'settings' && subActive === 'notifications'))}
-            Notifications
-          </a>
-          
+         
         </div>
       </div>
     </div>
@@ -305,24 +281,13 @@
       <div class="flex justify-between items-end mb-3">
         <div>
           <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Storage</p>
-          <p class="text-sm font-bold text-white">
-            {storageUsedLabel} <span class="text-gray-500 font-normal">/ {storageQuotaLabel}</span>
+          <p class="text-sm font-bold text-blue-400">
+            {storageUsedLabel} <span class="text-sm font-normal text-white"> Used </span>
           </p>
         </div>
-        <span class="text-[10px] text-blue-400 font-mono bg-blue-400/10 px-2 py-0.5 rounded-full
-                     border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-          {storagePercentLabel}
-        </span>
       </div>
       
-      <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-        <div class="h-full bg-gradient-to-r from-blue-600 via-blue-400 to-cyan-400 rounded-full 
-                    relative overflow-hidden" 
-             style="width: {storagePercent}%">
-          <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
-                       animate-shimmer"></span>
-        </div>
-      </div>
+     
     </div>
   </div>
 </aside>

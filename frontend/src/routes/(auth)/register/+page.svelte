@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade, fly, slide } from 'svelte/transition';
   import { authService } from '$lib/services';
-  import { goto } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
 
   // State
   let isLoading = $state(false);
@@ -139,15 +139,21 @@
       if (regData?.success) {
         const token = regData.data?.token;
         const isProfileComplete = regData.data?.isProfileComplete; // ✅ Ambil flag
-        
+
         if (token) localStorage.setItem('session_token', token);
 
         if (!isProfileComplete) {
           statusMessage = "✓ Account created! Silakan lengkapi profil Anda.";
-          setTimeout(() => { goto('/settings/profile'); }, 1500);
+          await invalidateAll(); // Invalidate all data before navigation
+          setTimeout(() => {
+            goto('/settings/profile', { invalidateAll: true, replaceState: true });
+          }, 1500);
         } else {
           statusMessage = "✓ Account created successfully! Redirecting...";
-          setTimeout(() => { goto('/dashboard'); }, 1200);
+          await invalidateAll(); // Invalidate all data before navigation
+          setTimeout(() => {
+            goto('/dashboard', { invalidateAll: true, replaceState: true });
+          }, 1200);
         }
       } else {
         throw new Error(regData?.message || "Registration verification failed!");
