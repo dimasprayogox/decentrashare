@@ -1719,9 +1719,12 @@ export const getMyStorageUsage = async (userId: string) => {
  */
 export const getSharedWithMeDocuments = async (userId: string) => {
   const sharedAccess = await prisma.documentAccess.findMany({
-    where: { 
+    where: {
       userId: userId,
-      document: { isArchived: false }
+      document: {
+        isArchived: false,
+        ownerId: { not: userId }
+      }
     },
     include: {
       document: {

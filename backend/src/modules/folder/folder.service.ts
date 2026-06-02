@@ -1502,10 +1502,11 @@ export const revokeFoldersAccess = async (
  */
 export const getSharedWithMeFolders = async (userId: string) => {
   const sharedAccess = await prisma.folderAccess.findMany({
-    where: { 
+    where: {
       userId: userId,
       folder: {
-        isArchived: false // Pastikan foldernya sendiri tidak sedang diarsip
+        isArchived: false, // Pastikan foldernya sendiri tidak sedang diarsip
+        ownerId: { not: userId }
       }
     },
     include: {
