@@ -4,13 +4,14 @@ import { PUBLIC_API_BASE_URL } from '$env/static/public';
 
 export const POST = async ({ cookies, fetch }) => {
   try {
+    const session = cookies.get('session_token');
     // 1. Call Express backend logout endpoint (untuk hapus refreshToken di DB)
     const backendRes = await fetch(`${PUBLIC_API_BASE_URL}/auth/logout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // ⚠️ Jangan kirim credentials: include di sini!
-      // Cookie session_token akan otomatis dikirim oleh SvelteKit via cookies.get()
-      // jika Anda perlu mengirim token ke backend untuk validasi
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': session ? `Bearer ${session}` : ''
+      },
     });
 
     // 2. Baca & parse response backend
@@ -22,13 +23,21 @@ export const POST = async ({ cookies, fetch }) => {
       result = { success: false, message: responseText || `HTTP ${backendRes.status} Error` };
     }
 
-    // 3. 🗑️ HAPUS COOKIE session_token (WAJIB - parameter HARUS match dengan login!)
+    const isProduction = import.meta.env.PROD;
+
+    // 3. 🗑️ HAPUS COOKIE session_token dan refresh_token
     cookies.delete('session_token', {
-      path: '/',                          // ← Harus SAMA dengan cookies.set() di login
-      httpOnly: true,                     // ← Harus SAMA
-      sameSite: 'strict',                 // ← Harus SAMA  
-      secure: process.env.NODE_ENV === 'production',  // ← Harus SAMA
-      // ⚠️ Jangan sertakan maxAge saat delete!
+      path: '/',
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: isProduction,
+    });
+
+    cookies.delete('refresh_token', {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: isProduction,
     });
 
     // 4. Return success response
@@ -40,12 +49,21 @@ export const POST = async ({ cookies, fetch }) => {
   } catch (error: any) {
     console.error('[API] Logout error:', error);
     
+    const isProduction = import.meta.env.PROD;
+
     // Fallback: tetap hapus cookie walau backend error
     cookies.delete('session_token', {
       path: '/',
       httpOnly: true,
       sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production'
+      secure: isProduction,
+    });
+
+    cookies.delete('refresh_token', {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: isProduction,
     });
     
     return json({

@@ -252,7 +252,7 @@
   </header>
 
   {#if currentFolder}
-    <section class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-8" transition:fade>
+    <section class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-8" in:fade>
       <div class="flex items-center gap-3 flex-1 min-w-0">
         <button onclick={() => openFolder(null)} class="p-2 mt-7 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0" title="Back to search results">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -269,7 +269,7 @@
   {/if}
 
   {#if isSearching || isFolderLoading}
-    <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]" transition:fade>
+    <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]" in:fade>
       <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
       <p class="text-gray-400">{isFolderLoading ? 'Loading public folder contents...' : 'Searching public folders and documents...'}</p>
     </div>

@@ -30,8 +30,24 @@
 
   const userId = $derived(page.params.userId);
   const currentFolder = $derived(currentFolderId ? folders.find((folder) => folder.id === currentFolderId) ?? null : null);
-  const visibleFolders = $derived(folders.filter((folder) => folder.parentId === currentFolderId));
-  const visibleDocuments = $derived(documents.filter((document) => document.folderId === currentFolderId));
+  
+  const folderIds = $derived(new Set(folders.map((f) => f.id)));
+  const visibleFolders = $derived(
+    folders.filter((folder) => {
+      if (currentFolderId === null) {
+        return folder.parentId === null || !folderIds.has(folder.parentId);
+      }
+      return folder.parentId === currentFolderId;
+    })
+  );
+  const visibleDocuments = $derived(
+    documents.filter((document) => {
+      if (currentFolderId === null) {
+        return document.folderId === null || !folderIds.has(document.folderId);
+      }
+      return document.folderId === currentFolderId;
+    })
+  );
   const resultCount = $derived(visibleFolders.length + visibleDocuments.length);
   const totalResultCount = $derived(folders.length + documents.length);
   const breadcrumbs = $derived.by(() => {
@@ -209,9 +225,7 @@
                     <a href={normalizeWebsiteUrl(user.website) as `http${string}` | `https${string}`} target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex max-w-full items-center gap-2 text-sm font-semibold text-blue-300 transition-colors hover:text-blue-200">
                       <span class="truncate">{getWebsiteDisplay(user.website)}</span>
                       <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                    </a>
-                  {:else}
-                    
+                    </a>                    
                   {/if}
                 </div>
 

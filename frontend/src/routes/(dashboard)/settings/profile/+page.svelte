@@ -179,7 +179,7 @@
   <div class="max-w-6xl mx-auto">
     
     <!-- 🎴 Dashboard Card -->
-    <div transition:fly={{ y: 20, duration: 400, easing: 'cubic-bezier(0.16,1,0.3,1)' }} 
+    <div in:fly={{ y: 20, duration: 400, easing: 'cubic-bezier(0.16,1,0.3,1)' }} 
          class="relative backdrop-blur-2xl bg-[#0a0a0f]/80 border border-white/10 rounded-2xl shadow-xl shadow-black/30 overflow-hidden">
       
       <!-- Top Accent -->
@@ -415,7 +415,7 @@
 
           <!-- 📢 Message Banner -->
           {#if message}
-            <div transition:fade={{ duration: 200 }} class="p-3 rounded-lg {message.type === 'success' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'} text-sm flex items-start gap-3">
+            <div in:fade={{ duration: 200 }} class="p-3 rounded-lg {message.type === 'success' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'} text-sm flex items-start gap-3">
               {#if message.type === 'success'}
                 <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               {:else}

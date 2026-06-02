@@ -20,13 +20,26 @@ export const POST = async ({ request, cookies }) => {
   // 2. Jika sukses, simpan cookie
   if (backendRes.ok && result?.success) {
     const token = result?.data?.token || result?.token;
+    const refreshToken = result?.data?.refreshToken || result?.refreshToken;
+    const isProduction = import.meta.env.PROD;
+
     if (token) {
       cookies.set('session_token', token, {
         path: '/',
         httpOnly: true,
         sameSite: 'strict',
-        secure: import.meta.env.PROD, // ✅ Vite-native
+        secure: isProduction,
         maxAge: 60 * 60 * 24
+      });
+    }
+
+    if (refreshToken) {
+      cookies.set('refresh_token', refreshToken, {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'strict',
+        secure: isProduction,
+        maxAge: 60 * 60 * 24 * 7
       });
     }
     return json(result, { status: backendRes.status });

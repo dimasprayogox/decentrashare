@@ -412,6 +412,8 @@ export const handleRefreshToken = async (req: Request, res: Response, next: Next
     return res.status(200).json({
       success: true,
       data: {
+        token: result.token,
+        refreshToken: result.refreshToken,
         user: result.user
       },
       message: 'Token refreshed successfully',

@@ -171,7 +171,7 @@
 
   <!-- Main Card -->
   <div 
-    transition:fly={{ y: 40, duration: 700, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
+    in:fly={{ y: 40, duration: 700, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
     class="w-full max-w-md relative"
   >
     <!-- Glow effect behind card -->
@@ -199,7 +199,7 @@
 
       <!-- Connected Wallet Badge -->
       {#if connectedAddress && !isLoading}
-        <div transition:fade={{ duration: 250 }} class="mb-6">
+        <div in:fade={{ duration: 250 }} class="mb-6">
           <div class="flex items-center justify-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
             <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
             <span class="text-sm text-gray-300 font-mono tracking-wide">{formatAddress(connectedAddress)}</span>
@@ -255,7 +255,7 @@
       <!-- Error Banner -->
       {#if showErrorBanner || statusMessage.toLowerCase().includes('error') || statusMessage.toLowerCase().includes('failed')}
         <div 
-          transition:slide={{ axis: 'y', duration: 200 }}
+          in:slide={{ axis: 'y', duration: 200 }}
           class="mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3"
         >
           <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

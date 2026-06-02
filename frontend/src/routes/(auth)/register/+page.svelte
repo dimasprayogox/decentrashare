@@ -144,15 +144,13 @@
 
         if (!isProfileComplete) {
           statusMessage = "✓ Account created! Silakan lengkapi profil Anda.";
-          await invalidateAll(); // Invalidate all data before navigation
           setTimeout(() => {
-            goto('/settings/profile', { invalidateAll: true, replaceState: true });
+            window.location.href = '/settings/profile';
           }, 1500);
         } else {
           statusMessage = "✓ Account created successfully! Redirecting...";
-          await invalidateAll(); // Invalidate all data before navigation
           setTimeout(() => {
-            goto('/dashboard', { invalidateAll: true, replaceState: true });
+            window.location.href = '/dashboard';
           }, 1200);
         }
       } else {
@@ -216,7 +214,7 @@
 
   <!-- Main Card -->
   <div 
-    transition:fly={{ y: 40, duration: 700, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
+    in:fly={{ y: 40, duration: 700, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}
     class="w-full max-w-md relative"
   >
     <!-- Glow effect -->
@@ -273,7 +271,7 @@
 
       <!-- STEP 1: Connect Wallet -->
       {#if step === 'connect' && !isLoading}
-        <div transition:fade>
+        <div in:fade>
           
           <button 
             onclick={connectWallet}
@@ -290,7 +288,7 @@
 
       <!-- STEP 2: Form (after wallet connected) -->
       {#if step === 'form' && !isLoading}
-        <div transition:fade>
+        <div in:fade>
           <!-- Connected Wallet Badge -->
           <div class="mb-6 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -385,7 +383,7 @@
       <!-- Error Banner -->
       {#if showErrorBanner || statusMessage.toLowerCase().includes('error') || statusMessage.toLowerCase().includes('failed')}
         <div 
-          transition:slide={{ axis: 'y', duration: 200 }}
+          in:slide={{ axis: 'y', duration: 200 }}
           class="mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3"
         >
           <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
