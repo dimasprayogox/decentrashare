@@ -12,13 +12,28 @@ export type ListUsersOptions = {
 
 const DEFAULT_STORAGE_LIMIT = 5n * 1024n * 1024n * 1024n; // 5GB in bytes
 
-// Helper: serialize a user record (convert BigInt storageLimit -> number)
+// Helper: serialize a user record (convert BigInt storageLimit -> number, or null = unlimited)
 const serializeUser = (user: any) => ({
   ...user,
-  storageLimit: user.storageLimit !== undefined && user.storageLimit !== null
-    ? Number(user.storageLimit)
-    : Number(DEFAULT_STORAGE_LIMIT),
+  storageLimit:
+    user.storageLimit !== undefined && user.storageLimit !== null
+      ? Number(user.storageLimit)
+      : null, // null = unlimited
 });
+
+// Helper: bangun objek storage usage. quotaBytes null berarti unlimited.
+const buildStorageInfo = (usedBytes: number, storageLimit: bigint | number | null) => {
+  if (storageLimit === null || storageLimit === undefined) {
+    return { usedBytes, quotaBytes: null, usagePercent: 0, unlimited: true };
+  }
+  const limitBytes = Number(storageLimit);
+  return {
+    usedBytes,
+    quotaBytes: limitBytes,
+    usagePercent: limitBytes > 0 ? Math.min(100, (usedBytes / limitBytes) * 100) : 0,
+    unlimited: false,
+  };
+};
 
 export const adminService = {
   /**
@@ -86,14 +101,9 @@ export const adminService = {
 
     const data = users.map((user) => {
       const usedBytes = usageMap.get(user.id) ?? 0;
-      const limitBytes = Number(user.storageLimit);
       return {
         ...serializeUser(user),
-        storage: {
-          usedBytes,
-          quotaBytes: limitBytes,
-          usagePercent: limitBytes > 0 ? Math.min(100, (usedBytes / limitBytes) * 100) : 0,
-        },
+        storage: buildStorageInfo(usedBytes, user.storageLimit),
       };
     });
 
@@ -140,15 +150,10 @@ export const adminService = {
     });
 
     const usedBytes = usage._sum.fileSize ?? 0;
-    const limitBytes = Number(user.storageLimit);
 
     return {
       ...serializeUser(user),
-      storage: {
-        usedBytes,
-        quotaBytes: limitBytes,
-        usagePercent: limitBytes > 0 ? Math.min(100, (usedBytes / limitBytes) * 100) : 0,
-      },
+      storage: buildStorageInfo(usedBytes, user.storageLimit),
     };
   },
 
@@ -172,9 +177,12 @@ export const adminService = {
       throw new Error('You cannot change your own admin role');
     }
 
+    // ADMIN = storage unlimited (null). Saat diturunkan ke USER, kembalikan ke default 5GB.
+    const nextStorageLimit = newRole === 'ADMIN' ? null : DEFAULT_STORAGE_LIMIT;
+
     const updated = await prisma.user.update({
       where: { id: targetUserId },
-      data: { role: newRole, updatedAt: new Date() },
+      data: { role: newRole, storageLimit: nextStorageLimit, updatedAt: new Date() },
       select: {
         id: true,
         walletAddress: true,
@@ -191,7 +199,10 @@ export const adminService = {
       'ADMIN_UPDATE_ROLE',
       targetUserId,
       updated.username || updated.walletAddress,
-      `Role changed from ${target.role} to ${newRole}`
+      `Role changed from ${target.role} to ${newRole}` +
+        (newRole === 'ADMIN'
+          ? ' (storage set to unlimited)'
+          : ' (storage reset to default 5GB)')
     );
 
     logger.info('[AdminService] User role updated', {
@@ -220,10 +231,15 @@ export const adminService = {
 
     const target = await prisma.user.findUnique({
       where: { id: targetUserId },
-      select: { id: true, storageLimit: true, username: true, walletAddress: true },
+      select: { id: true, role: true, storageLimit: true, username: true, walletAddress: true },
     });
 
     if (!target) throw new Error('User not found');
+
+    // Admin selalu unlimited — tidak bisa diberi batas. Turunkan role dulu jika ingin membatasi.
+    if (target.role === 'ADMIN') {
+      throw new Error('Admins have unlimited storage. Demote to USER first to set a limit.');
+    }
 
     // Pastikan limit baru tidak lebih kecil dari yang sudah dipakai
     const usage = await prisma.document.aggregate({
@@ -251,7 +267,7 @@ export const adminService = {
       'ADMIN_UPDATE_STORAGE_LIMIT',
       targetUserId,
       target.username || target.walletAddress,
-      `Storage limit set to ${Math.floor(storageLimitBytes)} bytes (previous: ${Number(target.storageLimit)} bytes)`
+      `Storage limit set to ${Math.floor(storageLimitBytes)} bytes (previous: ${target.storageLimit === null ? 'unlimited' : Number(target.storageLimit) + ' bytes'})`
     );
 
     logger.info('[AdminService] User storage limit updated', {
@@ -262,14 +278,7 @@ export const adminService = {
 
     return {
       ...serializeUser(updated),
-      storage: {
-        usedBytes,
-        quotaBytes: Number(updated.storageLimit),
-        usagePercent:
-          Number(updated.storageLimit) > 0
-            ? Math.min(100, (usedBytes / Number(updated.storageLimit)) * 100)
-            : 0,
-      },
+      storage: buildStorageInfo(usedBytes, updated.storageLimit),
     };
   },
 

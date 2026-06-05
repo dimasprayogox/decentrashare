@@ -139,7 +139,7 @@ export const handleUpdateStorageLimit = async (req: AuthRequest, res: Response, 
     if (error.message?.includes('not found')) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    if (error.message?.includes('Storage limit')) {
+    if (error.message?.includes('Storage limit') || error.message?.includes('unlimited storage')) {
       return res.status(400).json({ success: false, message: error.message });
     }
     next(error);

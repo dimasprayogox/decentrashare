@@ -13,6 +13,7 @@
     active={data?.active ?? 'dashboard'}
     subActive={data?.subActive ?? ''}
     storageUsage={data?.storageUsage}
+    role={data?.role ?? 'USER'}
   />
   
   <div class="flex-1 flex flex-col min-w-0 overflow-x-hidden">

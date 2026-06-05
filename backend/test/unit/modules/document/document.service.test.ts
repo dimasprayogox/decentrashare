@@ -421,6 +421,37 @@ describe('Feature: document privacy, access, and download behavior', () => {
     expect(prisma.document.create).not.toHaveBeenCalled();
   });
 
+  test('given a user with unlimited storage (null limit), when uploadMultipleFiles runs, then the quota check is skipped', async () => {
+    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
+
+    // Admin: storageLimit null = unlimited
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'admin', storageLimit: null });
+    prisma.document.findUnique.mockResolvedValue(null); // no content duplicates
+    pinata.upload.file.mockResolvedValue({ IpfsHash: 'QmAdminCID' });
+    blockchainService.prepareTransactionData.mockReturnValue({ hash: 'QmAdminCID', name: 'big.pdf', fileHash: 'hash-1' });
+    prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
+    prisma.document.create.mockResolvedValue(documentFactory({ id: 'doc-admin', ipfsHash: 'QmAdminCID', fileHash: 'hash-1' }));
+    prisma.documentAccess.createMany.mockResolvedValue({ count: 1 });
+    prisma.activityLog.create.mockResolvedValue({});
+
+    const aggregateSpy = prisma.document.aggregate;
+
+    const files = [
+      {
+        originalname: 'big.pdf',
+        mimetype: 'application/pdf',
+        size: 999999999999, // huge — would exceed any normal limit
+        path: '/tmp/big.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'admin-1');
+
+    // No quota error, upload proceeds; the quota aggregate query is never run
+    expect(result.results[0].errorCode).not.toBe('STORAGE_QUOTA_EXCEEDED');
+    expect(aggregateSpy).not.toHaveBeenCalled();
+  });
+
   // --- createDocumentsArchive ---
 
   test('given documents, when createDocumentsArchive is called, then it downloads files and adds them to ZIP', async () => {
@@ -552,6 +583,17 @@ describe('Feature: document privacy, access, and download behavior', () => {
     const result = await getMyStorageUsage('user-1');
     expect(result.quotaBytes).toBe(10737418240);
     expect(result.usagePercent).toBe(50); // 5 GB of 10 GB
+  });
+
+  test('given a user with a null storage limit (unlimited), when getMyStorageUsage is called, then quota is null and unlimited is true', async () => {
+    const { getMyStorageUsage } = await import('../../../../src/modules/document/document.service');
+    prisma.user.findUnique.mockResolvedValue({ storageLimit: null }); // unlimited (e.g. ADMIN)
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 9999999999 } });
+
+    const result = await getMyStorageUsage('user-1');
+    expect(result.quotaBytes).toBe(null);
+    expect(result.unlimited).toBe(true);
+    expect(result.usedBytes).toBe(9999999999);
   });
 
   // --- getSharedWithMeDocuments ---

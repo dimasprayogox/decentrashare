@@ -52,6 +52,7 @@ describe('Feature: admin user management and storage limit control', () => {
       usedBytes: 1073741824,
       quotaBytes: FIVE_GB,
       usagePercent: 20,
+      unlimited: false,
     });
 
     // user-2 has no usage recorded -> 0 bytes
@@ -59,6 +60,32 @@ describe('Feature: admin user management and storage limit control', () => {
       usedBytes: 0,
       quotaBytes: TEN_GB,
       usagePercent: 0,
+      unlimited: false,
+    });
+  });
+
+  test('given an admin user with a null storage limit, when listUsers runs, then their storage is reported as unlimited', async () => {
+    const { adminService } = await import('../../../../src/modules/admin/admin.service');
+
+    const adminUser = {
+      ...userFactory({ id: 'admin-1', username: 'root', role: 'ADMIN', storageLimit: null }),
+      _count: { documents: 5, folders: 3 },
+    };
+
+    prisma.user.findMany.mockResolvedValue([adminUser]);
+    prisma.user.count.mockResolvedValue(1);
+    prisma.document.groupBy.mockResolvedValue([
+      { ownerId: 'admin-1', _sum: { fileSize: 2147483648 } }, // 2GB used
+    ]);
+
+    const result = await adminService.listUsers({ page: 1, limit: 20 });
+
+    expect(result.users[0].storageLimit).toBe(null);
+    expect(result.users[0].storage).toEqual({
+      usedBytes: 2147483648,
+      quotaBytes: null,
+      usagePercent: 0,
+      unlimited: true,
     });
   });
 
@@ -131,6 +158,7 @@ describe('Feature: admin user management and storage limit control', () => {
       usedBytes: 2684354560,
       quotaBytes: FIVE_GB,
       usagePercent: 50,
+      unlimited: false,
     });
   });
 
@@ -144,21 +172,22 @@ describe('Feature: admin user management and storage limit control', () => {
 
   // --- updateUserRole ---
 
-  test('given a valid target user, when updateUserRole promotes them to ADMIN, then the role is updated and the action is logged', async () => {
+  test('given a valid target user, when updateUserRole promotes them to ADMIN, then the role is updated, storage becomes unlimited, and the action is logged', async () => {
     const { adminService } = await import('../../../../src/modules/admin/admin.service');
 
     prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'USER' });
-    const updated = userFactory({ id: 'user-2', role: 'ADMIN', storageLimit: BigInt(FIVE_GB) });
+    const updated = userFactory({ id: 'user-2', role: 'ADMIN', storageLimit: null });
     prisma.user.update.mockResolvedValue(updated);
     prisma.activityLog.create.mockResolvedValue({});
 
     const result = await adminService.updateUserRole('admin-1', 'user-2', 'ADMIN' as any);
 
     expect(result.role).toBe('ADMIN');
-    expect(result.storageLimit).toBe(FIVE_GB);
+    // ADMIN = unlimited → storageLimit null
+    expect(result.storageLimit).toBe(null);
     expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'user-2' },
-      data: expect.objectContaining({ role: 'ADMIN' }),
+      data: expect.objectContaining({ role: 'ADMIN', storageLimit: null }),
     }));
     expect(prisma.activityLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
@@ -167,6 +196,23 @@ describe('Feature: admin user management and storage limit control', () => {
         entityType: 'USER',
         entityId: 'user-2',
       }),
+    }));
+  });
+
+  test('given an admin being demoted to USER, when updateUserRole runs, then storage is reset to the default 5GB', async () => {
+    const { adminService } = await import('../../../../src/modules/admin/admin.service');
+
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-2', role: 'ADMIN' });
+    prisma.user.update.mockResolvedValue(
+      userFactory({ id: 'user-2', role: 'USER', storageLimit: BigInt(FIVE_GB) })
+    );
+    prisma.activityLog.create.mockResolvedValue({});
+
+    const result = await adminService.updateUserRole('admin-1', 'user-2', 'USER' as any);
+
+    expect(result.role).toBe('USER');
+    expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ role: 'USER', storageLimit: BigInt(FIVE_GB) }),
     }));
   });
 
@@ -205,6 +251,7 @@ describe('Feature: admin user management and storage limit control', () => {
 
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-2',
+      role: 'USER',
       storageLimit: BigInt(FIVE_GB),
       username: 'bob',
       walletAddress: '0xbob',
@@ -226,10 +273,27 @@ describe('Feature: admin user management and storage limit control', () => {
       usedBytes: 1073741824,
       quotaBytes: TEN_GB,
       usagePercent: 10,
+      unlimited: false,
     });
     expect(prisma.activityLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ action: 'ADMIN_UPDATE_STORAGE_LIMIT' }),
     }));
+  });
+
+  test('given an admin target, when updateUserStorageLimit runs, then it is rejected because admins are unlimited', async () => {
+    const { adminService } = await import('../../../../src/modules/admin/admin.service');
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'admin-2',
+      role: 'ADMIN',
+      storageLimit: null,
+      username: 'adminbob',
+      walletAddress: '0xadmin',
+    });
+
+    await expect(adminService.updateUserStorageLimit('admin-1', 'admin-2', TEN_GB))
+      .rejects.toThrow('Admins have unlimited storage');
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   test('given a negative limit, when updateUserStorageLimit runs, then it is rejected', async () => {
@@ -265,6 +329,7 @@ describe('Feature: admin user management and storage limit control', () => {
 
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-2',
+      role: 'USER',
       storageLimit: BigInt(FIVE_GB),
       username: 'bob',
       walletAddress: '0xbob',

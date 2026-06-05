@@ -17,6 +17,8 @@ export function getActiveNav(pathname: string, searchParams?: URLSearchParams): 
     if (path === '/settings/profile') return { active: 'settings', subActive: 'profile' };
     if (path === '/settings/security') return { active: 'settings', subActive: 'security' };
     if (path === '/settings/notifications') return { active: 'settings', subActive: 'notifications' };
+    if (path === '/settings/users') return { active: 'settings', subActive: 'users' };
+    if (path === '/settings/set-limit') return { active: 'settings', subActive: 'set-limit' };
     return { active: 'settings', subActive: '' };
   }
 

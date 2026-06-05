@@ -8,11 +8,13 @@
     active = 'dashboard',
     subActive = '',
     currentUser = null,
+    role = 'USER',
     storageUsage = { usedBytes: 0, quotaBytes: 5 * 1024 * 1024 * 1024, usagePercent: 0 }
   }: {
     active?: string;
     subActive?: string;
     currentUser?: AuthUser | null;
+    role?: 'USER' | 'ADMIN';
     storageUsage?: { usedBytes: number; quotaBytes: number; usagePercent: number };
   } = $props();
 
@@ -98,6 +100,7 @@
     Validate: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>`,
     Trash: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-8 0h10"></path></svg>`,
     Settings: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`,
+    Admin: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>`,
     Profile: (isActive: boolean) => `<svg class="w-4 h-4 transition-all duration-300 ${isActive ? 'text-blue-400' : 'opacity-70 group-hover:opacity-100'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`,
     Security: (isActive: boolean) => `<svg class="w-4 h-4 transition-all duration-300 ${isActive ? 'text-blue-400' : 'opacity-70 group-hover:opacity-100'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>`,
     Notifications: (isActive: boolean) => `<svg class="w-4 h-4 transition-all duration-300 ${isActive ? 'text-blue-400' : 'opacity-70 group-hover:opacity-100'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>`,
@@ -219,7 +222,7 @@
       <!-- Submenu with Animated Expand -->
       <div id="settings-submenu"
            class="overflow-hidden transition-all duration-300 ease-in-out" 
-           style="max-height: {isSettingsExpanded ? '200px' : '0px'}; 
+           style="max-height: {isSettingsExpanded ? '400px' : '0px'}; 
                   opacity: {isSettingsExpanded ? '1' : '0'};">
         <div class="pl-4 space-y-1 pt-1">
           
@@ -233,6 +236,34 @@
             {@html Icons.Profile((active === 'settings' && subActive === 'profile'))}
             Profile Setting
           </a>
+
+          {#if role === 'ADMIN'}
+            <!-- Manage Users (admin only) -->
+            <a href="/settings/users"
+               class="group relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium 
+                      transition-all duration-200 
+                      {(active === 'settings' && subActive === 'users') ? STYLES.subActive : STYLES.subInactive}">
+              {#if active === 'settings' && subActive === 'users'}
+                <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r animate-pulse"></span>
+              {/if}
+              {@html Icons.Admin((active === 'settings' && subActive === 'users'))}
+              <span class="flex-1">Manage Users</span>
+              <span class="text-[9px] font-semibold uppercase tracking-wider text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded">Admin</span>
+            </a>
+
+            <!-- Set Storage Limit (admin only) -->
+            <a href="/settings/set-limit"
+               class="group relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium 
+                      transition-all duration-200 
+                      {(active === 'settings' && subActive === 'set-limit') ? STYLES.subActive : STYLES.subInactive}">
+              {#if active === 'settings' && subActive === 'set-limit'}
+                <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r animate-pulse"></span>
+              {/if}
+              {@html Icons.Storage((active === 'settings' && subActive === 'set-limit'))}
+              <span class="flex-1">Set Storage Limit</span>
+              <span class="text-[9px] font-semibold uppercase tracking-wider text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded">Admin</span>
+            </a>
+          {/if}
           
          
         </div>

@@ -37,8 +37,8 @@ export const userService = {
 
     if (!user) throw new Error('User not found');
 
-    // storageLimit adalah BigInt, konversi ke number agar bisa di-serialize ke JSON
-    return { ...user, storageLimit: Number(user.storageLimit) };
+    // storageLimit adalah BigInt (atau null = unlimited), konversi agar bisa di-serialize ke JSON
+    return { ...user, storageLimit: user.storageLimit === null ? null : Number(user.storageLimit) };
   },
 
   async getPublicProfile(userId: string) {

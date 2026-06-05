@@ -4467,3 +4467,42 @@
 {"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-06-05 16:05:43"}
 {"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-06-05 16:05:43"}
 {"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 16:05:44"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-06-05 19:50:31"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 19:50:31"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[qhujg8qnx] PATCH /api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","method":"PATCH","requestId":"qhujg8qnx","timestamp":"2026-06-05 19:51:10","url":"/api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","userAgent":"Bun/1.3.9"}
+{"adminId":"3db971d8-5217-454a-a8b2-d2c02686dc49","from":"USER","level":"info","message":"[AdminService] User role updated","targetUserId":"bb0a050d-53e9-4338-a1f8-279f4e17d941","timestamp":"2026-06-05 19:51:10","to":"ADMIN"}
+{"duration":265,"level":"info","message":"[qhujg8qnx] 200 265ms","requestId":"qhujg8qnx","statusCode":200,"timestamp":"2026-06-05 19:51:10"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[efx57fqzx] PATCH /api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/storage-limit","method":"PATCH","requestId":"efx57fqzx","timestamp":"2026-06-05 19:51:10","url":"/api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/storage-limit","userAgent":"Bun/1.3.9"}
+{"level":"error","message":"Unhandled error: Admins have unlimited storage. Demote to USER first to set a limit.","stack":"Error: Admins have unlimited storage. Demote to USER first to set a limit.\n    at updateUserStorageLimit (/home/dimas/project/decentrashare/backend/src/modules/admin/admin.service.ts:241:17)\n    at async <anonymous> (/home/dimas/project/decentrashare/backend/src/modules/admin/admin.controller.ts:131:40)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-06-05 19:51:10"}
+{"duration":66,"level":"info","message":"[efx57fqzx] 500 66ms","requestId":"efx57fqzx","statusCode":500,"timestamp":"2026-06-05 19:51:10"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[219oju2fu] PATCH /api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","method":"PATCH","requestId":"219oju2fu","timestamp":"2026-06-05 19:51:10","url":"/api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","userAgent":"Bun/1.3.9"}
+{"adminId":"3db971d8-5217-454a-a8b2-d2c02686dc49","from":"ADMIN","level":"info","message":"[AdminService] User role updated","targetUserId":"bb0a050d-53e9-4338-a1f8-279f4e17d941","timestamp":"2026-06-05 19:51:10","to":"USER"}
+{"duration":109,"level":"info","message":"[219oju2fu] 200 109ms","requestId":"219oju2fu","statusCode":200,"timestamp":"2026-06-05 19:51:10"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[iry3fi3r9] GET /api/admin/users?role=ADMIN&limit=3","method":"GET","requestId":"iry3fi3r9","timestamp":"2026-06-05 19:51:10","url":"/api/admin/users?role=ADMIN&limit=3","userAgent":"Bun/1.3.9"}
+{"duration":502,"level":"info","message":"[iry3fi3r9] 200 502ms","requestId":"iry3fi3r9","statusCode":200,"timestamp":"2026-06-05 19:51:11"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 19:52:52"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-06-05 19:52:52"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-06-05 19:52:52"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-06-05 19:52:53"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-06-05 19:52:53"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-06-05 19:52:53"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-06-05 19:52:53"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-06-05 19:52:53"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 19:52:53"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[gg0l62k2d] PATCH /api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","method":"PATCH","requestId":"gg0l62k2d","timestamp":"2026-06-05 19:53:03","url":"/api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","userAgent":"Bun/1.3.9"}
+{"adminId":"3db971d8-5217-454a-a8b2-d2c02686dc49","from":"USER","level":"info","message":"[AdminService] User role updated","targetUserId":"bb0a050d-53e9-4338-a1f8-279f4e17d941","timestamp":"2026-06-05 19:53:04","to":"ADMIN"}
+{"duration":434,"level":"info","message":"[gg0l62k2d] 200 434ms","requestId":"gg0l62k2d","statusCode":200,"timestamp":"2026-06-05 19:53:04"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[gzvxtmbfm] PATCH /api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/storage-limit","method":"PATCH","requestId":"gzvxtmbfm","timestamp":"2026-06-05 19:53:04","url":"/api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/storage-limit","userAgent":"Bun/1.3.9"}
+{"duration":69,"level":"info","message":"[gzvxtmbfm] 400 69ms","requestId":"gzvxtmbfm","statusCode":400,"timestamp":"2026-06-05 19:53:04"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[2lt1uukkc] PATCH /api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","method":"PATCH","requestId":"2lt1uukkc","timestamp":"2026-06-05 19:53:04","url":"/api/admin/users/bb0a050d-53e9-4338-a1f8-279f4e17d941/role","userAgent":"Bun/1.3.9"}
+{"adminId":"3db971d8-5217-454a-a8b2-d2c02686dc49","from":"ADMIN","level":"info","message":"[AdminService] User role updated","targetUserId":"bb0a050d-53e9-4338-a1f8-279f4e17d941","timestamp":"2026-06-05 19:53:04","to":"USER"}
+{"duration":106,"level":"info","message":"[2lt1uukkc] 200 106ms","requestId":"2lt1uukkc","statusCode":200,"timestamp":"2026-06-05 19:53:04"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[fh3l43f24] GET /api/admin/users?role=ADMIN&limit=3","method":"GET","requestId":"fh3l43f24","timestamp":"2026-06-05 19:53:04","url":"/api/admin/users?role=ADMIN&limit=3","userAgent":"Bun/1.3.9"}
+{"duration":303,"level":"info","message":"[fh3l43f24] 200 303ms","requestId":"fh3l43f24","statusCode":200,"timestamp":"2026-06-05 19:53:04"}

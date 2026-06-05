@@ -4,6 +4,18 @@ import type { LayoutServerLoad } from './$types';
 import { PUBLIC_API_BASE_URL } from '$env/static/public';
 import { getActiveNav } from '$lib/utils/getActiveNav';
 
+// Decode payload JWT (tanpa verifikasi signature) hanya untuk membaca role.
+// Verifikasi signature tetap dilakukan backend di setiap request API.
+function decodeJwtRole(token: string): 'USER' | 'ADMIN' {
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return 'USER';
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        return payload?.role === 'ADMIN' ? 'ADMIN' : 'USER';
+    } catch {
+        return 'USER';
+    }
+}
 
 export const load: LayoutServerLoad = async ({ cookies, url, fetch }) => {
     const { active, subActive } = getActiveNav(url.pathname, url.searchParams);
@@ -15,6 +27,8 @@ export const load: LayoutServerLoad = async ({ cookies, url, fetch }) => {
     if (!session) {
         throw redirect(303, '/login');
     }
+
+    const role = decodeJwtRole(session);
 
     let storageUsage = fallbackStorageUsage;
     try {
@@ -34,6 +48,7 @@ export const load: LayoutServerLoad = async ({ cookies, url, fetch }) => {
 
     return {
         userAddress: session,
+        role,
         active,
         subActive,
         storageUsage

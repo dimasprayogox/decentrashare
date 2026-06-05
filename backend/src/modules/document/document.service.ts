@@ -613,9 +613,10 @@ export const uploadMultipleFiles = async (
   }
 
   // ── 0.5. STORAGE QUOTA CHECK ─────────────────────────
-  // Pastikan total upload tidak melebihi batas penyimpanan yang ditetapkan admin
-  {
-    const quotaBytes = user?.storageLimit ? Number(user.storageLimit) : 5 * 1024 * 1024 * 1024;
+  // Pastikan total upload tidak melebihi batas penyimpanan yang ditetapkan admin.
+  // storageLimit null = unlimited (mis. ADMIN) → lewati pengecekan.
+  if (user && user.storageLimit !== null) {
+    const quotaBytes = user.storageLimit ? Number(user.storageLimit) : 5 * 1024 * 1024 * 1024;
     const usage = await prisma.document.aggregate({
       where: { ownerId: userId, isArchived: false, deletedAt: null },
       _sum: { fileSize: true }
@@ -1747,9 +1748,6 @@ export const getMyStorageUsage = async (userId: string) => {
     select: { storageLimit: true }
   });
 
-  // Fallback ke 5GB jika user tidak punya limit tersimpan
-  const quotaBytes = user?.storageLimit ? Number(user.storageLimit) : 5 * 1024 * 1024 * 1024;
-
   const result = await prisma.document.aggregate({
     where: {
       ownerId: userId,
@@ -1762,9 +1760,16 @@ export const getMyStorageUsage = async (userId: string) => {
   });
 
   const usedBytes = result._sum.fileSize ?? 0;
+
+  // storageLimit null = unlimited (mis. ADMIN)
+  if (user && user.storageLimit === null) {
+    return { usedBytes, quotaBytes: null, usagePercent: 0, unlimited: true };
+  }
+
+  const quotaBytes = user?.storageLimit ? Number(user.storageLimit) : 5 * 1024 * 1024 * 1024;
   const usagePercent = quotaBytes > 0 ? Math.min(100, (usedBytes / quotaBytes) * 100) : 0;
 
-  return { usedBytes, quotaBytes, usagePercent };
+  return { usedBytes, quotaBytes, usagePercent, unlimited: false };
 }
 
 /**
