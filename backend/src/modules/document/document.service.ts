@@ -598,7 +598,7 @@ export const uploadMultipleFiles = async (
   // ── 0. PRE-FETCH: Get user's Pinata group ID ─────────
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { pinataGroupId: true, username: true }
+    select: { pinataGroupId: true, username: true, storageLimit: true }
   });
   
   const userGroupId = user?.pinataGroupId || null;
@@ -610,6 +610,52 @@ export const uploadMultipleFiles = async (
     });
   } else {
     logger.debug(`[Pinata] No personal group found for user, uploads will be ungrouped`, { userId });
+  }
+
+  // ── 0.5. STORAGE QUOTA CHECK ─────────────────────────
+  // Pastikan total upload tidak melebihi batas penyimpanan yang ditetapkan admin
+  {
+    const quotaBytes = user?.storageLimit ? Number(user.storageLimit) : 5 * 1024 * 1024 * 1024;
+    const usage = await prisma.document.aggregate({
+      where: { ownerId: userId, isArchived: false, deletedAt: null },
+      _sum: { fileSize: true }
+    });
+    const usedBytes = usage._sum.fileSize ?? 0;
+    const incomingBytes = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
+
+    if (usedBytes + incomingBytes > quotaBytes) {
+      logger.warn('[Upload] Storage quota exceeded', {
+        userId,
+        usedBytes,
+        incomingBytes,
+        quotaBytes
+      });
+
+      files.forEach(file => {
+        results.push({
+          success: false,
+          fileName: file.originalname,
+          status: 'error',
+          error: `Storage quota exceeded. Used ${usedBytes} bytes of ${quotaBytes} bytes, cannot add ${incomingBytes} more bytes.`,
+          errorCode: 'STORAGE_QUOTA_EXCEEDED'
+        });
+        if (fs.existsSync(file.path)) {
+          try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+        }
+      });
+
+      return {
+        results,
+        summary: {
+          total: results.length,
+          uploaded: 0,
+          duplicate: 0,
+          error: results.length
+        },
+        blockchainPayload: [],
+        folderId
+      };
+    }
   }
 
   // ── 1. SECURITY CHECK: Verify folder ownership or editor/admin access ──────────────────────
@@ -1696,7 +1742,14 @@ export const getSystemStatsForAdmin = async () => {
 }
 
 export const getMyStorageUsage = async (userId: string) => {
-  const quotaBytes = 5 * 1024 * 1024 * 1024;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { storageLimit: true }
+  });
+
+  // Fallback ke 5GB jika user tidak punya limit tersimpan
+  const quotaBytes = user?.storageLimit ? Number(user.storageLimit) : 5 * 1024 * 1024 * 1024;
+
   const result = await prisma.document.aggregate({
     where: {
       ownerId: userId,

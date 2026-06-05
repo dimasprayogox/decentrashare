@@ -3,6 +3,7 @@ import authRoutes from './modules/auth/auth.routes'
 import documentRoutes from './modules/document/document.routes'
 import folderRoutes from './modules/folder/folder.routes'
 import userRoutes from './modules/user/user.routes'
+import adminRoutes from './modules/admin/admin.routes'
 
 const router = Router()
 
@@ -11,6 +12,7 @@ router.use('/auth', authRoutes)
 router.use('/documents', documentRoutes)
 router.use('/folders', folderRoutes)
 router.use('/users', userRoutes)
+router.use('/admin', adminRoutes)
 
 // Health check endpoint
 router.get('/health', (req, res) => {

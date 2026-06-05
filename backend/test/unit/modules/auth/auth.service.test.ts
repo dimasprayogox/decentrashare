@@ -98,7 +98,7 @@ describe('Feature: wallet authentication and session lifecycle', () => {
 
   test('given a registered wallet and valid signature, when login succeeds, then access tokens are issued and the nonce is rotated', async () => {
     const { loginWithWallet } = await import('../../../../src/modules/auth/auth.service');
-    const user = userFactory({ walletAddress: '0xabc', nonce: 'nonce-1' });
+    const user = userFactory({ walletAddress: '0xabc', nonce: 'nonce-1', nonceExpiresAt: new Date(Date.now() + 50000) });
     prisma.user.findUnique.mockResolvedValue(user);
     prisma.user.update.mockResolvedValue({ ...user, nonce: 'random-nonce' });
     verifyMetamaskSignature.mockReturnValue(true);
@@ -119,6 +119,14 @@ describe('Feature: wallet authentication and session lifecycle', () => {
     expect(result.refreshToken).toBe('refresh-token');
   });
 
+  test('given an expired nonce, when login is attempted, then authentication is rejected', async () => {
+    const { loginWithWallet } = await import('../../../../src/modules/auth/auth.service');
+    const user = userFactory({ walletAddress: '0xabc', nonceExpiresAt: new Date(Date.now() - 5000) });
+    prisma.user.findUnique.mockResolvedValue(user);
+
+    await expect(loginWithWallet('0xabc', 'sig')).rejects.toThrow('Authentication nonce expired. Please request a new nonce.');
+  });
+
   test('given invalid registration profile data, when registration is attempted, then validation errors are returned', async () => {
     const { registerUser } = await import('../../../../src/modules/auth/auth.service');
 
@@ -126,13 +134,39 @@ describe('Feature: wallet authentication and session lifecycle', () => {
     await expect(registerUser('0xabc', 'sig', { username: 'alice', email: 'bad' })).rejects.toThrow('Please enter a valid email address');
   });
 
+  test('given a wallet that is already registered, when registration is attempted, then registration is rejected', async () => {
+    const { registerUser } = await import('../../../../src/modules/auth/auth.service');
+    prisma.user.findUnique.mockResolvedValue(userFactory({ isRegistered: true }));
+
+    await expect(registerUser('0xabc', 'sig', { username: 'alice', email: 'alice@example.com' })).rejects.toThrow('This wallet is already registered. Please login instead.');
+  });
+
+  test('given an expired nonce during registration, when registration is attempted, then registration is rejected', async () => {
+    const { registerUser } = await import('../../../../src/modules/auth/auth.service');
+    prisma.user.findUnique.mockResolvedValue(userFactory({ isRegistered: false, nonceExpiresAt: new Date(Date.now() - 5000) }));
+
+    await expect(registerUser('0xabc', 'sig', { username: 'alice', email: 'alice@example.com' })).rejects.toThrow('Authentication nonce expired. Please request a new nonce.');
+  });
+
   test('given a username already owned by another account, when registration is attempted, then registration is rejected', async () => {
     const { registerUser } = await import('../../../../src/modules/auth/auth.service');
-    prisma.user.findUnique.mockResolvedValue(userFactory({ isRegistered: false }));
+    prisma.user.findUnique.mockResolvedValue(userFactory({ isRegistered: false, nonceExpiresAt: new Date(Date.now() + 50000) }));
     verifyMetamaskSignature.mockReturnValue(true);
     prisma.user.findFirst.mockResolvedValueOnce(userFactory({ id: 'other' }));
 
     await expect(registerUser('0xabc', 'sig', { username: 'alice', email: 'alice@example.com' })).rejects.toThrow('Username is already taken. Please choose another one.');
+  });
+
+  test('given an email already registered by another account, when registration is attempted, then registration is rejected', async () => {
+    const { registerUser } = await import('../../../../src/modules/auth/auth.service');
+    prisma.user.findUnique.mockResolvedValue(userFactory({ isRegistered: false, nonceExpiresAt: new Date(Date.now() + 50000) }));
+    verifyMetamaskSignature.mockReturnValue(true);
+    // First query for username uniqueness returns null, second query for email returns other user
+    prisma.user.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(userFactory({ id: 'other' }));
+
+    await expect(registerUser('0xabc', 'sig', { username: 'alice', email: 'alice@example.com' })).rejects.toThrow('Email is already registered. Please use another email.');
   });
 
   test('given a valid wallet registration, when registration succeeds, then profile data is saved, tokens are issued, and Pinata setup starts', async () => {

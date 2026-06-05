@@ -2,6 +2,8 @@
   import { fade, fly, slide } from 'svelte/transition';
   import { authService } from '$lib/services';
   import { goto, invalidateAll } from '$app/navigation';
+  import logo from '$lib/assets/logo.png';
+
 
   // State
   let isLoading = $state(false);
@@ -31,7 +33,7 @@
     if (connectedAddress) {
       await navigator.clipboard.writeText(connectedAddress);
       const originalMsg = statusMessage;
-      statusMessage = "✓ Address copied!";
+      statusMessage = "Address copied!";
       setTimeout(() => { statusMessage = originalMsg; }, 1500);
     }
   }
@@ -135,20 +137,20 @@
         email: email.trim().toLowerCase()
       });
 
-      // 4. Success! ✅ REDIRECT CERDAS
+      // 4. Success! ✅ SMART REDIRECT
       if (regData?.success) {
         const token = regData.data?.token;
-        const isProfileComplete = regData.data?.isProfileComplete; // ✅ Ambil flag
+        const isProfileComplete = regData.data?.isProfileComplete; // ✅ Get flag
 
         if (token) localStorage.setItem('session_token', token);
 
         if (!isProfileComplete) {
-          statusMessage = "✓ Account created! Silakan lengkapi profil Anda.";
+          statusMessage = "Account created! Please complete your profile.";
           setTimeout(() => {
             window.location.href = '/settings/profile';
           }, 1500);
         } else {
-          statusMessage = "✓ Account created successfully! Redirecting...";
+          statusMessage = "Account created successfully! Redirecting...";
           setTimeout(() => {
             window.location.href = '/dashboard';
           }, 1200);
@@ -171,7 +173,7 @@
   function handleError(err: any) {
     const userMessage = err.message || 'An unknown error occurred';
     const statusCode = err.status ? ` (Status: ${err.status})` : '';
-    statusMessage = `Error: ${userMessage}${statusCode}`;
+    statusMessage = `Error: ${userMessage}`;
     showErrorBanner = true;
     
     console.error('🔴 [Register Error]', {
@@ -228,12 +230,11 @@
       
       <!-- Header -->
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-18 h-18 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-5 border border-white/20 shadow-lg shadow-blue-500/25 transition-transform duration-300" 
+        <div class="inline-flex items-center justify-center w-18 h-18 rounded-2xl bg-white/[0.02] transition-transform duration-300 overflow-hidden" 
              class:scale-105={isHovered}>
-          <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-          </svg>
+          <img src={logo} alt="DecentraShare Logo" class="w-full h-full object-contain" />
         </div>
+
         <h1 class="text-3xl font-bold text-white tracking-tight">
           Join <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">DecentraShare</span>
         </h1>

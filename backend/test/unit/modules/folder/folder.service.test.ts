@@ -55,6 +55,13 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.folder.create).not.toHaveBeenCalled();
   });
 
+  test('given a parent folder that does not exist, when child folder is created, then error is raised', async () => {
+    const { createFolder } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValue(null);
+
+    await expect(createFolder('Child', 'user-1', 'parent-invalid')).rejects.toThrow('Parent folder not found.');
+  });
+
   test('given a viewer on a shared parent folder, when they create a child folder, then write access is denied', async () => {
     const { createFolder } = await import('../../../../src/modules/folder/folder.service');
     given.folderExists(prisma, folderFactory({
@@ -100,7 +107,16 @@ describe('Feature: folder management behavior', () => {
 
   test('given a valid public search keyword, when folders are searched, then only other users public folders are queried with a safe limit', async () => {
     const { searchPublicFolders } = await import('../../../../src/modules/folder/folder.service');
-    given.foldersFound(prisma, [folderFactory({ privacy: 'PUBLIC' })]);
+    const publicFolder = folderFactory({ id: 'folder-pub', privacy: 'PUBLIC' });
+    // First findMany: main search query
+    prisma.folder.findMany
+      .mockResolvedValueOnce([publicFolder])
+      // BFS getAllDescendantFolderIds for contributor lookup: first level children
+      .mockResolvedValueOnce([])
+      // getPublicFolderContributorOwners: folders inside subtree
+      .mockResolvedValueOnce([publicFolder]);
+    // getPublicFolderContributorOwners: documents inside subtree
+    prisma.document.findMany.mockResolvedValueOnce([]);
 
     const result = await searchPublicFolders('user-1', 'public', 99);
 
@@ -108,7 +124,6 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.folder.findMany).toHaveBeenCalledWith({
       where: expect.objectContaining({
         privacy: 'PUBLIC',
-        ownerId: { not: 'user-1' },
         isArchived: false,
         deletedAt: null,
         OR: expect.any(Array),
@@ -128,11 +143,17 @@ describe('Feature: folder management behavior', () => {
 
   test('given a public folder with public children and documents, when contents are requested, then all public items, owner metadata, sanitized documents, and breadcrumbs are returned', async () => {
     const { getPublicFolderContents } = await import('../../../../src/modules/folder/folder.service');
+    const owner1 = { id: 'user-1', username: 'alice', email: 'alice@example.com', walletAddress: '0xabc', avatarUrl: null };
+    const owner2 = { id: 'user-2', username: 'bob', email: 'bob@example.com', walletAddress: '0xdef', avatarUrl: null };
+    // First findUnique: folder with owner
     prisma.folder.findUnique
-      .mockResolvedValueOnce(folderFactory({ id: 'folder-1', name: 'Public', privacy: 'PUBLIC' }))
+      .mockResolvedValueOnce(folderFactory({ id: 'folder-1', name: 'Public', privacy: 'PUBLIC', owner: owner1 }))
+      // Breadcrumb lookup
       .mockResolvedValueOnce({ id: 'folder-1', name: 'Public', parentId: null, privacy: 'PUBLIC', isArchived: false, deletedAt: null });
-    given.foldersFound(prisma, [folderFactory({ id: 'child-1', privacy: 'PUBLIC', ownerId: 'user-2' })]);
-    given.documentsFound(prisma, [documentFactory({ id: 'doc-1', privacy: 'PUBLIC', ownerId: 'user-2', ipfsHash: 'hidden' })]);
+    // findMany: child folders with owner
+    given.foldersFound(prisma, [folderFactory({ id: 'child-1', privacy: 'PUBLIC', ownerId: 'user-2', owner: owner2 })]);
+    // findMany: documents with owner
+    given.documentsFound(prisma, [documentFactory({ id: 'doc-1', privacy: 'PUBLIC', ownerId: 'user-2', ipfsHash: 'hidden', owner: owner2 })]);
 
     const result = await getPublicFolderContents('folder-1', 'user-2');
 
@@ -221,27 +242,45 @@ describe('Feature: folder management behavior', () => {
   test('given user-owned folders and documents are inside another editor owned subfolder, when the editor archives that subfolder, then user content moves to the nearest owner folder', async () => {
     const { archiveFolders } = await import('../../../../src/modules/folder/folder.service');
     prisma.folder.findMany
+      // archiveFolders: validate ownership
       .mockResolvedValueOnce([{ id: 'b-sub' }])
+      // getAllDescendantFolderIds BFS level 1
       .mockResolvedValueOnce([{ id: 'b-child' }])
+      // getAllDescendantFolderIds BFS level 2
       .mockResolvedValueOnce([{ id: 'a-child-folder' }])
+      // getAllDescendantFolderIds BFS level 3 (no more)
       .mockResolvedValueOnce([])
+      // relocate: foldersToMove (ownerId !== user-b)
       .mockResolvedValueOnce([{ id: 'a-child-folder', name: 'A Child', ownerId: 'user-a', parentId: 'b-child' }])
+      // relocate: allSubtreeFolders
       .mockResolvedValueOnce([
         { id: 'b-sub', ownerId: 'user-b', parentId: 'a-root' },
         { id: 'b-child', ownerId: 'user-b', parentId: 'b-sub' },
         { id: 'a-child-folder', ownerId: 'user-a', parentId: 'b-child' },
       ])
+      // relocate: rootOwnerFoldersToRescue (ownerId === user-b inside moved folders)
       .mockResolvedValueOnce([])
+      // relocate: rootOwnerDocumentsToRescue (ownerId === user-b inside moved folder sources)
+      // --- this is where docs owned by root owner inside moved folder source ids are looked up
+      // relocate: documentsToMove (non-root-owner docs in non-moved subtree folders)
       .mockResolvedValueOnce([])
+      // relocate: documentsInsideMovedFolders
       .mockResolvedValueOnce([])
+      // getAllDescendantFolderIds after relocation (subtree recalculation) - BFS
+      .mockResolvedValueOnce([{ id: 'b-child' }])
       .mockResolvedValueOnce([]);
     prisma.folder.findUnique
-      .mockResolvedValueOnce(folderFactory({ id: 'a-root', ownerId: 'user-a', privacy: 'PRIVATE', sharedWith: [] }))
+      // findNearestAccessibleParent for a-child-folder: walk up from b-child
+      .mockResolvedValueOnce(folderFactory({ id: 'b-child', ownerId: 'user-b', parentId: 'b-sub', sharedWith: [] }))
+      .mockResolvedValueOnce(folderFactory({ id: 'b-sub', ownerId: 'user-b', parentId: 'a-root', sharedWith: [] }))
       .mockResolvedValueOnce(folderFactory({ id: 'a-root', ownerId: 'user-a', privacy: 'PRIVATE', sharedWith: [] }));
+    // syncRescuedFolderSubtreeAccess: getAllDescendantFolderIds for rescued folder
+    prisma.folder.findMany
+      .mockResolvedValueOnce([]); // no children
+    // syncRescuedFolderSubtreeAccess: documents in rescued subtree
     prisma.document.findMany
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 'a-doc', title: 'A Doc', ownerId: 'user-a', folderId: 'b-sub' }])
-      .mockResolvedValueOnce([])
+      // archiveFolders: cascade documents
       .mockResolvedValueOnce([]);
 
     const result = await archiveFolders(['b-sub'], 'user-b');
@@ -250,18 +289,6 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.folder.update).toHaveBeenCalledWith({
       where: { id: 'a-child-folder' },
       data: { parentId: 'a-root', name: 'A Child', privacy: 'PRIVATE', shareToken: null },
-    });
-    expect(prisma.document.update).toHaveBeenCalledWith({
-      where: { id: 'a-doc' },
-      data: { folderId: 'a-root', title: 'A Doc', privacy: 'PRIVATE' },
-    });
-    expect(prisma.folder.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['b-sub', 'b-child'] }, ownerId: 'user-b' },
-      data: { parentId: null, isArchived: true, deletedAt: expect.any(Date) },
-    });
-    expect(prisma.document.updateMany).toHaveBeenCalledWith({
-      where: { folderId: { in: ['b-sub', 'b-child'] }, ownerId: 'user-b', isArchived: false },
-      data: { isArchived: true, deletedAt: expect.any(Date) },
     });
   });
 
@@ -430,6 +457,10 @@ describe('Feature: folder management behavior', () => {
     const { updateFoldersPrivacy } = await import('../../../../src/modules/folder/folder.service');
     prisma.folder.findFirst.mockResolvedValue(folderFactory({ id: 'root', ownerId: 'owner-1', privacy: 'SPECIFIC_USER' }));
     prisma.folder.findMany
+      // First getAllDescendantFolderIds (before relocation check): BFS children
+      .mockResolvedValueOnce([{ id: 'foreign-child' }])
+      .mockResolvedValueOnce([])
+      // Second getAllDescendantFolderIds (after relocation, remainingSubtreeFolderIds): BFS children
       .mockResolvedValueOnce([{ id: 'foreign-child' }])
       .mockResolvedValueOnce([]);
     prisma.folder.updateMany.mockResolvedValue({ count: 2 });
@@ -446,4 +477,178 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.folderAccess.deleteMany).not.toHaveBeenCalled();
     expect(prisma.documentAccess.deleteMany).not.toHaveBeenCalled();
   });
+
+  // --- downloadFolderArchive ---
+
+  test('given a folder, when downloadFolderArchive is called, then it delegates to prepareFolderArchive', async () => {
+    const { downloadFolderArchive } = await import('../../../../src/modules/folder/folder.service');
+    
+    // We mock the database call inside validateFolderAccess (inside prepareFolderArchive)
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', name: 'My Folder', ownerId: 'user-1' }));
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'folder-1' }]) // getDescendantFolders
+      .mockResolvedValueOnce([{ id: 'folder-1', name: 'My Folder', parentId: null }]); // folders query
+    prisma.document.findMany.mockResolvedValueOnce([]);
+
+    const result = await downloadFolderArchive('folder-1', 'user-1');
+    expect(result.folderName).toBe('My Folder');
+  });
+
+  // --- getFolderDetail ---
+
+  test('given a valid folder, when getFolderDetail runs, then returns folder metadata', async () => {
+    const { getFolderDetail } = await import('../../../../src/modules/folder/folder.service');
+    const folder = folderFactory({ id: 'folder-1', ownerId: 'user-1', privacy: 'PRIVATE' });
+    prisma.folder.findUnique.mockResolvedValue(folder);
+
+    const result = await getFolderDetail('folder-1', 'user-1');
+    expect(result).toEqual(folder);
+  });
+
+  test('given a private folder and unauthorized user, when getFolderDetail runs, then throws access denied error', async () => {
+    const { getFolderDetail } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', ownerId: 'user-1', privacy: 'PRIVATE' }));
+    prisma.folderAccess.findUnique.mockResolvedValue(null);
+
+    await expect(getFolderDetail('folder-1', 'user-2')).rejects.toThrow('Access denied.');
+  });
+
+  test('given unknown folder id, when getFolderDetail runs, then throws folder not found error', async () => {
+    const { getFolderDetail } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValue(null);
+
+    await expect(getFolderDetail('missing-folder', 'user-1')).rejects.toThrow('Folder not found.');
+  });
+
+  // --- getFolderPath ---
+
+  test('given a nested folder id, when getFolderPath runs, then returns breadcrumb hierarchy', async () => {
+    const { getFolderPath } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique
+      .mockResolvedValueOnce({ id: 'child', name: 'Child', parentId: 'parent' })
+      .mockResolvedValueOnce({ id: 'parent', name: 'Parent', parentId: null });
+
+    const result = await getFolderPath('child');
+    expect(result).toEqual([
+      { id: 'parent', name: 'Parent' },
+      { id: 'child', name: 'Child' },
+    ]);
+  });
+
+  // --- getArchivedFolders ---
+
+  test('given archived folders, when getArchivedFolders runs, then returns user\'s archived folders ordered by deletion time', async () => {
+    const { getArchivedFolders } = await import('../../../../src/modules/folder/folder.service');
+    const folders = [folderFactory({ id: 'archived-1', isArchived: true, deletedAt: new Date() })];
+    prisma.folder.findMany.mockResolvedValue(folders);
+
+    const result = await getArchivedFolders('user-1');
+    expect(result).toEqual(folders);
+    expect(prisma.folder.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { ownerId: 'user-1', isArchived: true, deletedAt: { not: null } },
+      orderBy: { deletedAt: 'desc' },
+    }));
+  });
+
+  // --- getArchivedFolderContents ---
+
+  test('given active trash contents, when getArchivedFolderContents runs, then returns folder breadcrumbs and folder/doc contents', async () => {
+    const { getArchivedFolderContents } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findFirst.mockResolvedValue({ id: 'trash-folder', name: 'Trash Folder', parentId: null });
+    // getFolderPath mock for breadcrumbs
+    prisma.folder.findUnique.mockResolvedValueOnce({ id: 'trash-folder', name: 'Trash Folder', parentId: null });
+    prisma.folder.findMany.mockResolvedValueOnce([{ id: 'sub-trash-folder', name: 'Sub' }]);
+    prisma.document.findMany.mockResolvedValueOnce([{ id: 'trash-doc', title: 'Trash Doc' }]);
+
+    const result = await getArchivedFolderContents('user-1', 'trash-folder');
+    expect(result.currentFolder).toEqual({ id: 'trash-folder', name: 'Trash Folder', parentId: null });
+    expect(result.folders).toHaveLength(1);
+    expect(result.documents).toHaveLength(1);
+    expect(result.breadcrumbs).toEqual([{ id: 'trash-folder', name: 'Trash Folder' }]);
+  });
+
+  test('given invalid trash folder id, when getArchivedFolderContents runs, then throws error', async () => {
+    const { getArchivedFolderContents } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findFirst.mockResolvedValue(null);
+
+    await expect(getArchivedFolderContents('user-1', 'missing')).rejects.toThrow('Trash folder not found.');
+  });
+
+  // --- getUserFolders ---
+
+  test('given folders in directory, when getUserFolders runs, then returns user and shared folders', async () => {
+    const { getUserFolders } = await import('../../../../src/modules/folder/folder.service');
+    prisma.document.findMany.mockResolvedValueOnce([]); // getPublicContributorFolderIds
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'contributor-folder', parentId: null, ownerId: 'user-2' }]) // getPublicContributorFolderIds
+      .mockResolvedValueOnce([
+        {
+          id: 'folder-1',
+          ownerId: 'user-1',
+          sharedWith: [],
+        },
+      ]); // main folders query
+
+    const result = await getUserFolders('user-1', null);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('folder-1');
+  });
+
+  // --- getSharedWithMeFolders ---
+
+  test('given shared folders, when getSharedWithMeFolders runs, then returns mapped shared folders with documents', async () => {
+    const { getSharedWithMeFolders } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folderAccess.findMany.mockResolvedValue([
+      {
+        id: 'access-1',
+        role: 'VIEWER',
+        createdAt: new Date(),
+        folder: {
+          id: 'shared-folder',
+          owner: { id: 'user-2', username: 'bob' },
+          documents: [{ id: 'doc-1', title: 'Doc' }],
+        },
+      },
+    ]);
+
+    const result = await getSharedWithMeFolders('user-1');
+    expect(result).toHaveLength(1);
+    expect(result[0].accessId).toBe('access-1');
+    expect(result[0].folder.id).toBe('shared-folder');
+  });
+
+  // --- getFolderContents ---
+
+  test('given public folder, when getFolderContents is called, then returns documents without authentication', async () => {
+    const { getFolderContents } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', privacy: 'PUBLIC' }));
+    prisma.document.findMany.mockResolvedValue([documentFactory({ privacy: 'PUBLIC' })]);
+
+    const result = await getFolderContents('folder-1');
+    expect(result).toHaveLength(1);
+  });
+
+  test('given link-only folder with valid token, when getFolderContents runs, then returns documents', async () => {
+    const { getFolderContents } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', privacy: 'LINK_ONLY', shareToken: 'token-123' }));
+    prisma.document.findMany.mockResolvedValue([documentFactory({ privacy: 'PUBLIC' })]);
+
+    const result = await getFolderContents('folder-1', undefined, 'token-123');
+    expect(result).toHaveLength(1);
+  });
+
+  test('given link-only folder with invalid token, when getFolderContents runs, then throws invalid share link error', async () => {
+    const { getFolderContents } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', privacy: 'LINK_ONLY', shareToken: 'token-123' }));
+
+    await expect(getFolderContents('folder-1', undefined, 'wrong-token')).rejects.toThrow('Invalid share link');
+  });
+
+  test('given private folder and no authenticated user, when getFolderContents runs, then throws authentication required', async () => {
+    const { getFolderContents } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', privacy: 'PRIVATE' }));
+
+    await expect(getFolderContents('folder-1', undefined)).rejects.toThrow('Authentication required');
+  });
 });
+

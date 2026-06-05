@@ -255,7 +255,7 @@
       else throw new Error(res.message || 'Search failed');
     } catch (err: any) {
       console.error('Search failed:', err);
-      errorMessage = err.message || 'Gagal mencari user';
+      errorMessage = err.message || 'Failed to search for users';
       if (import.meta.env.DEV) {
         const mockUsers: ShareableUser[] = [
           { id: 'usr_alice', username: 'alice_crypto', walletAddress: '0x1234...abcd', avatarUrl: null },
@@ -286,7 +286,7 @@
       return true;
     } catch (err: any) {
       console.error('❌ Document privacy update failed:', err);
-      errorMessage = err.message || 'Gagal update privacy';
+      errorMessage = err.message || 'Failed to update privacy settings';
       return false;
     } finally { isUpdatingPrivacy = false; }
   }
@@ -300,7 +300,7 @@
       return true;
     } catch (err: any) {
       console.error('❌ Document share failed:', err);
-      errorMessage = err.message || 'Gagal membagikan document';
+      errorMessage = err.message || 'Failed to share document';
       return false;
     } finally { isLoading = false; }
   }
@@ -339,7 +339,7 @@
       return true;
     } catch (err: any) {
       console.error('❌ Folder privacy update failed:', err);
-      errorMessage = err.message || 'Gagal update privacy';
+      errorMessage = err.message || 'Failed to update privacy settings';
       return false;
     } finally { isUpdatingPrivacy = false; }
   }
@@ -352,7 +352,7 @@
       return true;
     } catch (err: any) {
       console.error('❌ Folder share failed:', err);
-      errorMessage = err.message || 'Gagal membagikan folder';
+      errorMessage = err.message || 'Failed to share folder';
       return false;
     } finally { isLoading = false; }
   }
@@ -449,7 +449,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
     return true;
   } catch (err: any) {
     console.error('❌ Role update failed:', err);
-    errorMessage = err.message || 'Gagal update role';
+    errorMessage = err.message || 'Failed to update user role';
     showToastFeedback(errorMessage, 'error');
     return false;
   } finally { 
@@ -470,7 +470,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
       return true;
     } catch (err: any) {
       console.error('Privacy update failed:', err);
-      errorMessage = err.message || 'Gagal update privacy';
+      errorMessage = err.message || 'Failed to update privacy settings';
       showToastFeedback(errorMessage, 'error');
       privacyLevel = currentPrivacy;
       return false;
@@ -491,7 +491,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
       return true;
     } catch (err: any) {
       console.error('Share failed:', err);
-      errorMessage = err.message || 'Gagal membagikan';
+      errorMessage = err.message || 'Failed to share';
       showToastFeedback(errorMessage, 'error');
       return false;
     } finally { isLoading = false; }

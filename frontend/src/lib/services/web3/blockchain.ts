@@ -183,7 +183,7 @@ export async function recordFilesBatchOnChain(
   // ✅ 4. VERIFY ENCODING SEBELUM KIRIM TX (PENTING!)
   const iface = new ethers.Interface(rawAbi);
   try {
-    // Coba encode dulu. Jika gagal, berarti ABI mismatch
+    // Try encoding first. If it fails, it means there is an ABI mismatch
     const encodedData = iface.encodeFunctionData('recordFilesBatch', sanitizedArgs);
     console.log('[Web3] Encoding verified:', {
       selector: encodedData.slice(0, 10),

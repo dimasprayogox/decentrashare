@@ -3,6 +3,8 @@
   import { authService } from '$lib/services';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import logo from '$lib/assets/logo.png';
+
 
   type EthereumProvider = {
     request<T = unknown>(args: { method: string; params?: unknown[] }): Promise<T>;
@@ -135,7 +137,7 @@
         const token = loginData.data?.token; 
         if (token) localStorage.setItem('session_token', token);
 
-        statusMessage = "✓ Login successful! Redirecting...";
+        statusMessage = "Login successful! Redirecting...";
         setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
       } else {
         throw new Error(loginData?.message || "Signature verification failed!");
@@ -146,7 +148,7 @@
       const errorData = err as { status?: number; data?: unknown };
       const userMessage = error.message || 'An unknown error occurred';
       const statusCode = errorData.status ? ` (Status: ${errorData.status})` : '';
-      statusMessage = `Error: ${userMessage}${statusCode}`;
+      statusMessage = `Error: ${userMessage}`;
       showErrorBanner = true;
 
       console.error('🔴 [Login Error]', {
@@ -185,12 +187,11 @@
       
       <!-- Header -->
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-18 h-18 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-5 border border-white/20 shadow-lg shadow-blue-500/25 transition-transform duration-300" 
+        <div class="inline-flex items-center justify-center w-18 h-18 rounded-2xl bg-white/[0.02] transition-transform duration-300 overflow-hidden" 
              class:scale-105={isHovered}>
-          <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-          </svg>
+          <img src={logo} alt="DecentraShare Logo" class="w-full h-full object-contain" />
         </div>
+
         <h1 class="text-3xl font-bold text-white tracking-tight">
           Decentra<span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Share</span>
         </h1>

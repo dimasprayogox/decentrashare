@@ -30,13 +30,15 @@ export const userService = {
       where: { id: userId },
       select: {
         id: true, walletAddress: true, username: true, email: true,
-        avatarUrl: true, bio: true, website: true, role: true, isRegistered: true,
+        avatarUrl: true, bio: true, website: true, role: true, storageLimit: true, isRegistered: true,
         createdAt: true, updatedAt: true,
       },
     });
 
     if (!user) throw new Error('User not found');
-    return user;
+
+    // storageLimit adalah BigInt, konversi ke number agar bisa di-serialize ke JSON
+    return { ...user, storageLimit: Number(user.storageLimit) };
   },
 
   async getPublicProfile(userId: string) {

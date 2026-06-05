@@ -111,8 +111,8 @@
 
   function getDuplicateMessage(count: number): string {
     return count === 1
-      ? 'File ini sudah dimiliki/upload oleh pengguna lain di sistem. Karena DecentraShare melindungi karya digital dari duplikasi, file tidak bisa diupload ulang.'
-      : `${count} file sudah dimiliki/upload oleh pengguna lain di sistem. Karena DecentraShare melindungi karya digital dari duplikasi, file-file tersebut tidak bisa diupload ulang.`;
+      ? 'This file is already owned/uploaded by another user in the system. Because DecentraShare protects digital creations from duplication, it cannot be uploaded again.'
+      : `${count} files are already owned/uploaded by another user in the system. Because DecentraShare protects digital creations from duplication, these files cannot be uploaded again.`;
   }
 
   function clearFeedback() {
@@ -344,12 +344,12 @@
       }
 
       if (summary.duplicate > 0 && summary.uploaded > 0) {
-        let msg = `${summary.uploaded} file baru berhasil diupload.`;
-        msg += ` ${summary.duplicate} file duplikat ditolak karena karya digital tersebut sudah ada di sistem.`;
-        if (summary.error > 0) msg += ` ${summary.error} file gagal diproses.`;
+        let msg = `${summary.uploaded} new file(s) successfully uploaded.`;
+        msg += ` ${summary.duplicate} duplicate file(s) rejected because the digital creations already exist in the system.`;
+        if (summary.error > 0) msg += ` ${summary.error} file(s) failed to process.`;
         setUploadSuccess(msg);
       } else if (summary.uploaded > 0) {
-        setUploadSuccess(`${summary.uploaded} file berhasil diupload.`);
+        setUploadSuccess(`${summary.uploaded} file(s) successfully uploaded.`);
       }
 
       // ── PHASE 2: Batch Blockchain Confirmation (JIKA ADA FILE BARU) ─────

@@ -426,7 +426,7 @@
     if (moveTargets.length === 1) return moveTargets[0].name;
     const folderCount = moveTargets.filter(target => target.type === 'folder').length;
     const documentCount = moveTargets.filter(target => target.type === 'document').length;
-    return `${moveTargets.length} items (${folderCount} folder, ${documentCount} dokumen)`;
+    return `${moveTargets.length} items (${folderCount} folder(s), ${documentCount} document(s))`;
   }
 
   function getMoveDestinationLabel(): string {
@@ -733,7 +733,7 @@
     bulkConfirmError = '';
 
     if (documentsToConfirm.length === 0) {
-      bulkConfirmError = 'Tidak ada file terpilih yang perlu dikonfirmasi on-chain.';
+      bulkConfirmError = 'No selected files need to be confirmed on-chain.';
       return;
     }
 
@@ -760,7 +760,7 @@
       await storageService.confirmBatchComplete(txResult.txHash, confirmedIds);
       await refreshStorage();
 
-      bulkConfirmSuccess = `${confirmedIds.length} file berhasil dikonfirmasi on-chain.`;
+      bulkConfirmSuccess = `${confirmedIds.length} file(s) successfully confirmed on-chain.`;
       bulkConfirmStatus = '';
       clearSelection();
 
@@ -771,13 +771,13 @@
       const message = error instanceof Error ? error.message : 'Failed to confirm selected files on-chain';
 
       if (message === 'TRANSACTION_REJECTED') {
-        bulkConfirmError = 'Konfirmasi wallet dibatalkan.';
+        bulkConfirmError = 'Wallet confirmation cancelled.';
       } else if (message === 'INSUFFICIENT_FUNDS') {
-        bulkConfirmError = 'Saldo ETH tidak cukup untuk gas.';
+        bulkConfirmError = 'Insufficient ETH balance for gas.';
       } else if (message === 'WRONG_NETWORK') {
-        bulkConfirmError = 'Pindahkan wallet ke jaringan Sepolia.';
+        bulkConfirmError = 'Please switch your wallet network to Sepolia.';
       } else if (message === 'TX_CONFIRMATION_TIMEOUT') {
-        bulkConfirmError = 'Transaksi belum terkonfirmasi. Silakan refresh beberapa saat lagi.';
+        bulkConfirmError = 'Transaction is not confirmed yet. Please refresh after a few moments.';
       } else {
         bulkConfirmError = message;
       }
@@ -885,7 +885,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       });
       bulkShareSearchResults = response.success ? response.data.users : [];
     } catch (error: unknown) {
-      bulkShareError = error instanceof Error ? error.message : 'Gagal mencari user.';
+      bulkShareError = error instanceof Error ? error.message : 'Failed to search for users.';
     } finally {
       isBulkShareSearching = false;
     }
@@ -905,7 +905,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     ];
 
     if (targets.length === 0) {
-      bulkShareError = 'Pilih minimal satu item untuk dibagikan.';
+      bulkShareError = 'Select at least one item to share.';
       return;
     }
 
@@ -935,8 +935,8 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     const missingSpecificTargets = getBulkShareSpecificTargetsWithoutUsers();
     if (missingSpecificTargets.length > 0) {
       bulkShareError = bulkShareAccessMode === 'all'
-        ? 'Pilih minimal satu user tujuan untuk item Specific Users.'
-        : `Pilih minimal satu user untuk: ${missingSpecificTargets.join(', ')}`;
+        ? 'Please select at least one target user for Specific Users items.'
+        : `Please select at least one user for: ${missingSpecificTargets.join(', ')}`;
       return;
     }
 
@@ -989,9 +989,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       }
 
       const parts = [];
-      if (folderTargets.length > 0) parts.push(`${folderTargets.length} folder`);
-      if (documentTargets.length > 0) parts.push(`${documentTargets.length} dokumen`);
-      bulkShareSuccess = `${parts.join(' dan ')} berhasil diupdate.`;
+      if (folderTargets.length > 0) parts.push(`${folderTargets.length} folder(s)`);
+      if (documentTargets.length > 0) parts.push(`${documentTargets.length} document(s)`);
+      bulkShareSuccess = `${parts.join(' and ')} successfully updated.`;
       showBulkShareModal = false;
       clearSelection();
       selectionMode = false;
@@ -1001,7 +1001,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
         bulkShareSuccess = '';
       }, 4000);
     } catch (error: unknown) {
-      bulkShareError = error instanceof Error ? error.message : 'Gagal mengupdate share item.';
+      bulkShareError = error instanceof Error ? error.message : 'Failed to update share settings.';
     } finally {
       isBulkShareProcessing = false;
     }
@@ -1041,7 +1041,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     const folderIds = getSelectedFolders(folders).map(folder => folder.id);
 
     if (documentIds.length === 0 && folderIds.length === 0) {
-      downloadError = 'Pilih minimal satu item untuk didownload.';
+      downloadError = 'Select at least one item to download.';
       return;
     }
 
@@ -1084,7 +1084,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   function handleSingleMove(id: string, type: 'folder' | 'document') {
     const item = type === 'document' ? items.find(document => document.id === id) : folders.find(folder => folder.id === id);
     if (!item) {
-      moveError = 'Item tidak ditemukan.';
+      moveError = 'Item not found.';
       return;
     }
 
@@ -1103,7 +1103,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     ];
 
     if (targets.length === 0) {
-      moveError = "Pilih minimal satu item untuk dipindahkan.";
+      moveError = "Select at least one item to move.";
       return;
     }
 
@@ -1120,17 +1120,17 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     const folderTargets = moveTargets.filter(target => target.type === 'folder');
 
     if (moveTargets.length === 0) {
-      moveError = "Pilih minimal satu item untuk dipindahkan.";
+      moveError = "Select at least one item to move.";
       return;
     }
 
     if (moveTargetFolderId && !folderExistsInMoveTree(moveTargetFolderId)) {
-      moveError = "Folder tujuan tidak valid atau belum dimuat.";
+      moveError = "Destination folder is invalid or has not been loaded yet.";
       return;
     }
 
     if (isInvalidMoveDestination(moveTargetFolderId)) {
-      moveError = "Folder tidak bisa dipindahkan ke dirinya sendiri atau subfoldernya.";
+      moveError = "Cannot move a folder into itself or its subfolders.";
       return;
     }
 
@@ -1154,7 +1154,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       if (documentIds.length > 0) {
         const documentResponse = await storageService.moveDocuments(documentIds, moveTargetFolderId);
         if (!documentResponse.success) {
-          throw new Error(documentResponse.message || 'Gagal memindahkan dokumen.');
+          throw new Error(documentResponse.message || 'Failed to move documents.');
         }
         movedDocuments = documentResponse.data?.count ?? documentIds.length;
         appliedPrivacy = documentResponse.data?.appliedPrivacy ?? appliedPrivacy;
@@ -1163,17 +1163,17 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       for (const folder of folderTargets) {
         const folderResponse = await storageService.moveFolder(folder.id, moveTargetFolderId);
         if (!folderResponse.success) {
-          throw new Error(folderResponse.message || `Gagal memindahkan folder ${folder.name}.`);
+          throw new Error(folderResponse.message || `Failed to move folder ${folder.name}.`);
         }
         movedFolders += 1;
         appliedPrivacy = folderResponse.data?.appliedPrivacy ?? appliedPrivacy;
       }
 
       const parts = [];
-      if (movedFolders > 0) parts.push(`${movedFolders} folder`);
-      if (movedDocuments > 0) parts.push(`${movedDocuments} dokumen`);
+      if (movedFolders > 0) parts.push(`${movedFolders} folder(s)`);
+      if (movedDocuments > 0) parts.push(`${movedDocuments} document(s)`);
 
-      moveSuccess = `${parts.join(' dan ')} dipindahkan ke ${getMoveDestinationLabel()}. ${appliedPrivacy ? `Privacy disesuaikan menjadi ${appliedPrivacy}.` : ''}`;
+      moveSuccess = `${parts.join(' and ')} moved to ${getMoveDestinationLabel()}. ${appliedPrivacy ? `Privacy settings adjusted to ${appliedPrivacy}.` : ''}`;
       showMoveModal = false;
       await refreshStorage();
       moveFolderTree = {};
@@ -1186,7 +1186,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
         moveSuccess = "";
       }, 4000);
     } catch (error: unknown) {
-      moveError = error instanceof Error ? error.message : "Gagal memindahkan item.";
+      moveError = error instanceof Error ? error.message : "Failed to move items.";
     } finally {
       isMoveProcessing = false;
     }

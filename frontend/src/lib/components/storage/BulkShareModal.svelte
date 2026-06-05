@@ -236,7 +236,7 @@
       const res = await storageService.searchUsersForShare(searchQuery, { excludeSharedUserIds: exclude });
       searchResults = res.success ? res.data.users : [];
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Gagal mencari user.';
+      errorMessage = error instanceof Error ? error.message : 'Failed to search for users.';
     } finally {
       isSearching = false;
     }
@@ -250,7 +250,7 @@
   async function save() {
     const missing = missingSpecificTargets();
     if (missing.length > 0) {
-      errorMessage = accessMode === 'all' ? 'Pilih minimal satu user untuk Specific Users.' : `Pilih minimal satu user untuk: ${missing.join(', ')}`;
+      errorMessage = accessMode === 'all' ? 'Please select at least one user for Specific Users.' : `Please select at least one user for: ${missing.join(', ')}`;
       return;
     }
 
@@ -289,9 +289,9 @@
         }));
       }
 
-      onCompleted(`${targets.length} item berhasil diupdate.`);
+      onCompleted(`${targets.length} item(s) successfully updated.`);
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Gagal mengupdate share item.';
+      errorMessage = error instanceof Error ? error.message : 'Failed to update share settings.';
     } finally {
       isProcessing = false;
     }

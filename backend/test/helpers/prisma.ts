@@ -21,6 +21,8 @@ const methodNames = [
   'deleteMany',
   'upsert',
   'count',
+  'aggregate',
+  'groupBy',
 ] as const;
 
 export type PrismaMock = ReturnType<typeof createPrismaMock>;

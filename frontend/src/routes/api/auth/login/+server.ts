@@ -56,7 +56,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
   return json(
     {
       success: false,
-      message: result?.message || 'Verifikasi Gagal',
+      message: result?.message || 'Verification Failed',
       ...(result?.errorCode && { errorCode: result.errorCode })
     },
     { status: backendRes.status }

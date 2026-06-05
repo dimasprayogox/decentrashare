@@ -15,6 +15,26 @@ mock.module('../../../../src/config/pinata', () => ({ pinata }));
 mock.module('../../../../src/modules/blockchain/blockchain.service', () => ({ default: blockchainService }));
 mock.module('../../../../src/utils/hash', () => ({ generateFileHash: mock(async () => 'hash-1') }));
 
+const mockFs = {
+  existsSync: mock(() => true),
+  unlinkSync: mock(),
+  readFileSync: mock(() => Buffer.from('file-content')),
+};
+mock.module('fs', () => ({
+  default: mockFs
+}));
+
+const mockZipArchive = mock(function() {
+  return {
+    on: mock(),
+    append: mock(),
+    finalize: mock(),
+  };
+});
+mock.module('archiver', () => ({
+  ZipArchive: mockZipArchive
+}));
+
 describe('Feature: document privacy, access, and download behavior', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
@@ -195,7 +215,7 @@ describe('Feature: document privacy, access, and download behavior', () => {
     expect(prisma.document.findMany).not.toHaveBeenCalled();
   });
 
-  test('given a valid public search keyword, when documents are searched, then other users public documents are sanitized and returned', async () => {
+  test('given a valid public search keyword, when documents are searched, then public documents are sanitized and returned', async () => {
     const { searchPublicDocuments } = await import('../../../../src/modules/document/document.service');
     given.documentsFound(prisma, [documentFactory({ ownerId: 'owner-2', privacy: 'PUBLIC', ipfsHash: 'hidden' })]);
 
@@ -204,7 +224,7 @@ describe('Feature: document privacy, access, and download behavior', () => {
     expect(result).toHaveLength(1);
     expect(result[0].ipfsHash).toBeUndefined();
     expect(prisma.document.findMany).toHaveBeenCalledWith({
-      where: expect.objectContaining({ privacy: 'PUBLIC', ownerId: { not: 'user-1' }, isArchived: false, deletedAt: null, OR: expect.any(Array) }),
+      where: expect.objectContaining({ privacy: 'PUBLIC', isArchived: false, deletedAt: null, OR: expect.any(Array) }),
       include: expect.any(Object),
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
       take: 30,
@@ -305,4 +325,279 @@ describe('Feature: document privacy, access, and download behavior', () => {
     expect(result).toEqual([{ documentId: 'doc-1', revokedCount: 1, newStatus: 'PRIVATE' }]);
     expect(prisma.document.update).toHaveBeenCalledWith({ where: { id: 'doc-1' }, data: { privacy: 'PRIVATE' } });
   });
+
+  // --- uploadMultipleFiles ---
+
+  test('given valid files, when uploadMultipleFiles runs, then it uploads files to Pinata, saves to DB, and returns results', async () => {
+    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
+    
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'alice', storageLimit: 5368709120 });
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 0 } }); // Storage quota check: no usage yet
+    prisma.document.findUnique.mockResolvedValue(null); // No content duplicates
+    prisma.document.findFirst.mockResolvedValue(null); // No title duplicates
+    pinata.upload.file.mockResolvedValue({ IpfsHash: 'QmNewDocCID' });
+    blockchainService.prepareTransactionData.mockReturnValue({ hash: 'QmNewDocCID', name: 'report.pdf', fileHash: 'hash-1' });
+    
+    const mockCreatedDoc = documentFactory({ id: 'doc-new', title: 'report', ownerId: 'user-1', ipfsHash: 'QmNewDocCID', fileHash: 'hash-1' });
+    prisma.$transaction.mockImplementation(async (cb) => {
+      return cb(prisma);
+    });
+    prisma.document.create.mockResolvedValue(mockCreatedDoc);
+    prisma.documentAccess.createMany.mockResolvedValue({ count: 1 });
+    prisma.activityLog.create.mockResolvedValue({});
+
+    const files = [
+      {
+        originalname: 'report.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+        path: '/tmp/report.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'user-1');
+
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].success).toBe(true);
+    expect(result.results[0].status).toBe('uploaded');
+    expect(result.results[0].pinataInfo?.ipfsHash).toBe('QmNewDocCID');
+    expect(prisma.document.create).toHaveBeenCalled();
+  });
+
+  test('given files with duplicate hash, when uploadMultipleFiles runs, then skips uploading and reports duplicate status', async () => {
+    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
+
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, storageLimit: 5368709120 });
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 0 } }); // Storage quota check: no usage yet
+    // Simulate duplicate found
+    prisma.document.findUnique.mockResolvedValue({
+      id: 'doc-existing',
+      title: 'report',
+      ipfsHash: 'QmExisting',
+      fileHash: 'hash-1',
+      createdAt: new Date(),
+    });
+
+    const files = [
+      {
+        originalname: 'report.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+        path: '/tmp/report.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'user-1');
+
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].success).toBe(true);
+    expect(result.results[0].status).toBe('duplicate');
+    expect(result.results[0].errorCode).toBe('FILE_DUPLICATE');
+    expect(pinata.upload.file).not.toHaveBeenCalled();
+  });
+
+  test('given an upload that would exceed the storage quota, when uploadMultipleFiles runs, then it rejects all files without uploading', async () => {
+    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
+
+    // User limited to 1GB, already using ~1GB
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: 1073741824 });
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 1000000000 } }); // ~0.93GB used
+
+    const files = [
+      {
+        originalname: 'big.pdf',
+        mimetype: 'application/pdf',
+        size: 200000000, // 200MB — pushes total over the 1GB limit
+        path: '/tmp/big.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'user-1');
+
+    expect(result.summary).toEqual(expect.objectContaining({ uploaded: 0, error: 1 }));
+    expect(result.results[0].success).toBe(false);
+    expect(result.results[0].errorCode).toBe('STORAGE_QUOTA_EXCEEDED');
+    expect(pinata.upload.file).not.toHaveBeenCalled();
+    expect(prisma.document.create).not.toHaveBeenCalled();
+  });
+
+  // --- createDocumentsArchive ---
+
+  test('given documents, when createDocumentsArchive is called, then it downloads files and adds them to ZIP', async () => {
+    const { createDocumentsArchive } = await import('../../../../src/modules/document/document.service');
+    const body = new ReadableStream();
+    (globalThis.fetch as any).mockResolvedValue({ ok: true, body });
+
+    const docs = [{ id: 'doc-1', title: 'Doc', fileName: 'doc.txt', ipfsHash: 'QmHash' }];
+    const result = await createDocumentsArchive(docs, ['empty-folder']);
+
+    expect(result.summary.totalRequested).toBe(1);
+    expect(result.stream).toBeDefined();
+    await result.finalize();
+  });
+
+  // --- prepareFolderArchive ---
+
+  test('given a folder, when prepareFolderArchive is called, then it gathers files and creates ZIP', async () => {
+    const { prepareFolderArchive } = await import('../../../../src/modules/document/document.service');
+    
+    // validateFolderAccess mock
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', name: 'My Folder', ownerId: 'user-1' }));
+    // getDescendantFolders mock
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'folder-1' }]) // getDescendantFolders
+      .mockResolvedValueOnce([{ id: 'folder-1', name: 'My Folder', parentId: null }]); // folders query
+    
+    // documents inside subtree query mock
+    prisma.document.findMany.mockResolvedValueOnce([
+      { id: 'doc-1', title: 'Doc', fileName: 'doc.txt', ipfsHash: 'QmHash', folderId: 'folder-1' }
+    ]);
+
+    // mock fetch for createDocumentsArchive
+    const body = new ReadableStream();
+    (globalThis.fetch as any).mockResolvedValue({ ok: true, body });
+
+    const result = await prepareFolderArchive('folder-1', 'user-1');
+    expect(result.folderName).toBe('My Folder');
+    expect(result.metadata).toHaveLength(1);
+  });
+
+  // --- bulkDownloadDocuments ---
+
+  test('given document and folder IDs, when bulkDownloadDocuments runs, then it creates archive zip', async () => {
+    const { bulkDownloadDocuments } = await import('../../../../src/modules/document/document.service');
+    
+    // validateDocumentAccess mock
+    prisma.document.findUnique.mockResolvedValue(documentFactory({ id: 'doc-1', ipfsHash: 'QmHash', ownerId: 'user-1' }));
+    
+    // validateFolderAccess mock
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', name: 'Folder', ownerId: 'user-1' }));
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'folder-1' }]) // getDescendantFolders
+      .mockResolvedValueOnce([{ id: 'folder-1', name: 'Folder', parentId: null }]); // folders list
+
+    prisma.document.findMany.mockResolvedValueOnce([]); // documents list for folder
+
+    // fetch mock
+    (globalThis.fetch as any).mockResolvedValue({ ok: true, body: new ReadableStream() });
+
+    const result = await bulkDownloadDocuments({ documentIds: ['doc-1'], folderIds: ['folder-1'] }, 'user-1');
+    expect(result.stream).toBeDefined();
+    expect(result.summary.totalRequested).toBe(2);
+  });
+
+  test('given empty bulk download input, when bulkDownloadDocuments runs, then throws error', async () => {
+    const { bulkDownloadDocuments } = await import('../../../../src/modules/document/document.service');
+
+    await expect(bulkDownloadDocuments({ documentIds: [], folderIds: [] }, 'user-1')).rejects.toThrow('No documents specified');
+  });
+
+  // --- getRootDocuments ---
+
+  test('given user id, when getRootDocuments runs, then query finds root active documents of user', async () => {
+    const { getRootDocuments } = await import('../../../../src/modules/document/document.service');
+    const docs = [documentFactory({ id: 'doc-1', ownerId: 'user-1', folderId: null })];
+    prisma.document.findMany.mockResolvedValue(docs);
+
+    const result = await getRootDocuments('user-1');
+    expect(result).toEqual(docs);
+    expect(prisma.document.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { ownerId: 'user-1', folderId: null, isArchived: false },
+    }));
+  });
+
+  // --- getUserDocuments ---
+
+  test('given user and folder, when getUserDocuments runs, then checks folder access and returns sanitized documents', async () => {
+    const { getUserDocuments } = await import('../../../../src/modules/document/document.service');
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'folder-1', ownerId: 'user-1' }));
+    prisma.document.findMany.mockResolvedValue([
+      documentFactory({ id: 'doc-1', ownerId: 'user-1', folderId: 'folder-1' })
+    ]);
+
+    const result = await getUserDocuments('user-1', 'folder-1');
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('doc-1');
+  });
+
+  // --- getArchivedDocuments ---
+
+  test('given archived documents, when getArchivedDocuments runs, then query returns trash documents', async () => {
+    const { getArchivedDocuments } = await import('../../../../src/modules/document/document.service');
+    const docs = [documentFactory({ id: 'doc-1', isArchived: true })];
+    prisma.document.findMany.mockResolvedValue(docs);
+
+    const result = await getArchivedDocuments('user-1');
+    expect(result).toEqual(docs);
+  });
+
+  // --- getMyStorageUsage ---
+
+  test('given documents, when getMyStorageUsage is called, then calculates aggregate storage metrics against the user limit', async () => {
+    const { getMyStorageUsage } = await import('../../../../src/modules/document/document.service');
+    prisma.user.findUnique.mockResolvedValue({ storageLimit: 5368709120 }); // 5 GB limit
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 536870912 } }); // 512 MB
+
+    const result = await getMyStorageUsage('user-1');
+    expect(result.usedBytes).toBe(536870912);
+    expect(result.quotaBytes).toBe(5368709120);
+    expect(result.usagePercent).toBe(10); // 512 MB of 5 GB is 10%
+  });
+
+  test('given a user with a custom storage limit, when getMyStorageUsage is called, then the quota reflects that limit', async () => {
+    const { getMyStorageUsage } = await import('../../../../src/modules/document/document.service');
+    prisma.user.findUnique.mockResolvedValue({ storageLimit: 10737418240 }); // 10 GB limit
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 5368709120 } }); // 5 GB used
+
+    const result = await getMyStorageUsage('user-1');
+    expect(result.quotaBytes).toBe(10737418240);
+    expect(result.usagePercent).toBe(50); // 5 GB of 10 GB
+  });
+
+  // --- getSharedWithMeDocuments ---
+
+  test('given shared documents, when getSharedWithMeDocuments runs, then returns mapped documents', async () => {
+    const { getSharedWithMeDocuments } = await import('../../../../src/modules/document/document.service');
+    prisma.documentAccess.findMany.mockResolvedValue([
+      {
+        id: 'access-1',
+        document: documentFactory({ id: 'doc-1', ownerId: 'user-2', privacy: 'PUBLIC' }),
+      },
+    ]);
+
+    const result = await getSharedWithMeDocuments('user-1');
+    expect(result).toHaveLength(1);
+    expect(result[0].accessId).toBe('access-1');
+  });
+
+  // --- getActivityLogs ---
+
+  test('given logs, when getActivityLogs is called, then returns log records', async () => {
+    const { getActivityLogs } = await import('../../../../src/modules/document/document.service');
+    prisma.activityLog.findMany.mockResolvedValue([{ id: 'log-1', action: 'DOWNLOAD' }]);
+
+    const result = await getActivityLogs('user-1');
+    expect(result).toEqual([{ id: 'log-1', action: 'DOWNLOAD' }]);
+  });
+
+  // --- getAllDocumentsForAdmin ---
+
+  test('when getAllDocumentsForAdmin is called, then returns all documents', async () => {
+    const { getAllDocumentsForAdmin } = await import('../../../../src/modules/document/document.service');
+    prisma.document.findMany.mockResolvedValue([documentFactory()]);
+
+    const result = await getAllDocumentsForAdmin();
+    expect(result).toHaveLength(1);
+  });
+
+  // --- getSystemStatsForAdmin ---
+
+  test('when getSystemStatsForAdmin is called, then returns aggregate counts', async () => {
+    const { getSystemStatsForAdmin } = await import('../../../../src/modules/document/document.service');
+    prisma.$transaction.mockResolvedValue([10, 5]);
+
+    const result = await getSystemStatsForAdmin();
+    expect(result).toEqual({ totalFiles: 10, totalUsers: 5 });
+  });
 });
+

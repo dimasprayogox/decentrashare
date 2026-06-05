@@ -6,6 +6,9 @@ const BASE_URL = PUBLIC_API_BASE_URL;
 // ✅ Tambah type untuk response type
 export type ResponseType = 'json' | 'blob' | 'text';
 
+// Simpan status promise refresh secara global agar request konkuren menunggu satu promise yang sama
+let refreshPromise: Promise<string | null> | null = null;
+
 export const apiClient = async <T = any>(
   endpoint: string, 
   options: RequestInit = {},
@@ -39,28 +42,46 @@ export const apiClient = async <T = any>(
       // Auto-refresh token if expired (401 with TOKEN_EXPIRED)
       if (response.status === 401 && (errorData.code === 'TOKEN_EXPIRED' || errorData.errorCode === 'TOKEN_EXPIRED' || errorData.message?.includes('expired'))) {
         try {
-          const refreshRes = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          if (refreshRes.ok) {
-            const refreshData = await refreshRes.json();
-            if (refreshData.success && refreshData.token) {
-              localStorage.setItem('session_token', refreshData.token);
-
-              // Retry original request
-              const retryHeaders = {
-                ...headers,
-                'Authorization': `Bearer ${refreshData.token}`
-              };
-              const retryResponse = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers: retryHeaders });
-
-              if (retryResponse.ok) {
-                if (responseType === 'blob') return await retryResponse.blob() as unknown as T;
-                if (responseType === 'text') return await retryResponse.text() as unknown as T;
-                const retryText = await retryResponse.text();
-                return retryText ? JSON.parse(retryText) : {} as T;
+          // Jika sudah ada proses refresh yang berjalan, semua request konkuren akan menunggu promise ini
+          if (!refreshPromise) {
+            refreshPromise = (async () => {
+              try {
+                const refreshRes = await fetch('/api/auth/refresh', {
+                  method: 'POST',
+                  credentials: 'include'
+                });
+                if (refreshRes.ok) {
+                  const refreshData = await refreshRes.json();
+                  if (refreshData.success && refreshData.token) {
+                    localStorage.setItem('session_token', refreshData.token);
+                    return refreshData.token;
+                  }
+                }
+                return null;
+              } catch (err) {
+                console.error('[apiClient] Refresh request failed:', err);
+                return null;
+              } finally {
+                refreshPromise = null; // Reset setelah selesai
               }
+            })();
+          }
+
+          const newToken = await refreshPromise;
+
+          if (newToken) {
+            // Retry original request dengan token baru
+            const retryHeaders = {
+              ...headers,
+              'Authorization': `Bearer ${newToken}`
+            };
+            const retryResponse = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers: retryHeaders });
+
+            if (retryResponse.ok) {
+              if (responseType === 'blob') return await retryResponse.blob() as unknown as T;
+              if (responseType === 'text') return await retryResponse.text() as unknown as T;
+              const retryText = await retryResponse.text();
+              return retryText ? JSON.parse(retryText) : {} as T;
             }
           }
         } catch (refreshErr) {

@@ -43,6 +43,7 @@ model User {
   bio             String?
   website         String? 
   role            Role      @default(USER)
+  storageLimit    BigInt    @default(5368709120) // Batas penyimpanan dalam bytes (default 5GB)
   isRegistered    Boolean   @default(false)
   nonce           String?
   nonceExpiresAt  DateTime?

@@ -1,8 +1,8 @@
 <script>
   const features = [
-    { title: "Terdesentralisasi", desc: "File tidak disimpan di satu server, melainkan di jaringan IPFS.", icon: "🌐" },
-    { title: "Keamanan Blockchain", desc: "Setiap akses file tercatat permanen di Smart Contract Ethereum.", icon: "🔐" },
-    { title: "Tanpa Akun", desc: "Cukup hubungkan Wallet crypto kamu untuk mulai berbagi.", icon: "💳" }
+    { title: "Decentralized", desc: "Files are not stored on a single server, but rather across the IPFS network.", icon: "🌐" },
+    { title: "Blockchain Security", desc: "Every file access is permanently recorded on the Ethereum Smart Contract.", icon: "🔐" },
+    { title: "No Accounts Required", desc: "Simply connect your crypto wallet to start sharing.", icon: "💳" }
   ];
 </script>
 
