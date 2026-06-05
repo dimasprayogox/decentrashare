@@ -4454,3 +4454,16 @@
 {"duration":1,"level":"info","message":"[hjzw0ve6m] 403 1ms","requestId":"hjzw0ve6m","statusCode":403,"timestamp":"2026-06-05 15:13:12"}
 {"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 15:15:00"}
 {"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 15:15:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 16:05:15"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 16:05:43"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-06-05 16:05:43"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-06-05 16:05:43"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 16:05:44"}

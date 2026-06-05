@@ -1,3 +1,11 @@
+// ── BigInt JSON serialization patch ───────────────────────────────
+// Prisma mengembalikan kolom BigInt (mis. User.storageLimit) sebagai BigInt,
+// yang tidak bisa di-serialize oleh JSON.stringify (dipakai res.json()).
+// Konversi ke Number aman karena nilai jauh di bawah Number.MAX_SAFE_INTEGER.
+;(BigInt.prototype as any).toJSON = function () {
+  return Number(this)
+}
+
 import express from 'express'
 import cors from 'cors'
 import cron from 'node-cron';
