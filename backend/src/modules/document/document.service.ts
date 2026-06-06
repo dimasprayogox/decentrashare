@@ -1598,7 +1598,11 @@ export const updateDocumentMetadata = async (
     await prisma.activityLog.create({
       data: {
         userId,
-        action: 'RENAME',
+        action: updates.title && updates.description !== undefined
+          ? 'EDIT_METADATA'
+          : updates.title
+          ? 'RENAME'
+          : 'EDIT_DESCRIPTION',
         entityType: 'DOCUMENT',
         entityId: documentId,
         entityName: updatedDoc.title,

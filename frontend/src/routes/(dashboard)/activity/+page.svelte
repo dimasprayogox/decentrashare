@@ -154,8 +154,15 @@
       case 'REVOKE':
         return { bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', label: 'Revoke', icon: 'text-rose-400', iconBg: 'bg-rose-500/10' };
       case 'RENAME':
+      case 'EDIT_METADATA':
+      case 'EDIT_DESCRIPTION':
       case 'MOVE':
-        return { bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', label: action === 'RENAME' ? 'Rename' : 'Move', icon: 'text-amber-400', iconBg: 'bg-amber-500/10' };
+        return { 
+          bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', 
+          label: action === 'RENAME' ? 'Rename' : action === 'MOVE' ? 'Move' : action === 'EDIT_METADATA' ? 'Edit Metadata' : 'Edit Description', 
+          icon: 'text-amber-400', 
+          iconBg: 'bg-amber-500/10' 
+        };
       case 'CHANGE_PRIVACY':
         return { bg: 'bg-teal-500/10 border-teal-500/20 text-teal-400', label: 'Privacy', icon: 'text-teal-400', iconBg: 'bg-teal-500/10' };
       case 'ARCHIVE':
@@ -195,6 +202,8 @@
       case 'REVOKE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>`;
       case 'RENAME':
+      case 'EDIT_METADATA':
+      case 'EDIT_DESCRIPTION':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
       case 'MOVE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`;
