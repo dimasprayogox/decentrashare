@@ -836,20 +836,6 @@ if (existingFile) {
           });
         }
 
-        await tx.activityLog.create({
-          data: {
-            userId: userId,
-            action: "UPLOAD_IPFS",
-            entityType: "DOCUMENT",
-            entityId: doc.id,
-            entityName: doc.title,
-            fileHash: doc.fileHash,
-            ipfsHash: doc.ipfsHash,
-            blockchainTx: doc.blockchainTx,
-            details: `Uploaded to Pinata group ${userGroupId || 'ungrouped'}. Path: ${folderId ? `folders/${folderId}` : 'root'}`
-          }
-        });
-
         return doc;
       });
 
@@ -904,6 +890,36 @@ if (existingFile) {
     folderId,
     pinataGroupId: userGroupId 
   });
+
+  // ── Catat 1 aktivitas upload saja (gabungan untuk single/bulk) ────
+  const uploadedDocs = results.filter(r => r.status === 'uploaded' && r.data);
+  if (uploadedDocs.length > 0) {
+    try {
+      const isBulk = uploadedDocs.length > 1;
+      const firstDoc = uploadedDocs[0].data;
+      await prisma.activityLog.create({
+        data: {
+          userId,
+          action: 'UPLOAD_IPFS',
+          entityType: 'DOCUMENT',
+          entityId: firstDoc.id,
+          entityName: isBulk
+            ? `${uploadedDocs.length} files uploaded`
+            : firstDoc.title,
+          fileHash: isBulk ? null : firstDoc.fileHash,
+          ipfsHash: isBulk ? null : firstDoc.ipfsHash,
+          blockchainTx: isBulk ? null : firstDoc.blockchainTx,
+          details: JSON.stringify({
+            uploadedCount: uploadedDocs.length,
+            path: folderId ? `folders/${folderId}` : 'root',
+            files: uploadedDocs.map(r => ({ id: r.data.id, name: r.data.title })),
+          }),
+        }
+      });
+    } catch (logErr: any) {
+      logger.error('Failed to log upload activity', { userId, error: logErr.message });
+    }
+  }
 
   const summary = {
   total: results.length,

@@ -28,8 +28,10 @@ export function getActiveNav(pathname: string, searchParams?: URLSearchParams): 
   if (path === '/shared') return { active: 'shared', subActive: '' };
   if (path === '/validate') return { active: 'validate', subActive: '' };
   if (path === '/trash') return { active: 'trash', subActive: '' };
+  if (path === '/activity') return { active: 'activity', subActive: '' };
+  if (path === '/wallet-activity') return { active: 'wallet-activity', subActive: '' };
   if (path === '/contract-activity') return { active: 'contract-activity', subActive: '' };
 
   // Default
-  return { active: 'dashboard', subActive: '' };
+  return { active: 'storage', subActive: '' };
 }

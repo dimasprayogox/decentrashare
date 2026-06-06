@@ -158,10 +158,10 @@
     }
     if (editingField) await saveField(editingField);
     await invalidateAll();
-    setTimeout(() => goto('/dashboard'), 1000);
+    setTimeout(() => goto('/storage'), 1000);
   }
 
-  function skipForNow() { goto('/dashboard'); }
+  function skipForNow() { goto('/storage'); }
   function getInitials(): string { const name = profile.username || profile.bio?.trim() || 'U'; return name.charAt(0).toUpperCase(); }
   function formatUsernameDisplay(): string { return profile.username ? `@${profile.username}` : 'Set username'; }
   function formatValue(value: string | null | undefined, field: string): string {

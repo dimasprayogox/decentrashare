@@ -152,7 +152,7 @@
         } else {
           statusMessage = "Account created successfully! Redirecting...";
           setTimeout(() => {
-            window.location.href = '/dashboard';
+            window.location.href = '/storage';
           }, 1200);
         }
       } else {

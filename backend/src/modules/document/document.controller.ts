@@ -567,17 +567,23 @@ export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
       
       logger.debug('📋 Documents after update', { docsAfter });
 
-      // Log aktivitas batch
-      await tx.activityLog.createMany({
-        data: documentIds.map(docId => ({
+      // Log aktivitas batch (1 entri saja, baik single maupun bulk)
+      const isBatch = documentIds.length > 1;
+      await tx.activityLog.create({
+        data: {
           userId,
           action: 'BLOCKCHAIN_CONFIRM_BATCH',
           entityType: 'DOCUMENT',
-          entityId: docId,
-          entityName: 'Batch confirmation',
+          entityId: documentIds[0],
+          entityName: isBatch
+            ? `${documentIds.length} files confirmed`
+            : 'File confirmed on-chain',
           blockchainTx: txHash,
-          details: `Batch of ${documentIds.length} files confirmed on-chain`
-        }))
+          details: JSON.stringify({
+            confirmedCount: documentIds.length,
+            txHash,
+          }),
+        }
       });
 
       return updateResult;

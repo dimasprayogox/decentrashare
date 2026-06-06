@@ -228,17 +228,59 @@
 
   function getFileIcon(mimeType: string, actionType?: string): { icon: string; color: string; bg: string } {
     if (actionType?.includes('DELETE') || actionType?.includes('DESTROY')) {
-      return { icon: '🗑️', color: 'text-rose-400', bg: 'bg-rose-500/10' };
+      return {
+        icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-8 0h10"/></svg>`,
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/10'
+      };
     }
     if (actionType?.includes('CONFIRM') || actionType?.includes('BLOCKCHAIN')) {
-      return { icon: '🔗', color: 'text-amber-400', bg: 'bg-amber-500/10' };
+      return {
+        icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>`,
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/10'
+      };
     }
-    if (mimeType === 'folder') return { icon: '📁', color: 'text-blue-400', bg: 'bg-blue-500/10' };
-    if (mimeType?.includes('image')) return { icon: '🖼️', color: 'text-purple-400', bg: 'bg-purple-500/10' };
-    if (mimeType?.includes('video')) return { icon: '🎬', color: 'text-red-400', bg: 'bg-red-500/10' };
-    if (mimeType?.includes('pdf')) return { icon: '📄', color: 'text-orange-400', bg: 'bg-orange-500/10' };
-    if (mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) return { icon: '📊', color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
-    return { icon: '📎', color: 'text-gray-400', bg: 'bg-white/5' };
+    if (mimeType === 'folder') {
+      return {
+        icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>`,
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/10'
+      };
+    }
+    if (mimeType?.includes('image')) {
+      return {
+        icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/10'
+      };
+    }
+    if (mimeType?.includes('video')) {
+      return {
+        icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`,
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/10'
+      };
+    }
+    if (mimeType?.includes('pdf')) {
+      return {
+        icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`,
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/10'
+      };
+    }
+    if (mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) {
+      return {
+        icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
+        color: 'text-blue-400',
+        bg: 'bg-blue-500/10'
+      };
+    }
+    return {
+      icon: `<svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>`,
+      color: 'text-blue-400',
+      bg: 'bg-white/5'
+    };
   }
 
   // ── Donut Chart Computations ──
@@ -707,11 +749,11 @@
       <div class="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent overflow-hidden shadow-xl">
         <div class="flex items-center justify-between p-4 border-b border-white/5 bg-white/[0.01]">
           <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-indigo-500/20">
-              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-blue-500/20">
+              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
             </div>
             <h3 class="text-xs font-bold text-white tracking-wide uppercase">Smart Contract Activity</h3>
-            <span class="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 uppercase tracking-widest">Sepolia</span>
+            <span class="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20 uppercase tracking-widest">Sepolia</span>
           </div>
           <a href="/contract-activity" class="text-[10px] font-black text-gray-500 hover:text-blue-400 uppercase tracking-widest transition-colors flex items-center gap-1">
             View All
@@ -744,13 +786,13 @@
                   {@const matchedUser = allUsersMap.get(tx.from.toLowerCase())}
                   <tr class="transition-colors hover:bg-white/[0.02]">
                     <td class="p-3 pl-5">
-                      <a href="https://sepolia.etherscan.io/tx/{tx.hash}" target="_blank" rel="noopener noreferrer" class="font-mono text-[10px] text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 transition-colors">
+                       <a href="https://sepolia.etherscan.io/tx/{tx.hash}" target="_blank" rel="noopener noreferrer" class="font-mono text-[10px] text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 transition-colors">
                         {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
                         <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                       </a>
                     </td>
                     <td class="p-3">
-                      <span class="font-mono px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-300">
+                      <span class="font-mono px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] text-blue-300">
                         {formatTxMethod(tx)}
                       </span>
                     </td>
@@ -911,139 +953,7 @@
     </div>
   </div>
 
-  <!-- ═══ 2. MIDDLE ROW: CHARTS & WALLET BALANCE WIDGET ═══ -->
-  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-    <!-- Chart Segment (File Distribution Donut) - 1.5 Col Width -->
-    <div class="lg:col-span-1.5 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent p-5 shadow-xl flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xs font-bold text-white uppercase tracking-wider">File Distribution</h3>
-        </div>
-        <div class="relative flex items-center justify-center py-4">
-          <svg viewBox="0 0 100 100" class="w-36 h-36 drop-shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-            <circle cx="50" cy="50" r="30" fill="transparent" stroke="rgba(255,255,255,0.03)" stroke-width="8"/>
-            <circle cx="50" cy="50" r="30" fill="transparent" stroke="url(#privateGrad)" stroke-width="8"
-              stroke-dasharray="{circ}" stroke-dashoffset="{privateOffset}" transform="rotate(-90 50 50)" class="transition-all duration-1000 ease-out"/>
-            <circle cx="50" cy="50" r="30" fill="transparent" stroke="url(#publicGrad)" stroke-width="8"
-              stroke-dasharray="{circ}" stroke-dashoffset="{publicOffset}" transform="rotate({publicRotation - 90} 50 50)" class="transition-all duration-1000 ease-out"/>
-          </svg>
-          <div class="absolute flex flex-col items-center justify-center text-center">
-            <span class="text-xl font-black text-white">{chartTotal}</span>
-            <span class="text-[8px] font-black text-gray-500 uppercase tracking-widest">Total Files</span>
-          </div>
-        </div>
-      </div>
-      <div class="space-y-2 mt-2 bg-black/25 p-3 rounded-xl border border-white/5 text-[10px]">
-        <div class="flex items-center justify-between">
-          <span class="flex items-center gap-1.5 font-semibold text-gray-400">
-            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Private Storage
-          </span>
-          <span class="text-white font-bold">{chartPrivate} ({Math.round(privatePercent * 100)}%)</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="flex items-center gap-1.5 font-semibold text-gray-400">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Explore Network
-          </span>
-          <span class="text-white font-bold">{chartPublic} ({Math.round(publicPercent * 100)}%)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Web3 E-Wallet Balance Widget - 1.5 Col Width -->
-    <div class="lg:col-span-1.5 rounded-2xl border border-white/5 bg-gradient-to-b from-purple-950/10 via-indigo-950/5 to-transparent p-5 shadow-xl flex flex-col justify-between relative overflow-hidden">
-      <div class="absolute top-0 right-0 w-28 h-28 bg-purple-500/5 rounded-full blur-2xl"></div>
-      
-      <div>
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-xs font-bold text-white uppercase tracking-wider">Web3 Balance</h3>
-          <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">{networkName || 'Fetching...'}</span>
-        </div>
-
-        {#if web3Loading}
-          <div class="space-y-3 py-4">
-            <div class="h-8 w-28 bg-white/5 rounded-lg animate-pulse"></div>
-            <div class="h-4 w-40 bg-white/5 rounded animate-pulse"></div>
-          </div>
-        {:else}
-          <div class="py-3">
-            <div class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Estimated Balance</div>
-            <div class="flex items-baseline gap-1.5 mt-1">
-              <span class="text-3xl font-black text-white tracking-tight">{walletBalance || '0.0000'}</span>
-              <span class="text-xs font-extrabold text-purple-400">ETH</span>
-            </div>
-            <p class="text-[10px] text-gray-400 mt-1 font-semibold">
-              ≈ ${(parseFloat(walletBalance || '0') * 3520).toLocaleString('en-US', {maximumFractionDigits: 2})} USD
-            </p>
-          </div>
-        {/if}
-      </div>
-
-      <div class="mt-4 pt-3 border-t border-white/5 flex flex-col gap-2">
-        <div class="flex justify-between items-center text-[10px]">
-          <span class="text-gray-500 font-semibold">Network State</span>
-          <span class="text-emerald-400 font-bold flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Connected
-          </span>
-        </div>
-        <div class="flex justify-between items-center text-[10px]">
-          <span class="text-gray-500 font-semibold">Gas Fee Rate</span>
-          <span class="text-white font-bold font-mono">18 Gwei</span>
-        </div>
-        <button 
-          onclick={() => loadWeb3Details()} 
-          class="w-full mt-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-gray-300 hover:text-white transition-all border border-white/5 flex items-center justify-center gap-1.5"
-        >
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.29"/></svg>
-          Sync Wallet
-        </button>
-      </div>
-    </div>
-
-    <!-- Chart 2: Upload & Validation Activity (Line Chart) - 2 Col Width -->
-    <div class="lg:col-span-2 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent p-5 shadow-xl flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <div>
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider">Network Activity</h3>
-          </div>
-          <div class="flex items-center gap-3 text-[9px]">
-            <span class="flex items-center gap-1 font-semibold text-blue-400">
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> IPFS
-            </span>
-            <span class="flex items-center gap-1 font-semibold text-amber-400">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> ETH
-            </span>
-          </div>
-        </div>
-
-        <div class="relative w-full h-[130px] mt-2">
-          <svg class="w-full h-full" viewBox="0 0 380 130" preserveAspectRatio="none">
-            {#each Array(4) as _, i}
-              {@const y = 20 + i * 30}
-              <line x1="30" y1="{y}" x2="370" y2="{y}" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-            {/each}
-
-            {#each activityData as item, i}
-              {@const x = 40 + i * 55}
-              <text x="{x}" y="125" fill="#6b7280" font-size="8" text-anchor="middle" font-family="monospace">{item.day}</text>
-            {/each}
-
-            {#each [10, 5, 0] as label, i}
-              {@const y = 25 + i * 45}
-              <text x="20" y="{y}" fill="#6b7280" font-size="8" text-anchor="end" font-family="monospace">{label}</text>
-            {/each}
-
-            <path d="{pathUploaded}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
-            <path d="{pathConfirmed}" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3"/>
-          </svg>
-        </div>
-      </div>
-      <div class="flex items-center justify-between border-t border-white/5 pt-2 mt-1">
-        <span class="text-[8px] text-gray-500 font-bold uppercase tracking-wider">Verification Ratio</span>
-        <span class="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">+42.8%</span>
-      </div>
-    </div>
-  </div>
+ 
 
   <!-- Wallet Transaction History -->
   <div class="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent overflow-hidden shadow-xl">
@@ -1115,107 +1025,17 @@
   <!-- ═══ 3. BOTTOM ROW: THREE-COLUMN CORE DETAILS GRID ═══ -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     
-    <!-- Table 1: Recent "Shared With Me" Files (1st Column) -->
-    <div class="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent overflow-hidden shadow-xl flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between p-4 border-b border-white/5 bg-white/[0.01]">
-          <div class="flex items-center gap-2">
-            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-            <h3 class="text-xs font-bold text-white tracking-wide uppercase">Shared With Me</h3>
-          </div>
-          <a href="/shared" class="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors">View All</a>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="border-b border-white/5 text-gray-500 font-bold bg-white/[0.005] text-[10px]">
-                <th class="p-3">File Name</th>
-                <th class="p-3">Sender</th>
-                <th class="p-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-              {#each sharedFiles as file (file.id)}
-                <tr class="hover:bg-white/[0.02] transition-colors">
-                  <td class="p-3 font-semibold text-white truncate max-w-[100px]">{file.fileName}</td>
-                  <td class="p-3 font-mono text-[9px] text-gray-400">{formatAddress(file.sender)}</td>
-                  <td class="p-3 text-right">
-                    <a href="/shared" class="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-[9px] font-bold text-white shadow-sm transition-colors">
-                      View
-                    </a>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="p-3 border-t border-white/5 bg-white/[0.005] flex items-center justify-center">
-        <p class="text-[8px] text-gray-500 font-semibold tracking-wide">Sync is signed with active wallet</p>
-      </div>
-    </div>
-
-    <!-- Table 2: On-Chain Validation Queue (2nd Column) -->
-    <div class="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent overflow-hidden shadow-xl flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between p-4 border-b border-white/5 bg-white/[0.01]">
-          <div class="flex items-center gap-2">
-            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z"/></svg>
-            <h3 class="text-xs font-bold text-white tracking-wide uppercase">Validation Queue</h3>
-          </div>
-          <a href="/validate" class="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Audit</a>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="border-b border-white/5 text-gray-500 font-bold bg-white/[0.005] text-[10px]">
-                <th class="p-3">File Name</th>
-                <th class="p-3">CID Hash</th>
-                <th class="p-3 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-              {#each validationQueue as queueItem (queueItem.id)}
-                <tr class="hover:bg-white/[0.02] transition-colors">
-                  <td class="p-3 font-semibold text-white truncate max-w-[100px]">{queueItem.fileName}</td>
-                  <td class="p-3 font-mono text-[9px] text-blue-400 select-all">{queueItem.ipfsHash.slice(0, 5)}...{queueItem.ipfsHash.slice(-4)}</td>
-                  <td class="p-3 text-right">
-                    {#if queueItem.status === 'Success'}
-                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-black uppercase tracking-wider">
-                        Success
-                      </span>
-                    {:else if queueItem.status === 'In Progress'}
-                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-black uppercase tracking-wider animate-pulse">
-                        Pending
-                      </span>
-                    {:else}
-                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[8px] font-black uppercase tracking-wider">
-                        Failed
-                      </span>
-                    {/if}
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="p-3 border-t border-white/5 bg-white/[0.005] flex items-center justify-center">
-        <p class="text-[8px] text-gray-500 font-semibold tracking-wide">Blockchain transactions undergo block confirmation</p>
-      </div>
-    </div>
+   
 
     <!-- Table 3: Recent Document Activity / Modifications (3rd Column, Max 5) -->
     <div class="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent overflow-hidden shadow-xl flex flex-col justify-between">
       <div>
         <div class="flex items-center justify-between p-4 border-b border-white/5 bg-white/[0.01]">
           <div class="flex items-center gap-2">
-            <svg class="w-4.5 h-4.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <svg class="w-4.5 h-4.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <h3 class="text-xs font-bold text-white tracking-wide uppercase">Recent Activity</h3>
           </div>
-          <a href="/storage" class="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Explorer</a>
+          <a href="/activity" class="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Explorer</a>
         </div>
 
         <div class="overflow-x-auto">
@@ -1232,11 +1052,11 @@
                 {@const ft = getFileIcon(doc.mimeType, doc.actionType)}
                 <tr class="hover:bg-white/[0.02] transition-colors">
                   <td class="p-3 font-semibold text-white truncate max-w-[110px] flex items-center gap-1.5">
-                    <span class="text-xs">{ft.icon}</span>
+                    <span class="text-xs flex items-center justify-center shrink-0">{@html ft.icon}</span>
                     <span class="truncate">{doc.fileName}</span>
                   </td>
                   <td class="p-3 text-center">
-                    <span class="font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] text-gray-300">
+                    <span class="font-mono px-1.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[8px] text-blue-400 font-bold uppercase tracking-wider">
                       {formatAction(doc.actionType)}
                     </span>
                   </td>

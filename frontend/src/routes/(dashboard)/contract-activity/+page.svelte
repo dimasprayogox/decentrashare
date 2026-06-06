@@ -4,6 +4,7 @@
   import { adminService } from '$lib/services/admin/admin';
   import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
   import type { AdminUser } from '$lib/types/admin';
+  import { PUBLIC_ETHERSCAN_API_KEY } from '$env/static/public';
 
   // ── Props ──
   let { data } = $props<{ data?: { role?: 'USER' | 'ADMIN' } }>();
@@ -11,7 +12,7 @@
 
   // ── Constants ──
   const CONTRACT_ADDRESS = '0xa56DE256D4AfD0CdF9860FccD281147B67F6ae85';
-  const ETHERSCAN_API_KEY = 'DNGS1KV4YIDHDQ8UXSV1VURVCUTGPHISNH';
+  const ETHERSCAN_API_KEY = PUBLIC_ETHERSCAN_API_KEY;
 
   // ── State ──
   let isLoading = $state(true);
@@ -54,18 +55,24 @@
 
   // ── Helpers ──
   function formatTxMethod(tx: any): string {
+    const selector = tx.input ? tx.input.slice(0, 10).toLowerCase() : '';
+    const isBulk = selector === '0x85e48dd2' || tx.functionName?.includes('recordFilesBatch') || tx.functionName?.includes('getStakePercentage');
+    const isSingle = selector === '0x23c83113' || tx.functionName?.includes('recordFile');
+
+    if (isBulk || isSingle) {
+      return 'recordFile';
+    }
+
     if (tx.functionName) {
       const name = tx.functionName.split('(')[0];
       return name || 'Contract Call';
     }
-    const input = tx.input || '';
-    if (!input || input === '0x') return 'Transfer';
-    const selectors: Record<string, string> = {
-      '0x23c83113': 'recordFile',
-      '0x85e48dd2': 'recordFilesBatch',
-    };
-    const selector = input.slice(0, 10);
-    return selectors[selector] || `${selector}…`;
+
+    if (!tx.input || tx.input === '0x') {
+      return 'Transfer';
+    }
+
+    return 'Contract Call';
   }
 
   function formatEthValue(wei: string): string {
@@ -80,6 +87,7 @@
     return cost.toFixed(6) + ' ETH';
   }
 
+  // ── Helpers ──
   function formatTimestamp(ts: string): string {
     const d = new Date(Number(ts) * 1000);
     const now = new Date();
@@ -171,8 +179,8 @@
       </div>
       <h2 class="text-lg font-bold text-white">Access Denied</h2>
       <p class="text-sm text-gray-400">This page is only available to platform administrators.</p>
-      <a href="/dashboard" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors">
-        ← Back to Dashboard
+      <a href="/storage" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors">
+        ← Back to Storage
       </a>
     </div>
   </div>
@@ -187,16 +195,22 @@
         </div>
         <div>
           <h1 class="text-lg md:text-xl font-semibold text-white">Smart Contract Activity</h1>
-          <p class="text-xs text-gray-500 font-mono">{formatAddress(CONTRACT_ADDRESS)}</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-[9px] font-black px-2 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 uppercase tracking-widest">Sepolia Testnet</span>
         <a href="https://sepolia.etherscan.io/address/{CONTRACT_ADDRESS}" target="_blank" rel="noopener noreferrer"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
           View on Etherscan
         </a>
+        <button
+          onclick={() => loadTransactions(currentPage)}
+          disabled={isLoading}
+          class="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-xs hover:bg-white/10 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+          title="Refresh transaction logs"
+        >
+          {isLoading ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
     </div>
 
@@ -210,13 +224,12 @@
         <table class="w-full text-left text-sm border-collapse">
           <thead>
             <tr class="border-b border-white/5 text-gray-500 text-xs uppercase tracking-wider">
-              <th class="px-4 py-3.5 font-medium">Tx Hash</th>
+              <th class="px-4 py-3.5 font-medium">Blockchain Tx</th>
               <th class="px-4 py-3.5 font-medium">Block</th>
               <th class="px-4 py-3.5 font-medium">Method</th>
               <th class="px-4 py-3.5 font-medium">From</th>
               <th class="px-4 py-3.5 font-medium hidden md:table-cell">Gas Used</th>
               <th class="px-4 py-3.5 font-medium hidden lg:table-cell">Gas Cost</th>
-              <th class="px-4 py-3.5 font-medium hidden lg:table-cell">Value</th>
               <th class="px-4 py-3.5 font-medium">Time</th>
               <th class="px-4 py-3.5 font-medium text-center">Status</th>
             </tr>
@@ -242,7 +255,7 @@
                   <!-- Tx Hash -->
                   <td class="px-4 py-3">
                     <a href="https://sepolia.etherscan.io/tx/{tx.hash}" target="_blank" rel="noopener noreferrer"
-                      class="font-mono text-[11px] text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 transition-colors">
+                      class="font-mono text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 transition-colors">
                       {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
                       <svg class="w-2.5 h-2.5 opacity-60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </a>
@@ -251,16 +264,22 @@
                   <!-- Block -->
                   <td class="px-4 py-3">
                     <a href="https://sepolia.etherscan.io/block/{tx.blockNumber}" target="_blank" rel="noopener noreferrer"
-                      class="font-mono text-[11px] text-gray-400 hover:text-blue-400 transition-colors">
+                      class="font-mono text-xs text-gray-400 hover:text-blue-400 transition-colors">
                       {tx.blockNumber}
                     </a>
                   </td>
 
                   <!-- Method -->
                   <td class="px-4 py-3">
-                    <span class="font-mono px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-300">
-                      {formatTxMethod(tx)}
-                    </span>
+                    {#if formatTxMethod(tx) === 'Transfer'}
+                      <span class="font-mono px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
+                        {formatTxMethod(tx)}
+                      </span>
+                    {:else}
+                      <span class="font-mono px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
+                        {formatTxMethod(tx)}
+                      </span>
+                    {/if}
                   </td>
 
                   <!-- From -->
@@ -275,50 +294,45 @@
                           {#if matchedUser.avatarUrl}
                             <img src={matchedUser.avatarUrl} alt="" class="w-full h-full object-cover" />
                           {:else}
-                            <span class="text-[9px] font-bold text-blue-300">{(matchedUser.username || matchedUser.walletAddress || 'U').charAt(0).toUpperCase()}</span>
+                            <span class="text-[10px] font-bold text-blue-300">{(matchedUser.username || matchedUser.walletAddress || 'U').charAt(0).toUpperCase()}</span>
                           {/if}
                         </div>
-                        <span class="text-[11px] text-gray-300 group-hover/from:text-blue-400 transition-colors truncate max-w-[100px]">
+                        <span class="text-xs text-gray-300 group-hover/from:text-blue-400 transition-colors truncate max-w-[100px]">
                           {matchedUser.username || formatAddress(tx.from)}
                         </span>
                       </button>
                     {:else}
                       <a href="https://sepolia.etherscan.io/address/{tx.from}" target="_blank" rel="noopener noreferrer"
-                        class="font-mono text-[11px] text-gray-400 hover:text-blue-400 transition-colors">
+                        class="font-mono text-xs text-gray-400 hover:text-blue-400 transition-colors">
                         {formatAddress(tx.from)}
                       </a>
                     {/if}
                   </td>
 
                   <!-- Gas Used -->
-                  <td class="px-4 py-3 hidden md:table-cell font-mono text-[11px] text-gray-400">
+                  <td class="px-4 py-3 hidden md:table-cell font-mono text-xs text-gray-400">
                     {Number(tx.gasUsed).toLocaleString()}
                   </td>
 
                   <!-- Gas Cost -->
-                  <td class="px-4 py-3 hidden lg:table-cell font-mono text-[11px] text-gray-500">
+                  <td class="px-4 py-3 hidden lg:table-cell font-mono text-xs text-gray-500">
                     {formatGasCost(tx.gasUsed, tx.gasPrice)}
                   </td>
 
-                  <!-- Value -->
-                  <td class="px-4 py-3 hidden lg:table-cell font-mono text-[11px] text-gray-500">
-                    {formatEthValue(tx.value)}
-                  </td>
-
                   <!-- Time -->
-                  <td class="px-4 py-3 text-[11px] text-gray-500" title={formatFullDate(tx.timeStamp)}>
+                  <td class="px-4 py-3 text-xs text-gray-500" title={formatFullDate(tx.timeStamp)}>
                     {formatTimestamp(tx.timeStamp)}
                   </td>
 
                   <!-- Status -->
                   <td class="px-4 py-3 text-center">
                     {#if tx.txreceipt_status === '1' || tx.isError === '0'}
-                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black uppercase tracking-wider">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                         Success
                       </span>
                     {:else}
-                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] font-black uppercase tracking-wider">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-black uppercase tracking-wider">
                         <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
                         Failed
                       </span>
@@ -333,58 +347,49 @@
 
       <!-- Pagination -->
       {#if !isLoading && transactions.length > 0}
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 border-t border-white/5 bg-white/[0.015]">
-          <div class="flex items-center gap-4">
-            <div class="text-xs text-gray-500">
-              Page <span class="text-gray-200 font-semibold">{currentPage}</span> ·
-              Showing <span class="text-gray-200 font-semibold">{transactions.length}</span> transactions
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] text-gray-500 uppercase tracking-wider">Rows</span>
-              <select
-                value={pageSize}
-                onchange={(e) => changePageSize(Number(e.currentTarget.value))}
-                class="h-7 px-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 text-[10px] cursor-pointer hover:bg-white/10 transition-all"
-              >
-                {#each PAGE_SIZE_OPTIONS as size}
-                  <option class="bg-[#0a0a0f] text-white" value={size}>{size}</option>
-                {/each}
-              </select>
-            </div>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-white/5 bg-white/[0.005]">
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <span>Show</span>
+            <select
+              value={pageSize}
+              onchange={(e) => changePageSize(Number(e.currentTarget.value))}
+              class="bg-[#121214] border border-white/10 rounded-lg px-2 py-1 text-xs text-gray-300 focus:border-blue-500/50 outline-none"
+            >
+              {#each PAGE_SIZE_OPTIONS as size}
+                <option class="bg-[#121214] text-white" value={size}>{size}</option>
+              {/each}
+            </select>
+            <span>entries</span>
+            <span class="mx-2">|</span>
+            <span>Showing Page {currentPage} · Showing {transactions.length} entries</span>
           </div>
+
           <div class="flex items-center gap-1">
             <button
-              type="button"
               onclick={() => goToPage(currentPage - 1)}
               disabled={currentPage <= 1}
-              class="w-8 h-8 flex items-center justify-center text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/[0.02] text-xs text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all cursor-pointer"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+              Previous
             </button>
-
             {#each Array(Math.min(5, currentPage + (hasMore ? 1 : 0))) as _, i}
               {@const pageNum = Math.max(1, currentPage - 2) + i}
               {#if pageNum >= 1 && (pageNum <= currentPage || (pageNum === currentPage + 1 && hasMore))}
                 <button
-                  type="button"
                   onclick={() => goToPage(pageNum)}
-                  class="min-w-8 h-8 px-2.5 flex items-center justify-center text-xs rounded-lg border transition-all
-                    {pageNum === currentPage
-                      ? 'bg-blue-500/20 border-blue-500/40 text-blue-300 font-semibold shadow-[0_0_10px_rgba(59,130,246,0.25)]'
-                      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}"
+                  class="w-8 h-8 rounded-lg border text-xs font-semibold transition-all cursor-pointer
+                         {currentPage === pageNum ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/5'}"
                 >
                   {pageNum}
                 </button>
               {/if}
             {/each}
-
             <button
-              type="button"
               onclick={() => goToPage(currentPage + 1)}
               disabled={!hasMore}
-              class="w-8 h-8 flex items-center justify-center text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/[0.02] text-xs text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 transition-all cursor-pointer"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+              Next
             </button>
           </div>
         </div>

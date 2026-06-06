@@ -138,7 +138,7 @@
         if (token) localStorage.setItem('session_token', token);
 
         statusMessage = "Login successful! Redirecting...";
-        setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
+        setTimeout(() => { window.location.href = '/storage'; }, 1200);
       } else {
         throw new Error(loginData?.message || "Signature verification failed!");
       }

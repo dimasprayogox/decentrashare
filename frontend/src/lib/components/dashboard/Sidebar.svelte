@@ -5,7 +5,7 @@
 
   // ── Props ──
   let {
-    active = 'dashboard',
+    active = 'storage',
     subActive = '',
     currentUser = null,
     role = 'USER',
@@ -44,7 +44,7 @@
     // Main nav item - Active: Animated gradient + glow
     active: `
       relative overflow-hidden
-      bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-transparent
+      bg-gradient-to-r from-blue-600/20 via-blue-600/10 to-transparent
       text-blue-300 font-semibold
       shadow-[inset_0_0_30px_rgba(37,99,235,0.15),0_0_20px_rgba(59,130,246,0.1)]
       border-r-2 border-blue-400
@@ -98,7 +98,7 @@
 
   // ── Icons ──
   const Icons = {
-    Dashboard: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>`,
+    WalletActivity: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>`,
     Storage: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path></svg>`,
     Explore: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"></path></svg>`,
     Shared: (isActive: boolean) => `<svg class="w-5 h-5 transition-all duration-300 ${isActive ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>`,
@@ -149,17 +149,6 @@
 
   <!-- Navigation Menu -->
   <nav class="flex-1 space-y-1.5 overflow-y-auto pr-2 custom-scrollbar">
-    
-    <!-- Dashboard -->
-    <a href="/dashboard" 
-       class="group relative flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300
-              {active === 'dashboard' ? STYLES.active : STYLES.inactive}">
-      {#if active === 'dashboard'}{@html Icons.ActiveDot()}{/if}
-      {@html Icons.Dashboard(active === 'dashboard')}
-      <span class="transition-transform group-hover:translate-x-0.5">Dashboard</span>
-      {#if active === 'dashboard'}
-      {/if}
-    </a>
 
     <!-- Storage -->
     <a href="/storage"
@@ -197,27 +186,47 @@
       <span class="transition-transform group-hover:translate-x-0.5">Validate</span>
     </a>
 
-    <!-- Trash -->
-    <a href="/trash"
+    <!-- Wallet Activity -->
+    <a href="/wallet-activity" 
        class="group relative flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300
-              {active === 'trash' ? STYLES.active : STYLES.inactive}">
-      {#if active === 'trash'}{@html Icons.ActiveDot()}{/if}
-      {@html Icons.Trash(active === 'trash')}
-      <span class="transition-transform group-hover:translate-x-0.5">Trash</span>
+              {active === 'wallet-activity' ? STYLES.active : STYLES.inactive}">
+      {#if active === 'wallet-activity'}{@html Icons.ActiveDot()}{/if}
+      {@html Icons.WalletActivity(active === 'wallet-activity')}
+      <span class="transition-transform group-hover:translate-x-0.5">Wallet Activity</span>
     </a>
-
+    
     <!-- Contract Activity (Admin Only) -->
     {#if role === 'ADMIN'}
-      <a href="/contract-activity"
+    <a href="/contract-activity"
          class="group relative flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300
                 {active === 'contract-activity' ? STYLES.active : STYLES.inactive}">
         {#if active === 'contract-activity'}{@html Icons.ActiveDot()}{/if}
         <svg class="w-5 h-5 transition-all duration-300 {active === 'contract-activity' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
         <span class="transition-transform group-hover:translate-x-0.5">Smart Contract</span>
       </a>
-    {/if}
+      {/if}
 
-    <!-- ⚙️ Settings with Submenu -->
+      <!-- Activity Log -->
+    <a href="/activity"
+       class="group relative flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300
+              {active === 'activity' ? STYLES.active : STYLES.inactive}">
+      {#if active === 'activity'}{@html Icons.ActiveDot()}{/if}
+      <svg class="w-5 h-5 transition-all duration-300 {active === 'activity' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="transition-transform group-hover:translate-x-0.5">Activity Log</span>
+    </a>
+      
+      <!-- Trash -->
+      <a href="/trash"
+         class="group relative flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300
+                {active === 'trash' ? STYLES.active : STYLES.inactive}">
+        {#if active === 'trash'}{@html Icons.ActiveDot()}{/if}
+        {@html Icons.Trash(active === 'trash')}
+        <span class="transition-transform group-hover:translate-x-0.5">Trash</span>
+      </a>
+
+      <!-- ⚙️ Settings with Submenu -->
     <div class="space-y-1">
       <button 
         onclick={toggleSettings}
@@ -327,12 +336,12 @@
         <!-- Unlimited (mis. ADMIN) -->
         <div class="flex items-center justify-between mb-2">
           <p class="text-[10px] text-gray-500 uppercase tracking-widest">Storage</p>
-          <span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded">
+          <span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-blue-300 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             Unlimited
           </span>
         </div>
-        <p class="text-sm font-bold text-purple-300">
+        <p class="text-sm font-bold text-blue-300">
           {storageUsedLabel} <span class="text-sm font-normal text-gray-400">used</span>
         </p>
       {:else}
