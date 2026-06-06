@@ -562,7 +562,7 @@ export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
       // 🔍 Debug: Cek dokumen setelah update
       const docsAfter = await tx.document.findMany({
         where: { id: { in: documentIds } },
-        select: { id: true, isOnChain: true, blockchainTx: true }
+        select: { id: true, title: true, isOnChain: true, blockchainTx: true }
       });
       
       logger.debug('📋 Documents after update', { docsAfter });
@@ -577,11 +577,12 @@ export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
           entityId: documentIds[0],
           entityName: isBatch
             ? `${documentIds.length} files confirmed`
-            : 'File confirmed on-chain',
+            : (docsAfter[0]?.title || 'File confirmed on-chain'),
           blockchainTx: txHash,
           details: JSON.stringify({
             confirmedCount: documentIds.length,
             txHash,
+            files: docsAfter.map(d => ({ id: d.id, name: d.title }))
           }),
         }
       });

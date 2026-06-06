@@ -37,7 +37,7 @@
     { value: 'UPLOAD_IPFS', label: 'Upload' },
     { value: 'CREATE', label: 'Create' },
     { value: 'DOWNLOAD', label: 'Download' },
-    { value: 'BULK_DOWNLOAD', label: 'Bulk Download' },
+    { value: 'BULK_DOWNLOAD', label: 'Download' },
     { value: 'SHARE', label: 'Share' },
     { value: 'REVOKE', label: 'Revoke' },
     { value: 'RENAME', label: 'Rename' },
@@ -47,7 +47,7 @@
     { value: 'RESTORE', label: 'Restore' },
     { value: 'PERMANENT_DELETE', label: 'Delete' },
     { value: 'BLOCKCHAIN_CONFIRM', label: 'Blockchain' },
-    { value: 'BLOCKCHAIN_CONFIRM_BATCH', label: 'Blockchain Batch' },
+    { value: 'BLOCKCHAIN_CONFIRM_BATCH', label: 'Blockchain Confirm' },
   ];
 
   // ── Load Data ──
@@ -168,7 +168,7 @@
       case 'BLOCKCHAIN_CONFIRM':
         return { bg: 'bg-purple-500/10 border-purple-500/20 text-purple-400', label: 'Blockchain', icon: 'text-purple-400', iconBg: 'bg-purple-500/10' };
       case 'BLOCKCHAIN_CONFIRM_BATCH':
-        return { bg: 'bg-purple-500/10 border-purple-500/20 text-purple-400', label: 'Blockchain Batch', icon: 'text-purple-400', iconBg: 'bg-purple-500/10' };
+        return { bg: 'bg-purple-500/10 border-purple-500/20 text-purple-400', label: 'Blockchain Confirm', icon: 'text-purple-400', iconBg: 'bg-purple-500/10' };
       case 'ADMIN_UPDATE_ROLE':
         return { bg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400', label: 'Role Update', icon: 'text-indigo-400', iconBg: 'bg-indigo-500/10' };
       case 'ADMIN_UPDATE_STORAGE_LIMIT':
@@ -252,6 +252,47 @@
     } catch {
       return details;
     }
+  }
+
+  // Ambil data terstruktur dari field details (untuk ditampilkan di panel detail)
+  function parseDetails(details: string | null | undefined): {
+    files: { id?: string; name: string }[];
+    path?: string;
+    txHash?: string;
+    raw?: string;
+  } {
+    if (!details) return { files: [] };
+    const trimmed = details.trim();
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+      return { files: [], raw: details };
+    }
+    try {
+      const data = JSON.parse(trimmed);
+      const files = Array.isArray(data.files)
+        ? data.files.map((f: any) => (typeof f === 'string' ? { name: f } : { id: f?.id, name: f?.name ?? 'Unnamed' }))
+        : [];
+      return { files, path: data.path, txHash: data.txHash };
+    } catch {
+      return { files: [], raw: details };
+    }
+  }
+
+  function parseRename(details: string | null | undefined): { from: string; to: string } | null {
+    if (!details) return null;
+    const match = details.match(/(?:Document|Folder) renamed from (.+?) to (.+?)$/i);
+    if (match) {
+      return { from: match[1], to: match[2] };
+    }
+    return null;
+  }
+
+  function parseMove(details: string | null | undefined): string | null {
+    if (!details) return null;
+    const match = details.match(/(?:Document|Folder) moved to (.+?)$/i);
+    if (match) {
+      return match[1];
+    }
+    return null;
   }
 
   onMount(() => {
@@ -347,12 +388,13 @@
       <table class="w-full text-left text-sm border-collapse">
         <thead>
           <tr class="border-b border-white/5 text-gray-500 text-xs uppercase tracking-wider">
-            <th class="px-6 py-4 font-semibold">Event</th>
-            <th class="px-6 py-4 font-semibold">Details</th>
-            <th class="px-6 py-4 font-semibold">Time</th>
-            <th class="px-6 py-4 font-semibold text-right">Record</th>
-          </tr>
-        </thead>
+            <th class="px-6 py-4 font-semibold w-[25%]">Event</th>
+            <th class="px-6 py-4 font-semibold w-[20%]">Document/Folder Name</th>
+            <th class="px-6 py-4 font-semibold text-center w-[25%]">Details</th>
+            <th class="px-6 py-4 font-semibold w-[15%]">Time</th>
+            <th class="px-6 py-4 font-semibold text-center w-[20%]">Status</th>
+          </tr> 
+        </thead> 
         <tbody class="divide-y divide-white/5">
           {#if isLoading}
             {#each Array(5) as _}
@@ -381,18 +423,26 @@
               {@const badge = getActionBadgeTheme(log.action)}
               {@const isExpanded = expandedId === log.id}
               <tr class="hover:bg-white/[0.015] transition-all duration-200 {isExpanded ? 'bg-white/[0.015]' : ''}" in:fade>
-                
-                <!-- Event (Action + Name) -->
+
+                <!-- Event (Action) -->
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <span class="w-9 h-9 rounded-xl {badge.iconBg} border border-white/5 flex items-center justify-center shadow-inner shrink-0">
                       {@html getActionIcon(log.action, badge.icon)}
                     </span>
-                    <div class="min-w-0">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider mb-1 {badge.bg}">
+                    <div class="min-w-0 flex-1">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[12px] font-bold uppercase tracking-wider mb-1 {badge.bg}">
                         {badge.label}
                       </span>
-                      <p class="text-gray-200 font-semibold truncate max-w-[200px]" title={log.entityName || 'Unnamed Entity'}>
+                    </div>
+                  </div>
+                </td>
+
+                 <!-- Event (Name) -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-gray-200 font-semibold truncate max-w-[250px]" title={log.entityName || 'Unnamed Entity'}>
                         {log.entityName || 'Unnamed Entity'}
                       </p>
                     </div>
@@ -400,19 +450,7 @@
                 </td>
 
                 <!-- Details -->
-                <td class="px-6 py-4 max-w-xs">
-                  <p class="text-gray-400 text-xs leading-relaxed" title={log.details || ''}>
-                    {formatDetails(log.details)}
-                  </p>
-                </td>
-
-                <!-- Time -->
-                <td class="px-6 py-4 text-xs text-gray-400 font-semibold whitespace-nowrap" title={formatFullDate(log.createdAt)}>
-                  {formatTimestamp(log.createdAt)}
-                </td>
-
-                <!-- Record toggle -->
-                <td class="px-6 py-4 text-right">
+                <td class="px-6 py-4 text-center">
                   <button
                     type="button"
                     onclick={() => toggleExpand(log.id)}
@@ -432,106 +470,257 @@
                     <svg class="w-3.5 h-3.5 transition-transform {isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                   </button>
                 </td>
+
+                <!-- Time -->
+                <td class="px-6 py-4 text-xs text-gray-400 font-semibold whitespace-nowrap" title={formatFullDate(log.createdAt)}>
+                  {formatTimestamp(log.createdAt)}
+                </td>
+
+                <!-- Status -->
+                <td class="px-6 py-4 text-center">
+                  <div class="flex items-center justify-center">
+                    {#if log.blockchainTx}
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium shadow-[0_0_12px_rgba(168,85,247,0.1)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
+                        Verified
+                      </span>
+                    {:else if log.ipfsHash}
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                        IPFS Synced
+                      </span>
+                    {:else}
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium shadow-[0_0_12px_rgba(16,185,129,0.1)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        Completed
+                      </span>
+                    {/if}
+                  </div>
+                </td>
               </tr>
 
               {#if isExpanded}
+                {@const parsed = parseDetails(log.details)}
+                {@const renameInfo = parseRename(log.details)}
+                {@const moveInfo = parseMove(log.details)}
                 <tr class="bg-black/20" in:fade={{ duration: 150 }}>
-                  <td colspan="4" class="px-6 py-4">
-                    <div class="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                      <div class="flex items-center gap-2 mb-3">
-                        <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded {log.entityType === 'FOLDER' ? 'Folder' : 'Document'}</span>
+                  <td colspan="5" class="px-6 py-4">
+                    <div class="rounded-2xl border border-white/10 bg-white/[0.01] p-5 shadow-inner">
+                      
+                      <!-- Header Status Aksi -->
+                      <div class="flex items-center gap-2 mb-4 border-b border-white/5 pb-3">
+                        {#if log.action.includes('UPLOAD')}
+                          <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                          <span class="text-xs font-bold uppercase tracking-wider text-blue-400">File Uploaded to IPFS</span>
+                        {:else if log.action.includes('CONFIRM') || log.blockchainTx}
+                          <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                          <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Blockchain Confirmation Complete</span>
+                        {:else if log.action === 'RENAME'}
+                          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                          <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Resource Renamed</span>
+                        {:else if log.action === 'MOVE'}
+                          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                          <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Resource Moved</span>
+                        {:else if log.action === 'SHARE' || log.action === 'REVOKE'}
+                          <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                          <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Access Control Updated</span>
+                        {:else if log.action === 'ARCHIVE' || log.action === 'PERMANENT_DELETE'}
+                          <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          <span class="text-xs font-bold uppercase tracking-wider text-red-400">Resource Deleted / Archived</span>
+                        {:else}
+                          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                          <span class="text-xs font-bold uppercase tracking-wider text-gray-400">System Activity Event</span>
+                        {/if}
                       </div>
 
-                      <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-xs">
-                        <!-- Name -->
-                        <div class="flex flex-col gap-0.5">
-                          <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Name</dt>
-                          <dd class="text-gray-200 font-medium break-all">{log.entityName || '—'}</dd>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                        
+                        <!-- DETAIL UMUM -->
+                        <div class="space-y-3">
+                          <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Target Name</span>
+                            <span class="text-gray-200 font-semibold text-sm">{log.entityName || '—'}</span>
+                          </div>
+                          
+                          <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Entity Type</span>
+                            <div class="mt-1">
+                              <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-300 text-[10px] font-bold uppercase">{log.entityType === 'FOLDER' ? 'Folder' : 'Document'}</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Timestamp</span>
+                            <span class="text-gray-300 font-medium">{formatFullDate(log.createdAt)}</span>
+                          </div>
                         </div>
 
-                        <!-- Type -->
-                        <div class="flex flex-col gap-0.5">
-                          <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Type</dt>
-                          <dd class="text-gray-200 font-medium">{log.entityType === 'FOLDER' ? 'Folder' : 'Document'}</dd>
-                        </div>
-
-                        <!-- Entity ID -->
-                        <div class="flex flex-col gap-0.5">
-                          <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Entity ID</dt>
-                          <dd class="flex items-center gap-1.5">
-                            <span class="text-gray-300 font-mono break-all">{log.entityId}</span>
-                            <button type="button" onclick={() => copyToClipboard(log.entityId, `eid-${log.id}`)} aria-label="Copy entity ID" class="text-gray-500 hover:text-white transition-colors shrink-0">
-                              {#if copiedId === `eid-${log.id}`}
-                                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                              {:else}
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        <!-- DETAIL AKSI SPESIFIK -->
+                        <div class="space-y-4 border-t md:border-t-0 md:border-l border-white/5 pt-4 md:pt-0 md:pl-6">
+                          
+                          <!-- UPLOAD IPFS -->
+                          {#if log.action.includes('UPLOAD')}
+                            <div class="space-y-3">
+                              {#if log.ipfsHash}
+                                <div>
+                                  <span class="text-[10px] uppercase font-bold text-blue-400 tracking-wider block mb-1">IPFS Storage (CID)</span>
+                                  <div class="flex items-center gap-1.5">
+                                    <a href={`https://gateway.pinata.cloud/ipfs/${log.ipfsHash}`} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline font-mono text-[11px] break-all">{log.ipfsHash}</a>
+                                    <button type="button" onclick={() => copyToClipboard(log.ipfsHash || '', `ipfs-${log.id}`)} class="text-gray-500 hover:text-white transition-colors shrink-0">
+                                      {#if copiedId === `ipfs-${log.id}`}
+                                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                      {:else}
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                      {/if}
+                                    </button>
+                                  </div>
+                                </div>
                               {/if}
-                            </button>
-                          </dd>
+
+                              {#if log.fileHash}
+                                <div>
+                                  <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block mb-0.5">Content Hash (SHA-256)</span>
+                                  <div class="flex items-center gap-1.5">
+                                    <span class="text-gray-300 font-mono text-[11px] break-all">{log.fileHash}</span>
+                                    <button type="button" onclick={() => copyToClipboard(log.fileHash || '', `fh-${log.id}`)} class="text-gray-500 hover:text-white transition-colors shrink-0">
+                                      {#if copiedId === `fh-${log.id}`}
+                                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                      {:else}
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                      {/if}
+                                    </button>
+                                  </div>
+                                </div>
+                              {/if}
+                            </div>
+
+                          <!-- CONFIRM BLOCKCHAIN -->
+                          {:else if log.action.includes('CONFIRM') || log.blockchainTx}
+                            <div class="space-y-3">
+                              {#if log.blockchainTx}
+                                <div>
+                                  <span class="text-[10px] uppercase font-bold text-purple-400 tracking-wider block mb-1">Blockchain Tx Hash</span>
+                                  <div class="flex items-center gap-1.5">
+                                    <a href={`https://sepolia.etherscan.io/tx/${log.blockchainTx}`} target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:text-purple-300 hover:underline font-mono text-[11px] break-all">{log.blockchainTx}</a>
+                                    <button type="button" onclick={() => copyToClipboard(log.blockchainTx || '', `tx-${log.id}`)} class="text-gray-500 hover:text-white transition-colors shrink-0">
+                                      {#if copiedId === `tx-${log.id}`}
+                                        <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                      {:else}
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                      {/if}
+                                    </button>
+                                  </div>
+                                </div>
+                              {/if}
+
+                              <!-- Confirmed File (Single File Fallback) -->
+                              {#if !parsed.files || parsed.files.length === 0}
+                                <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+                                  <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Confirmed File</span>
+                                  <div class="flex items-center gap-2">
+                                    <svg class="w-3.5 h-3.5 text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                    <span class="text-xs font-semibold text-gray-200 truncate" title={log.entityName}>{log.entityName || 'Unnamed File'}</span>
+                                  </div>
+                                  {#if log.fileHash}
+                                    <div class="text-[10px] font-mono text-gray-400">
+                                      <span class="font-bold text-gray-500">HASH:</span> <span class="break-all">{log.fileHash}</span>
+                                    </div>
+                                  {/if}
+                                  {#if log.ipfsHash}
+                                    <div class="text-[10px] font-mono text-gray-400">
+                                      <span class="font-bold text-gray-500">IPFS:</span> <a href={`https://gateway.pinata.cloud/ipfs/${log.ipfsHash}`} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline break-all">{log.ipfsHash}</a>
+                                    </div>
+                                  {/if}
+                                </div>
+                              {/if}
+
+                              <div class="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                                <p class="text-gray-400 text-xs leading-relaxed">This record has been permanently verified and anchored on the Sepolia testnet Ethereum network.</p>
+                              </div>
+                            </div>
+
+                          <!-- RENAME -->
+                          {:else if log.action === 'RENAME' && renameInfo}
+                            <div class="space-y-3">
+                              <div>
+                                <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block mb-1">Sebelum (Before)</span>
+                                <div class="px-3 py-2 rounded-lg bg-rose-500/5 border border-rose-500/10 text-rose-300 text-xs font-semibold line-through break-all">
+                                  {renameInfo.from}
+                                </div>
+                              </div>
+                              <div>
+                                <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block mb-1">Sesudah (After)</span>
+                                <div class="px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-emerald-300 text-xs font-semibold break-all">
+                                  {renameInfo.to}
+                                </div>
+                              </div>
+                            </div>
+
+                          <!-- MOVE -->
+                          {:else if log.action === 'MOVE' && moveInfo}
+                            <div class="space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Perubahan Lokasi</span>
+                              <div class="flex items-center gap-3">
+                                <span class="text-gray-400">Aksi</span>
+                                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                <span class="text-gray-200 font-semibold">Dipindahkan ke: <span class="text-amber-400 uppercase font-mono">{moveInfo}</span></span>
+                              </div>
+                            </div>
+
+                          <!-- SHARE / REVOKE -->
+                          {:else if log.action === 'SHARE' || log.action === 'REVOKE'}
+                            <div class="space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Access Log</span>
+                              <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-gray-300">
+                                {parsed.raw ?? log.details}
+                              </div>
+                            </div>
+
+                          <!-- HAPUS (ARCHIVE ATAU PERMANENT DELETE) -->
+                          {:else if log.action === 'ARCHIVE' || log.action === 'PERMANENT_DELETE'}
+                            <div class="space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-red-400 tracking-wider block">Status Penghapusan</span>
+                              <div class="p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-red-300">
+                                {#if log.action === 'ARCHIVE'}
+                                  Dokumen dipindahkan ke Folder Sampah (Trash) dan semua akses sharing dinonaktifkan sementara.
+                                {:else}
+                                  Dokumen dan seluruh riwayat aksesnya telah dihapus secara permanen dari sistem.
+                                {/if}
+                              </div>
+                            </div>
+
+                          <!-- DEFAULT DETAILS -->
+                          {:else}
+                            {#if log.details && !parsed.files.length}
+                              <div>
+                                <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block mb-1">Details Summary</span>
+                                <div class="text-gray-400 italic break-words leading-relaxed">{parsed.raw ?? formatDetails(log.details)}</div>
+                              </div>
+                            {/if}
+                          {/if}
+
+                          <!-- RECORDED FILES LIST (Selalu muncul jika ada parsed.files) -->
+                          {#if parsed.files && parsed.files.length > 0}
+                            <div class="space-y-2 mt-4 pt-4 border-t border-white/5">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Recorded Items ({parsed.files.length})</span>
+                              <div class="rounded-xl border border-white/10 bg-black/20 divide-y divide-white/5 max-h-52 overflow-y-auto">
+                                {#each parsed.files as file, i (file.id ?? file.name + i)}
+                                  <div class="flex items-center gap-2.5 px-3 py-2">
+                                    <span class="w-6 h-6 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-[10px] font-bold text-blue-300">{i + 1}</span>
+                                    <svg class="w-3.5 h-3.5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                    <span class="flex-1 min-w-0 text-gray-300 text-xs truncate" title={file.name}>{file.name}</span>
+                                    {#if file.id}
+                                      <span class="text-[9px] text-gray-600 font-mono shrink-0">{truncateHash(file.id, 6, 4)}</span>
+                                    {/if}
+                                  </div>
+                                {/each}
+                              </div>
+                            </div>
+                          {/if}
+
                         </div>
 
-                        <!-- Timestamp -->
-                        <div class="flex flex-col gap-0.5">
-                          <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Timestamp</dt>
-                          <dd class="text-gray-200 font-medium">{formatFullDate(log.createdAt)}</dd>
-                        </div>
-
-                        <!-- File Hash -->
-                        {#if log.fileHash}
-                          <div class="flex flex-col gap-0.5">
-                            <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">File Hash</dt>
-                            <dd class="flex items-center gap-1.5">
-                              <span class="text-gray-300 font-mono" title={log.fileHash}>{truncateHash(log.fileHash)}</span>
-                              <button type="button" onclick={() => copyToClipboard(log.fileHash || '', `fh-${log.id}`)} aria-label="Copy file hash" class="text-gray-500 hover:text-white transition-colors shrink-0">
-                                {#if copiedId === `fh-${log.id}`}
-                                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                {:else}
-                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                {/if}
-                              </button>
-                            </dd>
-                          </div>
-                        {/if}
-
-                        <!-- IPFS Hash -->
-                        {#if log.ipfsHash}
-                          <div class="flex flex-col gap-0.5">
-                            <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">IPFS CID</dt>
-                            <dd class="flex items-center gap-1.5">
-                              <a href={`https://gateway.pinata.cloud/ipfs/${log.ipfsHash}`} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline font-mono" title={log.ipfsHash}>{truncateHash(log.ipfsHash)}</a>
-                              <button type="button" onclick={() => copyToClipboard(log.ipfsHash || '', `ipfs-${log.id}`)} aria-label="Copy IPFS CID" class="text-gray-500 hover:text-white transition-colors shrink-0">
-                                {#if copiedId === `ipfs-${log.id}`}
-                                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                {:else}
-                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                {/if}
-                              </button>
-                            </dd>
-                          </div>
-                        {/if}
-
-                        <!-- Blockchain Tx -->
-                        {#if log.blockchainTx}
-                          <div class="flex flex-col gap-0.5 sm:col-span-2">
-                            <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Blockchain Transaction</dt>
-                            <dd class="flex items-center gap-1.5">
-                              <a href={`https://sepolia.etherscan.io/tx/${log.blockchainTx}`} target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:text-purple-300 hover:underline font-mono flex items-center gap-1" title={log.blockchainTx}>
-                                {truncateHash(log.blockchainTx, 14, 10)}
-                                <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                              </a>
-                            </dd>
-                          </div>
-                        {/if}
-
-                        <!-- Full details (raw) -->
-                        {#if log.details}
-                          <div class="flex flex-col gap-0.5 sm:col-span-2">
-                            <dt class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Details</dt>
-                            <dd class="text-gray-400 text-xs break-words">{formatDetails(log.details)}</dd>
-                          </div>
-                        {/if}
-                      </dl>
+                      </div>
                     </div>
                   </td>
                 </tr>
