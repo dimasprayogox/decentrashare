@@ -1605,7 +1605,16 @@ export const updateDocumentMetadata = async (
         fileHash: updatedDoc.fileHash,
         ipfsHash: updatedDoc.ipfsHash,
         blockchainTx: updatedDoc.blockchainTx,
-        details: updates.title ? `Document renamed from ${doc.title} to ${updatedDoc.title}` : `Document description updated`
+        details: JSON.stringify({
+          raw: updates.title && updates.description !== undefined
+            ? `Document renamed from ${doc.title} to ${updatedDoc.title} and description updated`
+            : updates.title
+            ? `Document renamed from ${doc.title} to ${updatedDoc.title}`
+            : `Document description updated`,
+          rename: updates.title ? { from: doc.title, to: updatedDoc.title } : null,
+          description: updates.description !== undefined ? { from: doc.description || '', to: updatedDoc.description || '' } : null,
+          descriptionUpdated: updates.description !== undefined
+        })
       }
     });
   } catch (err) {
