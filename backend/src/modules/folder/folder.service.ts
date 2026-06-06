@@ -1,5 +1,4 @@
 import { prisma } from '../../config/db';
-import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { prepareFolderArchive, sanitizeDocuments } from '../document/document.service';
 import crypto from 'node:crypto';
@@ -100,6 +99,21 @@ export const createFolder = async (
     }
   }
 
+  try {
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: 'CREATE',
+        entityType: 'FOLDER',
+        entityId: folder.id,
+        entityName: folderName,
+        details: `Folder created: ${folderName}`
+      }
+    });
+  } catch (err) {
+    logger.error('Failed to log createFolder activity:', err);
+  }
+
   return folder;
 };
 
@@ -138,10 +152,27 @@ export const renameFolder = async (
     throw new Error(`Folder "${folderName}" already exists in this location`);
   }
 
-  return await prisma.folder.update({
+  const updatedFolder = await prisma.folder.update({
     where: { id: folderId },
     data: { name: folderName }
   });
+
+  try {
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: 'RENAME',
+        entityType: 'FOLDER',
+        entityId: folderId,
+        entityName: folderName,
+        details: `Folder renamed from ${folder.name} to ${folderName}`
+      }
+    });
+  } catch (err) {
+    logger.error('Failed to log renameFolder activity:', err);
+  }
+
+  return updatedFolder;
 };
 
 export const moveFolder = async (
@@ -292,6 +323,21 @@ export const moveFolder = async (
           });
         }
       }
+    }
+
+    try {
+      await tx.activityLog.create({
+        data: {
+          userId,
+          action: 'MOVE',
+          entityType: 'FOLDER',
+          entityId: folderId,
+          entityName: folder.name,
+          details: `Folder moved to ${location}`
+        }
+      });
+    } catch (err) {
+      logger.error('Failed to log moveFolder activity:', err);
     }
 
     return {
@@ -1054,7 +1100,7 @@ export const archiveFolders = async (folderIds: string[], userId: string) => {
         ownerId: userId,
         isArchived: false
       },
-      select: { id: true }
+      select: { id: true, name: true }
     });
 
     if (folders.length === 0) {
@@ -1093,6 +1139,21 @@ export const archiveFolders = async (folderIds: string[], userId: string) => {
       }
     });
     
+    try {
+      await tx.activityLog.createMany({
+        data: folders.map((f: any) => ({
+          userId,
+          action: 'ARCHIVE',
+          entityType: 'FOLDER',
+          entityId: f.id,
+          entityName: f.name || 'Unnamed Folder',
+          details: `Folder archived: ${f.name || 'Unnamed Folder'}`
+        }))
+      });
+    } catch (err) {
+      logger.error('Failed to log archiveFolders activity:', err);
+    }
+
     // Return count of ROOT folders archived (not total descendants)
     return { count: validRootFolderIds.length };
   });
@@ -1108,7 +1169,7 @@ export const restoreFolders = async (folderIds: string[], userId: string) => {
         ownerId: userId,
         isArchived: true  // ← Only restore archived folders
       },
-      select: { id: true }
+      select: { id: true, name: true }
     });
 
     if (folders.length === 0) {
@@ -1142,6 +1203,21 @@ export const restoreFolders = async (folderIds: string[], userId: string) => {
       }
     });
     
+    try {
+      await tx.activityLog.createMany({
+        data: folders.map((f: any) => ({
+          userId,
+          action: 'RESTORE',
+          entityType: 'FOLDER',
+          entityId: f.id,
+          entityName: f.name || 'Unnamed Folder',
+          details: `Folder restored: ${f.name || 'Unnamed Folder'}`
+        }))
+      });
+    } catch (err) {
+      logger.error('Failed to log restoreFolders activity:', err);
+    }
+
     return { count: validRootFolderIds.length };
   });
 };
@@ -1156,7 +1232,7 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
         ownerId: userId,
         isArchived: true  // ← Safety: only destroy archived items
       },
-      select: { id: true }
+      select: { id: true, name: true }
     });
 
     if (folders.length === 0) {
@@ -1212,6 +1288,21 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
       where: { id: { in: ownedFolderIdValues }, ownerId: userId }
     });
     
+    try {
+      await tx.activityLog.createMany({
+        data: folders.map((f: any) => ({
+          userId,
+          action: 'PERMANENT_DELETE',
+          entityType: 'FOLDER',
+          entityId: f.id,
+          entityName: f.name || 'Unnamed Folder',
+          details: `Folder permanently deleted: ${f.name || 'Unnamed Folder'}`
+        }))
+      });
+    } catch (err) {
+      logger.error('Failed to log destroyFolders activity:', err);
+    }
+
     return { count: validRootFolderIds.length };
   });
 };
@@ -1393,6 +1484,21 @@ export const shareFoldersFlexible = async (
         data: { privacy: 'SPECIFIC_USER' }
       });
 
+      try {
+        await tx.activityLog.create({
+          data: {
+            userId: ownerId,
+            action: 'SHARE',
+            entityType: 'FOLDER',
+            entityId: item.folderId,
+            entityName: folder.name,
+            details: `Folder shared with ${item.targetUsers.length} user(s)`
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log shareFoldersFlexible activity:', err);
+      }
+
       finalResults.push({ folderId: item.folderId, sharedWith: folderResults, cascadedFolders: subtreeFolderIds.length });
     }
 
@@ -1492,6 +1598,21 @@ export const revokeFoldersAccess = async (
           where: { folderId: { in: privateFolderIds }, ownerId },
           data: { privacy: 'PRIVATE' }
         });
+      }
+
+      try {
+        await tx.activityLog.create({
+          data: {
+            userId: ownerId,
+            action: 'REVOKE',
+            entityType: 'FOLDER',
+            entityId: item.folderId,
+            entityName: folder.name,
+            details: `Access revoked for ${item.targetUserIds.length} user(s)`
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log revokeFoldersAccess activity:', err);
       }
 
       finalResults.push({
@@ -1694,6 +1815,23 @@ export const updateFoldersPrivacy = async (
           where: { documentId: { in: updatedDocuments.map(document => document.id) } }
         });
         accessDeleted = deleted.count + deletedDocumentAccess.count;
+      }
+
+      if (folderUpdate.count > 0) {
+        try {
+          await tx.activityLog.create({
+            data: {
+              userId: ownerId,
+              action: 'CHANGE_PRIVACY',
+              entityType: 'FOLDER',
+              entityId: item.folderId,
+              entityName: folder.name,
+              details: `Folder privacy changed to ${item.newPrivacy}`
+            }
+          });
+        } catch (err) {
+          logger.error('Failed to log updateFoldersPrivacy activity:', err);
+        }
       }
 
       results.push({

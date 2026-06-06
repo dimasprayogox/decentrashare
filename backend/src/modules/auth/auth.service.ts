@@ -35,6 +35,19 @@ export const getNonce = async (walletAddress: string) => {
   };
 };
 
+// Helper: serialize user untuk response (convert BigInt ke number, null = unlimited)
+const serializeUserForResponse = (user: any) => {
+  // Convert BigInt fields ke number, null tetap null
+  return {
+    ...user,
+    storageLimit: user.storageLimit !== undefined && user.storageLimit !== null
+      ? Number(user.storageLimit)
+      : null,
+    nonce: undefined, // Remove nonce dari response
+    refreshToken: undefined, // Remove refreshToken dari response
+  };
+};
+
 export const loginWithWallet = async (walletAddress: string, signature: string) => {
   const address = walletAddress.toLowerCase();
 
@@ -79,7 +92,11 @@ export const loginWithWallet = async (walletAddress: string, signature: string) 
   });
 
   logger.info(`[AUTH] Login success for wallet: ${address}`);
-  return { user: updatedUser, token: accessToken, refreshToken };
+  return { 
+    user: serializeUserForResponse(updatedUser), 
+    token: accessToken, 
+    refreshToken 
+  };
 };
 
 export const registerUser = async (
@@ -199,7 +216,7 @@ export const registerUser = async (
 
   // ── Return Response (without waiting for Pinata) ───────────
   return { 
-    user: updatedUser, 
+    user: serializeUserForResponse(updatedUser), 
     token: accessToken, 
     refreshToken,
     // ✅ Optional: Inform frontend that Pinata setup is in progress
@@ -234,7 +251,11 @@ export const refreshAccessToken = async (oldRefreshToken: string) => {
     data: { refreshToken: newRefreshToken }
   });
 
-  return { token: newAccessToken, refreshToken: newRefreshToken, user };
+  return { 
+    token: newAccessToken, 
+    refreshToken: newRefreshToken, 
+    user: serializeUserForResponse(user) 
+  };
 };
 
 export const logout = async (userId: string) => {

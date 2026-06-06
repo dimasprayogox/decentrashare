@@ -4506,3 +4506,180 @@
 {"duration":106,"level":"info","message":"[2lt1uukkc] 200 106ms","requestId":"2lt1uukkc","statusCode":200,"timestamp":"2026-06-05 19:53:04"}
 {"ip":"::ffff:127.0.0.1","level":"info","message":"[fh3l43f24] GET /api/admin/users?role=ADMIN&limit=3","method":"GET","requestId":"fh3l43f24","timestamp":"2026-06-05 19:53:04","url":"/api/admin/users?role=ADMIN&limit=3","userAgent":"Bun/1.3.9"}
 {"duration":303,"level":"info","message":"[fh3l43f24] 200 303ms","requestId":"fh3l43f24","statusCode":200,"timestamp":"2026-06-05 19:53:04"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:09:08"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-06-05 23:09:08"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-06-05 23:09:08"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-06-05 23:09:09"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-06-05 23:09:09"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-06-05 23:09:09"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-06-05 23:09:09"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-06-05 23:09:09"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:09:09"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:10:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:10:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:10:00"}
+{"ip":"::1","level":"info","message":"[onlz020dn] GET /api/auth/nonce/0x0000000000000000000000000000000000000000","method":"GET","requestId":"onlz020dn","timestamp":"2026-06-05 23:10:01","url":"/api/auth/nonce/0x0000000000000000000000000000000000000000","userAgent":"curl/8.5.0"}
+{"ip":"::1","level":"info","message":"[AUTH] Nonce requested for wallet: 0x000000...","timestamp":"2026-06-05 23:10:01","userAgent":"curl/8.5.0"}
+{"duration":89,"level":"info","message":"[onlz020dn] 200 89ms","requestId":"onlz020dn","statusCode":200,"timestamp":"2026-06-05 23:10:01"}
+{"ip":"::1","level":"info","message":"[eaygx8u9z] POST /api/auth/login","method":"POST","requestId":"eaygx8u9z","timestamp":"2026-06-05 23:10:53","url":"/api/auth/login","userAgent":"curl/8.5.0"}
+{"ip":"::1","level":"info","message":"[AUTH] Login attempt for wallet: 0xeaada6...","timestamp":"2026-06-05 23:10:53"}
+{"ip":"::1","level":"error","message":"[AUTH] Login error: Authentication nonce expired. Please request a new nonce.","stack":"Error: Authentication nonce expired. Please request a new nonce.\n    at <anonymous> (/home/dimas/project/decentrashare/backend/dist/server.js:117792:20)\n    at async <anonymous> (/home/dimas/project/decentrashare/backend/dist/server.js:117999:64)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-06-05 23:10:53","walletAddress":"0xeaada6..."}
+{"level":"error","message":"Unhandled error: Authentication nonce expired. Please request a new nonce.","stack":"Error: Authentication nonce expired. Please request a new nonce.\n    at <anonymous> (/home/dimas/project/decentrashare/backend/dist/server.js:117792:20)\n    at async <anonymous> (/home/dimas/project/decentrashare/backend/dist/server.js:117999:64)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-06-05 23:10:53"}
+{"duration":79,"level":"info","message":"[eaygx8u9z] 500 79ms","requestId":"eaygx8u9z","statusCode":500,"timestamp":"2026-06-05 23:10:53"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:15:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:15:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:15:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:20:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:20:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:20:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:25:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:25:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:25:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:30:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:30:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:30:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:35:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:35:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:35:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:40:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:40:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:40:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:45:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:45:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:45:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:50:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:50:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:50:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-05 23:55:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-05 23:55:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-05 23:55:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:00:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:00:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:00:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:05:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:05:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:05:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:10:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:10:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:10:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:15:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:15:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:15:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:20:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:20:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:20:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:25:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:25:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:25:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:30:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:30:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:30:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:35:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:35:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:35:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:40:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:40:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:40:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:45:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:45:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:45:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:50:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:50:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:50:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 00:55:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 00:55:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 00:55:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:00:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:00:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:00:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:05:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:05:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:05:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:10:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:10:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:10:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:15:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:15:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:15:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:20:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:20:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:20:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:25:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:25:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:25:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:30:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:30:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:30:00"}
+{"ip":"::1","level":"info","message":"[dx2os8l9w] GET /api/admin/users","method":"GET","requestId":"dx2os8l9w","timestamp":"2026-06-06 01:34:30","url":"/api/admin/users","userAgent":"curl/8.5.0"}
+{"duration":13,"level":"info","message":"[dx2os8l9w] 401 13ms","requestId":"dx2os8l9w","statusCode":401,"timestamp":"2026-06-06 01:34:30"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:35:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:35:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:35:00"}
+{"ip":"::1","level":"info","message":"[6eo8co9pw] GET /api/admin/users","method":"GET","requestId":"6eo8co9pw","timestamp":"2026-06-06 01:35:37","url":"/api/admin/users","userAgent":"curl/8.5.0"}
+{"duration":3,"level":"info","message":"[6eo8co9pw] 401 3ms","requestId":"6eo8co9pw","statusCode":401,"timestamp":"2026-06-06 01:35:37"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:40:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:40:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:40:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:45:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:45:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:45:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:50:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:50:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:50:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 01:55:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 01:55:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 01:55:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:00:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:00:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:00:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:05:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:05:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:05:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:10:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:10:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:10:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:15:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:15:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:15:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:20:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:20:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:20:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:25:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:25:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:25:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:30:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:30:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:30:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:35:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:35:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:35:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:40:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:40:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:40:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:45:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:45:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:45:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:50:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:50:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:50:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 02:55:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 02:55:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 02:55:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 03:00:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 03:00:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 03:00:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 03:05:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 03:05:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 03:05:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 03:10:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 03:10:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 03:10:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-06-06 03:15:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-06 03:15:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-06-06 03:15:00"}
+{"level":"info","message":"Starting expired trash cleanup job...","timestamp":"2026-06-06 03:17:00"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-06-06 03:17:00"}
+{"level":"info","message":"No expired trash items found","timestamp":"2026-06-06 03:17:00"}
+{"level":"info","message":"SIGTERM received, shutting down gracefully...","timestamp":"2026-06-06 03:18:34"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-06-06 03:18:34"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-06-06 03:18:34"}

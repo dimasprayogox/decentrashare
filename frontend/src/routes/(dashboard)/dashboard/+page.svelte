@@ -2,13 +2,165 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { storageService } from '$lib/services/storage/storage';
+  import { adminService } from '$lib/services/admin/admin';
   import { ethers } from 'ethers';
   import type { Document } from '$lib/types/storage';
+  import type { AdminUser } from '$lib/types/admin';
+  import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
+
+  // ── Props (from layout server: role, storageUsage, etc.) ──
+  let { data } = $props<{ data?: { role?: 'USER' | 'ADMIN' } }>();
+  const isAdmin = $derived(data?.role === 'ADMIN');
 
   // ── State ──
   let isLoading = $state(true);
   let currentUser = $state<{ id: string; username?: string; walletAddress: string } | null>(null);
   let isCopied = $state(false);
+
+  // ── Admin platform stats ──
+  let adminLoading = $state(true);
+  let totalUsers = $state(0);
+  let totalAdmins = $state(0);
+  let totalRegularUsers = $state(0);
+  let platformUsedBytes = $state(0);
+  let topStorageUsers = $state<AdminUser[]>([]);
+  let allUsersMap = $state<Map<string, AdminUser>>(new Map());
+
+  // ── Smart Contract Activity (Etherscan) ──
+  const CONTRACT_ADDRESS = '0xa56DE256D4AfD0CdF9860FccD281147B67F6ae85';
+  const ETHERSCAN_API_KEY = 'DNGS1KV4YIDHDQ8UXSV1VURVCUTGPHISNH';
+  let contractTxs = $state<any[]>([]);
+  let contractTxLoading = $state(true);
+
+  async function loadContractActivity() {
+    contractTxLoading = true;
+    try {
+      const url = `https://api.etherscan.io/v2/api?chainid=11155111&module=account&action=txlist&address=${CONTRACT_ADDRESS}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.status === '1' && Array.isArray(json.result)) {
+        contractTxs = json.result.slice(0, 10);
+      } else {
+        contractTxs = [];
+      }
+    } catch (err) {
+      console.error('[Dashboard] Failed to load contract activity:', err);
+      contractTxs = [];
+    } finally {
+      contractTxLoading = false;
+    }
+  }
+
+  function formatTxMethod(tx: any): string {
+    // Use functionName from Etherscan response if available
+    if (tx.functionName) {
+      const name = tx.functionName.split('(')[0];
+      return name || 'Contract Call';
+    }
+    const input = tx.input || '';
+    if (!input || input === '0x') return 'Transfer';
+    const selectors: Record<string, string> = {
+      '0x23c83113': 'recordFile',
+      '0x85e48dd2': 'recordFilesBatch',
+    };
+    const selector = input.slice(0, 10);
+    return selectors[selector] || `${selector}…`;
+  }
+
+  function formatGasPrice(wei: string): string {
+    const gwei = Number(wei) / 1e9;
+    return gwei.toFixed(2);
+  }
+
+  function formatEthValue(wei: string): string {
+    const eth = Number(wei) / 1e18;
+    if (eth === 0) return '0 ETH';
+    return eth.toFixed(6) + ' ETH';
+  }
+
+  function formatTimestamp(ts: string): string {
+    const d = new Date(Number(ts) * 1000);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ago`;
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `${diffD}d ago`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  async function loadAdminStats() {
+    adminLoading = true;
+    try {
+      // Ambil total user + total admin secara akurat dari pagination.total
+      const [allRes, adminRes] = await Promise.allSettled([
+        adminService.listUsers({ page: 1, limit: 100 }),
+        adminService.listUsers({ role: 'ADMIN', page: 1, limit: 1 }),
+      ]);
+
+      if (allRes.status === 'fulfilled' && allRes.value?.success && allRes.value.data) {
+        const { users, pagination } = allRes.value.data;
+        totalUsers = pagination.total;
+
+        // Agregasi penggunaan storage dari halaman yang dimuat (maks 100 user)
+        platformUsedBytes = users.reduce((sum, u) => sum + (u.storage?.usedBytes ?? 0), 0);
+
+        // Build wallet-to-user lookup map (for contract activity)
+        allUsersMap = new Map(users.map(u => [u.walletAddress.toLowerCase(), u]));
+
+        // Top 5 user berdasarkan storage usage
+        topStorageUsers = [...users]
+          .sort((a, b) => (b.storage?.usedBytes ?? 0) - (a.storage?.usedBytes ?? 0))
+          .slice(0, 5);
+      }
+
+      if (adminRes.status === 'fulfilled' && adminRes.value?.success && adminRes.value.data) {
+        totalAdmins = adminRes.value.data.pagination.total;
+      }
+
+      totalRegularUsers = Math.max(0, totalUsers - totalAdmins);
+
+      // Load contract activity in parallel
+      loadContractActivity();
+    } catch (err) {
+      console.error('[Dashboard] Failed to load admin stats:', err);
+    } finally {
+      adminLoading = false;
+    }
+  }
+
+  // ── Profile preview modal ──
+  type Profile = {
+    id: string;
+    username?: string | null;
+    email?: string | null;
+    walletAddress: string;
+    avatarUrl?: string | null;
+    bio?: string | null;
+    website?: string | null;
+    joinedAt?: string | Date;
+  };
+  let showProfileModal = $state(false);
+  let selectedProfile = $state<Profile | null>(null);
+
+  function openProfileModal(user: any) {
+    selectedProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      walletAddress: user.walletAddress,
+      avatarUrl: user.avatarUrl,
+      joinedAt: user.createdAt,
+    };
+    showProfileModal = true;
+  }
+  function closeProfileModal() {
+    showProfileModal = false;
+    selectedProfile = null;
+  }
 
   // Stats Counters
   let totalPrivateFiles = $state(0);
@@ -302,10 +454,10 @@
       }
 
       if (realLogs.length > 0) {
-        // Map real backend activity logs to recent modified documents (Max 5)
+        // Map real backend activity logs to recent modified documents/folders (Max 5)
         recentModifications = realLogs.slice(0, 5).map((log: any) => ({
           id: log.id,
-          fileName: log.entityName || 'Unnamed Document',
+          fileName: log.entityName || (log.entityType === 'FOLDER' ? 'Unnamed Folder' : 'Unnamed Document'),
           mimeType: log.entityType === 'FOLDER' ? 'folder' : 'application/octet-stream',
           actionType: log.action,
           updatedAt: log.createdAt
@@ -328,6 +480,11 @@
     } finally {
       isLoading = false;
     }
+
+    // Jika admin, muat statistik platform (tidak memblok render utama)
+    if (isAdmin) {
+      loadAdminStats();
+    }
   });
 </script>
 
@@ -338,54 +495,337 @@
 <div class="w-full max-w-[1400px] mx-auto space-y-8" in:fade={{ duration: 200 }}>
 
   <!-- ═══ WELCOME HERO BANNER ═══ -->
-  <div class="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-blue-950/20 via-indigo-950/10 to-transparent p-6 sm:p-8 backdrop-blur-md">
-    <div class="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4"></div>
+ <div class="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4"></div>
     <div class="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/4"></div>
     
     <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
       <div class="space-y-2">
-        <p class="text-xs font-black uppercase tracking-[0.25em] text-blue-400">Web3 Storage Hub</p>
+        <div class="flex items-center gap-2">
+        </div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
           Welcome back, 
           {#if currentUser}
             <span class="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
               {currentUser.username || formatAddress(currentUser.walletAddress)}
             </span>
+            {#if isAdmin}
+            <span class="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/30">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              Admin
+            </span>
+          {/if}
           {:else}
             <span class="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">User</span>
           {/if}
         </h1>
-        <p class="text-xs sm:text-sm text-gray-400 max-w-lg">
-          Your secure file ledger connected to Ethereum and IPFS. Verify authenticity with zero third-party trust.
-        </p>
+      </div>
+    </div>
+  
+
+  <!-- ═══ ADMIN-ONLY: PLATFORM OVERVIEW ═══ -->
+  {#if isAdmin}
+    <div in:fly={{ y: 20, duration: 400 }} class="space-y-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          </div>
+          <h2 class="text-sm font-black uppercase tracking-widest text-white">Platform Administration</h2>
+        </div>
       </div>
 
-      {#if currentUser || walletAddress}
-        <div class="shrink-0 p-4 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-lg flex flex-col gap-2.5 min-w-[240px]">
-          <div class="flex items-center justify-between">
-            <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Active Address</span>
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          </div>
-          <div class="flex items-center justify-between gap-3 bg-black/35 p-2 rounded-xl border border-white/5 font-mono text-[11px] text-gray-300">
-            <span>{formatAddress(walletAddress || currentUser?.walletAddress || '')}</span>
-            <button 
-              onclick={copyAddress}
-              class="p-1 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
-              title="Copy Address"
-            >
-              {#if isCopied}
-                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      <!-- Admin metric cards & Top Storage Consumers (single row) -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        
+        <!-- Left side: Admin Stats Cards Grid -->
+        <div class="grid grid-cols-2 gap-4 lg:col-span-2">
+          
+          <!-- Card 1: Platform Storage Used -->
+          <div class="group relative overflow-hidden rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-emerald-950/20 to-transparent p-5 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 shadow-lg flex flex-col justify-between min-h-[140px]">
+            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative flex items-start justify-between">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+              </div>
+              <span class="text-[9px] font-black uppercase tracking-widest text-gray-500">Aggregate</span>
+            </div>
+            <div class="relative mt-4">
+              {#if adminLoading}
+                <div class="h-8 w-20 bg-white/5 rounded-lg animate-pulse"></div>
               {:else}
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <p class="text-3xl font-black text-white tracking-tight">{formatBytes(platformUsedBytes)}</p>
               {/if}
-            </button>
+              <p class="text-[10px] text-gray-500 mt-1">Total storage consumed</p>
+            </div>
+          </div>
+
+          <!-- Card 2: Total Registered Users -->
+          <div class="group relative overflow-hidden rounded-2xl border border-blue-500/15 bg-gradient-to-br from-blue-950/20 to-transparent p-5 hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-1 shadow-lg flex flex-col justify-between min-h-[140px]">
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative flex items-start justify-between">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+              </div>
+              <span class="text-[9px] font-black uppercase tracking-widest text-gray-500">Total Users</span>
+            </div>
+            <div class="relative mt-4">
+              {#if adminLoading}
+                <div class="h-8 w-20 bg-white/5 rounded-lg animate-pulse"></div>
+              {:else}
+                <p class="text-3xl font-black text-white tracking-tight">{totalUsers}</p>
+              {/if}
+              <p class="text-[10px] text-gray-500 mt-1">Registered accounts</p>
+            </div>
+          </div>
+
+          <!-- Card 3: Regular Members -->
+          <div class="group relative overflow-hidden rounded-2xl border border-cyan-500/15 bg-gradient-to-br from-cyan-950/20 to-transparent p-5 hover:border-cyan-500/30 transition-all duration-300 hover:-translate-y-1 shadow-lg flex flex-col justify-between min-h-[140px]">
+            <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative flex items-start justify-between">
+              <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
+                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+              </div>
+              <span class="text-[9px] font-black uppercase tracking-widest text-gray-500">Users</span>
+            </div>
+            <div class="relative mt-4">
+              {#if adminLoading}
+                <div class="h-8 w-20 bg-white/5 rounded-lg animate-pulse"></div>
+              {:else}
+                <p class="text-3xl font-black text-white tracking-tight">{totalRegularUsers}</p>
+              {/if}
+              <p class="text-[10px] text-gray-500 mt-1">Standard member users</p>
+            </div>
+          </div>
+
+          <!-- Card 4: Platform Administrators -->
+          <div class="group relative overflow-hidden rounded-2xl border border-purple-500/15 bg-gradient-to-br from-purple-950/20 to-transparent p-5 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1 shadow-lg flex flex-col justify-between min-h-[140px]">
+            <div class="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative flex items-start justify-between">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <span class="text-[9px] font-black uppercase tracking-widest text-gray-500">Admins</span>
+            </div>
+            <div class="relative mt-4">
+              {#if adminLoading}
+                <div class="h-8 w-20 bg-white/5 rounded-lg animate-pulse"></div>
+              {:else}
+                <p class="text-3xl font-black text-white tracking-tight">{totalAdmins}</p>
+              {/if}
+              <p class="text-[10px] text-gray-500 mt-1">Platform administrators</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right side: Top Storage Consumers Table -->
+        <div class="lg:col-span-3 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent overflow-hidden shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between p-4 border-b border-white/5 bg-white/[0.01]">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                <h3 class="text-xs font-bold text-white tracking-wide uppercase">Top Storage Consumers</h3>
+              </div>
+              <a href="/settings/set-limit" class="text-[12px] font-black text-gray-500 hover:text-blue-400 uppercase tracking-widest transition-colors">Manage Limits</a>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-white/5 text-gray-500 font-bold bg-white/[0.005] text-[10px]">
+                    <th class="p-3 pl-5">User</th>
+                    <th class="p-3">Role</th>
+                    <th class="p-3">Storage Used</th>
+                    <th class="p-3 hidden sm:table-cell">Quota</th>
+                    <th class="p-3 text-center pr-5">Usage</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                  {#if adminLoading}
+                    {#each Array(3) as _}
+                      <tr><td colspan="5" class="p-4"><div class="h-5 w-full bg-white/5 rounded animate-pulse"></div></td></tr>
+                    {/each}
+                  {:else if topStorageUsers.length === 0}
+                    <tr><td colspan="5" class="p-8 text-center text-gray-500">No user data available.</td></tr>
+                  {:else}
+                    {#each topStorageUsers.slice(0, 5) as u (u.id)}
+                      {@const pct = u.storage?.usagePercent ?? 0}
+                      <tr class="transition-colors">
+                        <td class="p-3 pl-5">
+                          <button
+                            type="button"
+                            onclick={() => openProfileModal(u)}
+                            class="group/user flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-white/5 transition-all duration-200 cursor-pointer active:scale-[0.98] text-left focus:outline-none"
+                          >
+                            <div class="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover/user:border-blue-400/40 flex items-center justify-center shrink-0 transition-all duration-200">
+                              {#if u.avatarUrl}
+                                <img src={u.avatarUrl} alt="" class="w-full h-full object-cover" />
+                              {:else}
+                                <span class="text-[11px] font-bold text-blue-300">{(u.username || u.walletAddress || 'U').charAt(0).toUpperCase()}</span>
+                              {/if}
+                            </div>
+                            <div class="min-w-0">
+                              <p class="font-semibold text-white truncate max-w-[120px] group-hover/user:text-blue-400 transition-colors duration-200">{u.username || 'No username'}</p>
+                              <p class="text-[9px] text-gray-500 font-mono truncate">{formatAddress(u.walletAddress)}</p>
+                            </div>
+                          </button>
+                        </td>
+                        <td class="p-3">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold
+                            {u.role === 'ADMIN' ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30' : 'bg-white/5 text-gray-300 border border-white/10'}">
+                            {u.role}
+                          </span>
+                        </td>
+                        <td class="p-3 text-gray-300 font-medium">{formatBytes(u.storage?.usedBytes ?? 0)}</td>
+                        <td class="p-3 hidden sm:table-cell text-gray-500">
+                          {u.role === 'ADMIN' || u.storageLimit === null ? 'Unlimited' : formatBytes(u.storageLimit)}
+                        </td>
+                        <td class="p-3 pr-5">
+                          <div class="flex items-center justify-center gap-2">
+                            {#if u.role === 'ADMIN' || u.storageLimit === null}
+                              <span class="text-[24px] text-blue-400">∞</span>
+                            {:else}
+                              <div class="w-20 h-1.5 bg-white/5 rounded-full overflow-hidden hidden sm:block">
+                                <div class="h-full rounded-full {pct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : 'bg-gradient-to-r from-blue-500 to-cyan-500'}" style="width: {Math.min(100, pct)}%"></div>
+                              </div>
+                              <span class="text-[9px] font-bold text-gray-400 w-9 text-right">{Math.round(pct)}%</span>
+                            {/if}
+                          </div>
+                        </td>
+                      </tr>
+                    {/each}
+                  {/if}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      {/if}
+
+      </div>
+
+      <!-- Smart Contract Activity Log -->
+      <div class="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.01] to-transparent overflow-hidden shadow-xl">
+        <div class="flex items-center justify-between p-4 border-b border-white/5 bg-white/[0.01]">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-indigo-500/20">
+              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            </div>
+            <h3 class="text-xs font-bold text-white tracking-wide uppercase">Smart Contract Activity</h3>
+            <span class="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 uppercase tracking-widest">Sepolia</span>
+          </div>
+          <a href="/contract-activity" class="text-[10px] font-black text-gray-500 hover:text-blue-400 uppercase tracking-widest transition-colors flex items-center gap-1">
+            View All
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-white/5 text-gray-500 font-bold bg-white/[0.005] text-[10px]">
+                <th class="p-3 pl-5">Tx Hash</th>
+                <th class="p-3">Method</th>
+                <th class="p-3">From</th>
+                <th class="p-3 hidden sm:table-cell">Gas Used</th>
+                <th class="p-3 hidden md:table-cell">Value</th>
+                <th class="p-3">Time</th>
+                <th class="p-3 text-center pr-5">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              {#if contractTxLoading}
+                {#each Array(3) as _}
+                  <tr><td colspan="7" class="p-4"><div class="h-5 w-full bg-white/5 rounded animate-pulse"></div></td></tr>
+                {/each}
+              {:else if contractTxs.length === 0}
+                <tr><td colspan="7" class="p-8 text-center text-gray-500">No contract transactions found.</td></tr>
+              {:else}
+                {#each contractTxs as tx (tx.hash)}
+                  {@const matchedUser = allUsersMap.get(tx.from.toLowerCase())}
+                  <tr class="transition-colors hover:bg-white/[0.02]">
+                    <td class="p-3 pl-5">
+                      <a href="https://sepolia.etherscan.io/tx/{tx.hash}" target="_blank" rel="noopener noreferrer" class="font-mono text-[10px] text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 transition-colors">
+                        {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
+                        <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      </a>
+                    </td>
+                    <td class="p-3">
+                      <span class="font-mono px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-300">
+                        {formatTxMethod(tx)}
+                      </span>
+                    </td>
+                    <td class="p-3">
+                      {#if matchedUser}
+                        <button
+                          type="button"
+                          onclick={() => openProfileModal(matchedUser)}
+                          class="group/from flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-all duration-200 cursor-pointer text-left focus:outline-none"
+                        >
+                          <div class="w-5 h-5 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover/from:border-blue-400/40 flex items-center justify-center shrink-0 transition-all duration-200">
+                            {#if matchedUser.avatarUrl}
+                              <img src={matchedUser.avatarUrl} alt="" class="w-full h-full object-cover" />
+                            {:else}
+                              <span class="text-[8px] font-bold text-blue-300">{(matchedUser.username || matchedUser.walletAddress || 'U').charAt(0).toUpperCase()}</span>
+                            {/if}
+                          </div>
+                          <span class="text-[10px] text-gray-300 group-hover/from:text-blue-400 transition-colors truncate max-w-[90px]">
+                            {matchedUser.username || `${tx.from.slice(0, 6)}...${tx.from.slice(-4)}`}
+                          </span>
+                        </button>
+                      {:else}
+                        <a href="https://sepolia.etherscan.io/address/{tx.from}" target="_blank" rel="noopener noreferrer" class="font-mono text-[10px] text-gray-400 hover:text-blue-400 transition-colors">
+                          {tx.from.slice(0, 6)}...{tx.from.slice(-4)}
+                        </a>
+                      {/if}
+                    </td>
+                    <td class="p-3 hidden sm:table-cell text-gray-400 font-mono text-[10px]">
+                      {Number(tx.gasUsed).toLocaleString()}
+                    </td>
+                    <td class="p-3 hidden md:table-cell text-gray-500 font-mono text-[10px]">
+                      {formatEthValue(tx.value)}
+                    </td>
+                    <td class="p-3 text-gray-500 text-[10px]">
+                      {formatTimestamp(tx.timeStamp)}
+                    </td>
+                    <td class="p-3 text-center pr-5">
+                      {#if tx.txreceipt_status === '1' || tx.isError === '0'}
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[8px] font-black uppercase tracking-wider">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          Success
+                        </span>
+                      {:else}
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-[8px] font-black uppercase tracking-wider">
+                          <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                          Failed
+                        </span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              {/if}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 border-t border-white/5 bg-white/[0.005] flex items-center justify-between">
+          <p class="text-[8px] text-gray-500 font-semibold tracking-wide">Contract: {CONTRACT_ADDRESS.slice(0, 10)}...{CONTRACT_ADDRESS.slice(-6)}</p>
+          <p class="text-[8px] text-gray-500 font-semibold tracking-wide">Showing latest {contractTxs.length} transactions</p>
+        </div>
+      </div>
+
     </div>
-  </div>
+  {/if}
 
   <!-- ═══ 1. TOP ROW: SUMMARY METRICS CARDS ═══ -->
+  {#if isAdmin}
+    <div class="flex items-center gap-2.5 pt-2">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+      </div>
+      <h2 class="text-sm font-black uppercase tracking-widest text-white">Your Workspace</h2>
+    </div>
+  {/if}
+
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
     <!-- Card A (Total Private Files) -->
     <div class="group relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.01] p-5 hover:border-blue-500/20 hover:bg-white/[0.03] transition-all duration-300 hover:-translate-y-1 shadow-lg flex flex-col justify-between min-h-[140px]">
@@ -773,7 +1213,7 @@
         <div class="flex items-center justify-between p-4 border-b border-white/5 bg-white/[0.01]">
           <div class="flex items-center gap-2">
             <svg class="w-4.5 h-4.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <h3 class="text-xs font-bold text-white tracking-wide uppercase">Recent Document Activity</h3>
+            <h3 class="text-xs font-bold text-white tracking-wide uppercase">Recent Activity</h3>
           </div>
           <a href="/storage" class="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors">Explorer</a>
         </div>
@@ -814,10 +1254,17 @@
         </div>
       </div>
       <div class="p-3 border-t border-white/5 bg-white/[0.005] flex items-center justify-center">
-        <p class="text-[8px] text-gray-500 font-semibold tracking-wide">Showing up to 5 latest modified files</p>
+        <p class="text-[8px] text-gray-500 font-semibold tracking-wide">Showing up to 5 latest modified items</p>
       </div>
     </div>
 
   </div>
 
 </div>
+
+<!-- ── Profile Preview Modal ── -->
+<ProfilePreviewModal
+  isOpen={showProfileModal}
+  onClose={closeProfileModal}
+  profile={selectedProfile}
+/>

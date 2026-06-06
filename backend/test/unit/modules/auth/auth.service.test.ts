@@ -195,7 +195,7 @@ describe('Feature: wallet authentication and session lifecycle', () => {
       groupPinPolicy: { regions: [{ desiredRegions: ['us-east-1'], minReplicationCount: 1 }] },
     });
     expect(result).toEqual({
-      user: updatedUser,
+      user: { ...updatedUser, nonce: undefined, refreshToken: undefined },
       token: 'access-token',
       refreshToken: 'refresh-token',
       pinataSetup: 'in_progress',
@@ -220,7 +220,7 @@ describe('Feature: wallet authentication and session lifecycle', () => {
     const result = await refreshAccessToken('old-refresh');
 
     expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: user.id }, data: { refreshToken: 'new-refresh' } });
-    expect(result).toEqual({ token: 'new-access', refreshToken: 'new-refresh', user });
+    expect(result).toEqual({ token: 'new-access', refreshToken: 'new-refresh', user: { ...user, nonce: undefined, refreshToken: undefined } });
   });
 
   test('given an active session, when the user logs out, then the stored refresh token is cleared', async () => {

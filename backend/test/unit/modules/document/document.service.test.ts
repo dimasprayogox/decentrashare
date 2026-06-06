@@ -233,13 +233,17 @@ describe('Feature: document privacy, access, and download behavior', () => {
 
   test('given active owned documents, when they are archived, then deletedAt is set and only active owner documents are updated', async () => {
     const { archiveDocuments } = await import('../../../../src/modules/document/document.service');
+    prisma.document.findMany.mockResolvedValue([
+      { id: 'doc-1', title: 'Doc 1', fileHash: 'h1', ipfsHash: 'i1', blockchainTx: 'tx1' },
+      { id: 'doc-2', title: 'Doc 2', fileHash: 'h2', ipfsHash: 'i2', blockchainTx: 'tx2' }
+    ]);
     prisma.document.updateMany.mockResolvedValue({ count: 2 });
 
     const result = await archiveDocuments(['doc-1', 'doc-2'], 'user-1');
 
     expect(result).toEqual({ count: 2 });
     expect(prisma.document.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['doc-1', 'doc-2'] }, ownerId: 'user-1', isArchived: false },
+      where: { id: { in: ['doc-1', 'doc-2'] } },
       data: { isArchived: true, deletedAt: expect.any(Date) },
     });
   });

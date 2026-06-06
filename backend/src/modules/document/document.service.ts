@@ -1155,6 +1155,19 @@ export const moveMultipleDocuments = async (
       movedCount += 1;
     }
 
+    if (movedCount > 0) {
+      await tx.activityLog.createMany({
+        data: documents.map((doc) => ({
+          userId,
+          action: 'MOVE',
+          entityType: 'DOCUMENT',
+          entityId: doc.id,
+          entityName: doc.title,
+          details: `Document moved to ${targetFolderId ? 'Folder' : 'Root'}`
+        }))
+      });
+    }
+
     return {
       count: movedCount,
       appliedPrivacy: targetPrivacy,
@@ -1257,16 +1270,47 @@ export const getUserDocuments = async (userId: string, folderId: string | null) 
  * Ditambah logika: Set privacy ke PRIVATE agar akses orang lain terputus otomatis
  */
 export const archiveDocuments = async (documentIds: string[], userId: string) => {
-  return await prisma.document.updateMany({
-    where: {
-      id: { in: documentIds },
-      ownerId: userId,
-      isArchived: false
-    },
-    data: {
-      isArchived: true,
-      deletedAt: new Date()
+  return await prisma.$transaction(async (tx) => {
+    const docs = await tx.document.findMany({
+      where: {
+        id: { in: documentIds },
+        ownerId: userId,
+        isArchived: false
+      },
+      select: { id: true, title: true, fileHash: true, ipfsHash: true, blockchainTx: true }
+    });
+
+    if (docs.length === 0) return { count: 0 };
+
+    const result = await tx.document.updateMany({
+      where: {
+        id: { in: docs.map(d => d.id) }
+      },
+      data: {
+        isArchived: true,
+        deletedAt: new Date()
+      }
+    });
+
+    try {
+      await tx.activityLog.createMany({
+        data: docs.map(doc => ({
+          userId,
+          action: 'ARCHIVE',
+          entityType: 'DOCUMENT',
+          entityId: doc.id,
+          entityName: doc.title,
+          fileHash: doc.fileHash,
+          ipfsHash: doc.ipfsHash,
+          blockchainTx: doc.blockchainTx,
+          details: `Document archived: ${doc.title}`
+        }))
+      });
+    } catch (err) {
+      logger.error('Failed to log archiveDocuments activity:', err);
     }
+
+    return result;
   });
 };
 
@@ -1389,6 +1433,25 @@ export const restoreDocuments = async (documentIds: string[], userId: string) =>
       }
     }
 
+    try {
+      await tx.activityLog.createMany({
+        data: documents.map(doc => {
+          const renamedItem = rootRenamed.find(r => r.id === doc.id);
+          const entityName = renamedItem ? renamedItem.restoredTitle : doc.title;
+          return {
+            userId,
+            action: 'RESTORE',
+            entityType: 'DOCUMENT',
+            entityId: doc.id,
+            entityName,
+            details: `Document restored: ${entityName}`
+          };
+        })
+      });
+    } catch (err) {
+      logger.error('Failed to log restoreDocuments activity:', err);
+    }
+
     return {
       count: documents.length,
       movedToRootCount: restoreToRootDocuments.length,
@@ -1411,19 +1474,23 @@ export const destroyMultipleDocuments = async (documentIds: string[], userId: st
     if (docs.length === 0) return { count: 0 };
 
     // 2. CATAT KE ACTIVITY LOG (Sesuai skema baru)
-    await tx.activityLog.createMany({
-      data: docs.map(doc => ({
-        userId: userId,
-        action: "PERMANENT_DELETE",
-        entityType: "DOCUMENT",
-        entityId: doc.id,
-        entityName: doc.title,
-        fileHash: doc.fileHash,
-        ipfsHash: doc.ipfsHash,
-        blockchainTx: doc.blockchainTx,
-        details: "Document and its access records permanently purged."
-      }))
-    });
+    try {
+      await tx.activityLog.createMany({
+        data: docs.map(doc => ({
+          userId: userId,
+          action: "PERMANENT_DELETE",
+          entityType: "DOCUMENT",
+          entityId: doc.id,
+          entityName: doc.title,
+          fileHash: doc.fileHash,
+          ipfsHash: doc.ipfsHash,
+          blockchainTx: doc.blockchainTx,
+          details: "Document and its access records permanently purged."
+        }))
+      });
+    } catch (err) {
+      logger.error('Failed to log destroyMultipleDocuments activity:', err);
+    }
 
     // --- LANGKAH BARU: BERSIHKAN RELASI ---
     // 3. Hapus semua record akses (Foreign Key) yang terkait dokumen ini
@@ -1506,10 +1573,30 @@ export const updateDocumentMetadata = async (
   }
 
   // 3. Update document (updatedAt will auto-update via @updatedAt)
-  return await prisma.document.update({
+  const updatedDoc = await prisma.document.update({
     where: { id: documentId },
     data: updateData
   });
+
+  try {
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: 'RENAME',
+        entityType: 'DOCUMENT',
+        entityId: documentId,
+        entityName: updatedDoc.title,
+        fileHash: updatedDoc.fileHash,
+        ipfsHash: updatedDoc.ipfsHash,
+        blockchainTx: updatedDoc.blockchainTx,
+        details: updates.title ? `Document renamed from ${doc.title} to ${updatedDoc.title}` : `Document description updated`
+      }
+    });
+  } catch (err) {
+    logger.error('Failed to log updateDocumentMetadata activity:', err);
+  }
+
+  return updatedDoc;
 };
 
   /**
@@ -1542,6 +1629,28 @@ export const updateDocumentsPrivacy = async (
           where: { documentId: item.documentId }
         });
         accessDeleted = deleted.count;
+      }
+
+      if (docUpdate.count > 0) {
+        const doc = await tx.document.findUnique({
+          where: { id: item.documentId },
+          select: { title: true, fileHash: true, ipfsHash: true, blockchainTx: true }
+        });
+        if (doc) {
+          await tx.activityLog.create({
+            data: {
+              userId: ownerId,
+              action: 'CHANGE_PRIVACY',
+              entityType: 'DOCUMENT',
+              entityId: item.documentId,
+              entityName: doc.title,
+              fileHash: doc.fileHash,
+              ipfsHash: doc.ipfsHash,
+              blockchainTx: doc.blockchainTx,
+              details: `Document privacy changed to ${item.newPrivacy}`
+            }
+          });
+        }
       }
 
       results.push({
@@ -1599,6 +1708,20 @@ export const shareDocumentsToUsers = async (
       await tx.document.update({
         where: { id: item.documentId },
         data: { privacy: 'SPECIFIC_USER' }
+      });
+
+      await tx.activityLog.create({
+        data: {
+          userId: ownerId,
+          action: 'SHARE',
+          entityType: 'DOCUMENT',
+          entityId: item.documentId,
+          entityName: doc.title,
+          fileHash: doc.fileHash,
+          ipfsHash: doc.ipfsHash,
+          blockchainTx: doc.blockchainTx,
+          details: `Document shared with ${item.targetUsers.length} user(s)`
+        }
       });
 
       finalResults.push({ documentId: item.documentId, sharedWith: docResults });
@@ -1661,6 +1784,20 @@ export const revokeDocumentsAccess = async (
         });
         updatedPrivacy = updatedDoc.privacy;
       }
+
+      await tx.activityLog.create({
+        data: {
+          userId: ownerId,
+          action: 'REVOKE',
+          entityType: 'DOCUMENT',
+          entityId: item.documentId,
+          entityName: doc.title,
+          fileHash: doc.fileHash,
+          ipfsHash: doc.ipfsHash,
+          blockchainTx: doc.blockchainTx,
+          details: `Document access revoked for ${item.targetUserIds.length} user(s)`
+        }
+      });
 
       finalResults.push({ 
         documentId: item.documentId, 

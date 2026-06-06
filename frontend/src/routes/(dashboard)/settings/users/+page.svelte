@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { adminService } from '$lib/services/admin/admin';
+  import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
   import type { AdminUser, UserRole, AdminPagination } from '$lib/types/admin';
 
   // ── State ──
@@ -16,12 +17,46 @@
   let roleFilter = $state<'' | UserRole>('');
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // ── Pagination limit selector ──
+  const paginationOptions = [5, 10, 20, 50, 100];
+  let limitSelectorOpen = $state(false);
+
   // ── Per-row action state ──
   let savingUserId = $state<string | null>(null);
 
   // ── Role confirm modal ──
   let roleTarget = $state<AdminUser | null>(null);
   let pendingRole = $state<UserRole>('USER');
+
+  // ── Profile preview modal ──
+  type Profile = {
+    id: string;
+    username?: string | null;
+    email?: string | null;
+    walletAddress: string;
+    avatarUrl?: string | null;
+    bio?: string | null;
+    website?: string | null;
+    joinedAt?: string | Date;
+  };
+  let showProfileModal = $state(false);
+  let selectedProfile = $state<Profile | null>(null);
+
+  function openProfileModal(user: AdminUser) {
+    selectedProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      walletAddress: user.walletAddress,
+      avatarUrl: user.avatarUrl,
+      joinedAt: user.createdAt,
+    };
+    showProfileModal = true;
+  }
+  function closeProfileModal() {
+    showProfileModal = false;
+    selectedProfile = null;
+  }
 
   // ── Helpers ──
   function formatAddress(address: string): string {
@@ -62,6 +97,12 @@
     }
   }
 
+  function changeLimit(newLimit: number) {
+    pagination.limit = newLimit;
+    loadUsers(1);
+    limitSelectorOpen = false;
+  }
+
   onMount(() => loadUsers(1));
 
   function onSearchInput() {
@@ -73,6 +114,35 @@
     if (p < 1 || p > pagination.totalPages || p === pagination.page) return;
     loadUsers(p);
   }
+
+  // Daftar nomor halaman yang ditampilkan (dengan ellipsis bila banyak)
+  const pageNumbers = $derived.by<(number | '...')[]>(() => {
+    const total = pagination.totalPages;
+    const current = pagination.page;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+    const pages: (number | '...')[] = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push('...');
+    pages.push(total);
+    return pages;
+  });
+
+  // Tutup limit selector saat klik di luar
+  $effect(() => {
+    if (!limitSelectorOpen) return;
+    function handleClick(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest?.('[data-limit-selector]')) {
+        limitSelectorOpen = false;
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  });
 
   // ── Role change ──
   function openRoleConfirm(user: AdminUser) {
@@ -135,20 +205,11 @@
         </div>
         <div>
           <h1 class="text-lg md:text-xl font-semibold text-white">Manage Users</h1>
-          <p class="text-xs text-gray-500">Promote or demote user roles</p>
-        </div>
+      </div>
       </div>
       <div class="text-sm text-gray-400">
-        <span class="font-semibold text-white">{pagination.total}</span> total users
+        <span class=" text-blue-400">{pagination.total}</span> total users
       </div>
-    </div>
-
-    <!-- Quick link to storage limits -->
-    <div class="mb-5">
-      <a href="/settings/set-limit" class="inline-flex items-center gap-2 text-xs text-blue-300 hover:text-blue-200 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
-        Manage storage limits →
-      </a>
     </div>
 
     <!-- Message banner -->
@@ -185,9 +246,9 @@
         aria-label="Filter by role"
         class="h-10 px-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500/50 text-sm"
       >
-        <option value="">All roles</option>
-        <option value="USER">User</option>
-        <option value="ADMIN">Admin</option>
+        <option class="bg-[#0a0a0f] text-white" value="">All roles</option>
+        <option class="bg-[#0a0a0f] text-white" value="USER">User</option>
+        <option class="bg-[#0a0a0f] text-white" value="ADMIN">Admin</option>
       </select>
     </div>
 
@@ -210,12 +271,12 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="text-left text-gray-500 border-b border-white/5 text-xs uppercase tracking-wider">
-                <th class="px-4 py-3 font-medium">User</th>
-                <th class="px-4 py-3 font-medium">Role</th>
-                <th class="px-4 py-3 font-medium hidden md:table-cell">Email</th>
-                <th class="px-4 py-3 font-medium hidden lg:table-cell">Joined</th>
-                <th class="px-4 py-3 font-medium text-right">Actions</th>
+              <tr class="text-gray-500 border-b border-white/5 text-xs uppercase tracking-wider">
+                <th class="px-4 py-3 font-medium text-center">User</th>
+                <th class="px-4 py-3 font-medium text-center">Role</th>
+                <th class="px-4 py-3 font-medium hidden md:table-cell text-center">Email</th>
+                <th class="px-4 py-3 font-medium hidden lg:table-cell text-center">Joined</th>
+                <th class="px-4 py-3 font-medium text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -223,24 +284,32 @@
                 <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                   <!-- User -->
                   <td class="px-4 py-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center shrink-0">
+                    <button
+                      type="button"
+                      onclick={() => openProfileModal(user)}
+                      title={user.walletAddress}
+                      class="group/owner mx-auto flex items-center gap-3 px-2 py-1.5 rounded-lg
+                             hover:bg-white/5 hover:scale-[1.02] active:scale-[0.98]
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                             transition-all duration-200 ease-out"
+                    >
+                      <div class="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover/owner:border-blue-400/50 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)] flex items-center justify-center shrink-0 transition-all duration-200">
                         {#if user.avatarUrl}
                           <img src={user.avatarUrl} alt="" class="w-full h-full object-cover" />
                         {:else}
                           <span class="text-sm font-bold text-blue-300">{getInitial(user)}</span>
                         {/if}
                       </div>
-                      <div class="min-w-0">
-                        <p class="font-medium text-white truncate">{user.username || 'No username'}</p>
+                      <div class="min-w-0 text-left">
+                        <p class="font-medium text-white truncate group-hover/owner:text-blue-300 transition-colors">{user.username || 'No username'}</p>
                         <p class="text-xs text-gray-500 truncate font-mono">{formatAddress(user.walletAddress)}</p>
                       </div>
-                    </div>
+                    </button>
                   </td>
 
                   <!-- Role -->
-                  <td class="px-4 py-3">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
+                  <td class="px-4 py-3 text-center">
+                    <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-medium
                       {user.role === 'ADMIN'
                         ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
                         : 'bg-white/5 text-gray-300 border border-white/10'}">
@@ -249,18 +318,18 @@
                   </td>
 
                   <!-- Email -->
-                  <td class="px-4 py-3 hidden md:table-cell text-gray-400 truncate max-w-[220px]">
-                    {user.email || '—'}
+                  <td class="px-4 py-3 hidden md:table-cell text-gray-400 text-center">
+                    <span class="block truncate max-w-[220px] mx-auto">{user.email || '—'}</span>
                   </td>
 
                   <!-- Joined -->
-                  <td class="px-4 py-3 hidden lg:table-cell text-gray-500 text-xs">
+                  <td class="px-4 py-3 hidden lg:table-cell text-gray-500 text-xs text-center">
                     {formatDate(user.createdAt)}
                   </td>
 
                   <!-- Actions -->
                   <td class="px-4 py-3">
-                    <div class="flex items-center justify-end">
+                    <div class="flex items-center justify-center">
                       <button
                         type="button"
                         onclick={() => openRoleConfirm(user)}
@@ -280,18 +349,84 @@
           </table>
         </div>
 
-        <!-- Pagination -->
-        {#if pagination.totalPages > 1}
-          <div class="flex items-center justify-between px-4 py-3 border-t border-white/5">
-            <p class="text-xs text-gray-500">Page {pagination.page} of {pagination.totalPages}</p>
-            <div class="flex items-center gap-1">
-              <button type="button" onclick={() => goToPage(pagination.page - 1)} disabled={pagination.page <= 1}
-                class="px-3 py-1.5 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
-              <button type="button" onclick={() => goToPage(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
-                class="px-3 py-1.5 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+        <!-- Pagination Bar -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 border-t border-white/5 bg-white/[0.015]">
+          <!-- Left: info + rows-per-page -->
+          <div class="flex items-center gap-4 text-xs text-gray-500">
+            <span>
+              Showing <span class="text-gray-200 font-semibold">{users.length}</span>
+              of <span class="text-gray-200 font-semibold">{pagination.total}</span> users
+            </span>
+
+            <span class="hidden sm:block w-px h-4 bg-white/10"></span>
+
+            <!-- Rows per page selector -->
+            <div class="relative shrink-0 flex items-center gap-2" data-limit-selector>
+              <span class="hidden sm:inline text-gray-500">Rows</span>
+              <button
+                type="button"
+                onclick={() => (limitSelectorOpen = !limitSelectorOpen)}
+                class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-200 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-white/20 transition-all"
+                aria-label="Select items per page"
+                aria-expanded={limitSelectorOpen}
+              >
+                {pagination.limit}
+                <svg class="w-3.5 h-3.5 text-gray-400 transition-transform {limitSelectorOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+
+              {#if limitSelectorOpen}
+                <div in:fade={{ duration: 120 }}
+                     class="absolute bottom-full left-0 mb-2 w-28 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-1.5 z-50 overflow-hidden">
+                  {#each paginationOptions as option}
+                    <button onclick={() => changeLimit(option)}
+                            class="w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors hover:bg-blue-500/10 hover:text-blue-300 {pagination.limit === option ? 'text-blue-300' : 'text-gray-300'}">
+                      <span>{option}</span>
+                      {#if pagination.limit === option}
+                        <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                      {/if}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
             </div>
           </div>
-        {/if}
+
+          <!-- Right: page navigation -->
+          {#if pagination.totalPages > 1}
+            <div class="flex items-center gap-1">
+              <!-- Prev -->
+              <button type="button" onclick={() => goToPage(pagination.page - 1)} disabled={pagination.page <= 1}
+                aria-label="Previous page"
+                class="w-8 h-8 flex items-center justify-center text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+              </button>
+
+              <!-- Page numbers -->
+              {#each pageNumbers as p}
+                {#if p === '...'}
+                  <span class="w-8 h-8 flex items-center justify-center text-xs text-gray-600">…</span>
+                {:else}
+                  <button type="button" onclick={() => goToPage(p)}
+                    aria-label={`Go to page ${p}`}
+                    aria-current={p === pagination.page ? 'page' : undefined}
+                    class="min-w-8 h-8 px-2.5 flex items-center justify-center text-xs rounded-lg border transition-all
+                      {p === pagination.page
+                        ? 'bg-blue-500/20 border-blue-500/40 text-blue-300 font-semibold shadow-[0_0_10px_rgba(59,130,246,0.25)]'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}">
+                    {p}
+                  </button>
+                {/if}
+              {/each}
+
+              <!-- Next -->
+              <button type="button" onclick={() => goToPage(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
+                aria-label="Next page"
+                class="w-8 h-8 flex items-center justify-center text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          {/if}
+        </div>
       {/if}
     </div>
   </div>
@@ -327,3 +462,10 @@
     </div>
   </div>
 {/if}
+
+<!-- ── Profile Preview Modal ── -->
+<ProfilePreviewModal
+  isOpen={showProfileModal}
+  onClose={closeProfileModal}
+  profile={selectedProfile}
+/>

@@ -293,8 +293,9 @@ export interface GetPublicProfileResponse extends StorageApiResponse {
 export interface GetStorageUsageResponse extends StorageApiResponse {
   data: {
     usedBytes: number;
-    quotaBytes: number;
+    quotaBytes: number | null;
     usagePercent: number;
+    unlimited?: boolean;
   };
 }
 

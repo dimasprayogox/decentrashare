@@ -479,6 +479,20 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
       }
     });
 
+    await prisma.activityLog.create({
+      data: {
+        userId: userId!,
+        action: 'BLOCKCHAIN_CONFIRM',
+        entityType: 'DOCUMENT',
+        entityId: id,
+        entityName: updated.title,
+        fileHash: updated.fileHash,
+        ipfsHash: updated.ipfsHash,
+        blockchainTx: txHash,
+        details: `Document confirmed on blockchain`
+      }
+    }).catch(err => logger.error('Failed to log confirmDocumentOnChain activity:', err));
+
     res.json({ success: true, message: "Document recorded on blockchain", data: updated });
 
   } catch (error: any) {

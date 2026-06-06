@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { adminService } from '$lib/services/admin/admin';
+  import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
   import type { AdminUser, AdminPagination } from '$lib/types/admin';
 
   // ── State ──
@@ -11,15 +12,89 @@
   let isRefreshing = $state(false);
   let message = $state<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // ── Filters ──
+  // ── Filters & Sort (dropdown gaya Google Drive seperti di Header) ──
   let searchQuery = $state('');
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let roleFilter = $state<'' | 'USER' | 'ADMIN'>('');
+  type SortField = 'name' | 'usage';
+  type SortDir = 'asc' | 'desc';
+  let sortField = $state<SortField>('name');
+  let sortDir = $state<SortDir>('asc');
+  let showSortDropdown = $state(false);
+
+  // ── Pagination limit selector ──
+  const paginationOptions = [5, 10, 20, 50, 100];
+  let limitSelectorOpen = $state(false);
+
+  // Daftar user yang sudah diurutkan (client-side, pada data yang tampil)
+  const sortedUsers = $derived.by(() => {
+    const list = [...users];
+    const nameOf = (u: AdminUser) => (u.username || u.walletAddress || '').toLowerCase();
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortField === 'usage') {
+      list.sort((a, b) => ((a.storage?.usedBytes ?? 0) - (b.storage?.usedBytes ?? 0)) * dir);
+    } else {
+      list.sort((a, b) => nameOf(a).localeCompare(nameOf(b)) * dir);
+    }
+    return list;
+  });
+
+  // Label untuk grup "Show"
+  const roleOptions = [
+    { value: '' as const, label: 'All users' },
+    { value: 'USER' as const, label: 'User only' },
+    { value: 'ADMIN' as const, label: 'Admin only' },
+  ];
+
+  function applyRoleFilter(value: '' | 'USER' | 'ADMIN') {
+    if (value === roleFilter) return;
+    roleFilter = value;
+    loadUsers(1); // filter role di sisi server
+  }
+  function applySortField(field: SortField) {
+    sortField = field;
+  }
+  function applySortDir(dir: SortDir) {
+    sortDir = dir;
+  }
 
   // ── Storage limit modal ──
   let editingUser = $state<AdminUser | null>(null);
   let limitValue = $state<number>(0);
   let limitUnit = $state<'MB' | 'GB'>('GB');
   let isSavingLimit = $state(false);
+  let limitError = $state<string | null>(null); // Error khusus di dalam modal set-limit
+
+  // ── Profile preview modal ──
+  type Profile = {
+    id: string;
+    username?: string | null;
+    email?: string | null;
+    walletAddress: string;
+    avatarUrl?: string | null;
+    bio?: string | null;
+    website?: string | null;
+    joinedAt?: string | Date;
+  };
+  let showProfileModal = $state(false);
+  let selectedProfile = $state<Profile | null>(null);
+
+  function openProfileModal(user: AdminUser) {
+    selectedProfile = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      walletAddress: user.walletAddress,
+      avatarUrl: user.avatarUrl,
+      joinedAt: user.createdAt,
+    };
+    showProfileModal = true;
+  }
+  function closeProfileModal() {
+    showProfileModal = false;
+    selectedProfile = null;
+  }
 
   // ── Helpers ──
   function formatBytes(bytes: number | null): string {
@@ -46,6 +121,7 @@
     try {
       const res = await adminService.listUsers({
         query: searchQuery.trim() || undefined,
+        role: roleFilter || undefined,
         page,
         limit: pagination.limit,
       });
@@ -63,6 +139,12 @@
     }
   }
 
+  function changeLimit(newLimit: number) {
+    pagination.limit = newLimit;
+    loadUsers(1);
+    limitSelectorOpen = false;
+  }
+
   onMount(() => loadUsers(1));
 
   function onSearchInput() {
@@ -74,10 +156,53 @@
     loadUsers(p);
   }
 
+  // Daftar nomor halaman yang ditampilkan (dengan ellipsis bila banyak)
+  const pageNumbers = $derived.by<(number | '...')[]>(() => {
+    const total = pagination.totalPages;
+    const current = pagination.page;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+    const pages: (number | '...')[] = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push('...');
+    pages.push(total);
+    return pages;
+  });
+
+  // Tutup dropdown sort saat klik di luar
+  $effect(() => {
+    if (!showSortDropdown) return;
+    function handleClick(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest?.('[data-sort-container]')) {
+        showSortDropdown = false;
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  });
+
+  // Tutup limit selector saat klik di luar
+  $effect(() => {
+    if (!limitSelectorOpen) return;
+    function handleClick(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest?.('[data-limit-selector]')) {
+        limitSelectorOpen = false;
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  });
+
   // ── Storage limit ──
   function openLimitModal(user: AdminUser) {
     if (user.role === 'ADMIN') return; // admin = unlimited, tidak bisa di-set
     editingUser = user;
+    limitError = null;
     const baseBytes = user.storageLimit ?? 5 * 1024 * 1024 * 1024;
     if (baseBytes >= 1024 * 1024 * 1024) {
       limitUnit = 'GB';
@@ -91,6 +216,7 @@
   function closeLimitModal() {
     editingUser = null;
     limitValue = 0;
+    limitError = null;
   }
 
   const limitBytesPreview = $derived(
@@ -102,13 +228,14 @@
   async function saveStorageLimit() {
     if (!editingUser) return;
     const target = editingUser;
+    limitError = null;
 
     if (!Number.isFinite(limitValue) || limitValue < 0) {
-      message = { type: 'error', text: 'Storage limit must be a non-negative number' };
+      limitError = 'Storage limit must be a non-negative number';
       return;
     }
     if (limitBytesPreview < target.storage.usedBytes) {
-      message = { type: 'error', text: `Limit cannot be lower than used storage (${formatBytes(target.storage.usedBytes)})` };
+      limitError = `Limit cannot be lower than used storage (${formatBytes(target.storage.usedBytes)})`;
       return;
     }
 
@@ -126,10 +253,10 @@
         message = { type: 'success', text: `Storage limit updated for ${target.username || formatAddress(target.walletAddress)}` };
         closeLimitModal();
       } else {
-        message = { type: 'error', text: res?.message || 'Failed to update storage limit' };
+        limitError = res?.message || 'Failed to update storage limit';
       }
     } catch (err: any) {
-      message = { type: 'error', text: err?.message || 'Failed to update storage limit' };
+      limitError = err?.message || 'Failed to update storage limit';
     } finally {
       isSavingLimit = false;
     }
@@ -151,20 +278,11 @@
         </div>
         <div>
           <h1 class="text-lg md:text-xl font-semibold text-white">Storage Limits</h1>
-          <p class="text-xs text-gray-500">Set per-user storage quota (admins are always unlimited)</p>
         </div>
       </div>
       <div class="text-sm text-gray-400">
-        <span class="font-semibold text-white">{pagination.total}</span> total users
+        <span class=" text-blue-400">{pagination.total}</span> total users
       </div>
-    </div>
-
-    <!-- Quick link to manage users -->
-    <div class="mb-5">
-      <a href="/settings/users" class="inline-flex items-center gap-2 text-xs text-blue-300 hover:text-blue-200 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        Manage user roles →
-      </a>
     </div>
 
     <!-- Message banner -->
@@ -181,9 +299,9 @@
       </div>
     {/if}
 
-    <!-- Search -->
-    <div class="mb-5">
-      <div class="relative">
+    <!-- Search + Sort (dropdown gaya Google Drive) -->
+    <div class="mb-5 flex items-center gap-3">
+      <div class="relative flex-1">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/>
         </svg>
@@ -195,12 +313,82 @@
           class="w-full h-10 pl-10 pr-4 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
         />
       </div>
+
+      <!-- Sort control -->
+      <div class="relative shrink-0" data-sort-container>
+        <button
+          type="button"
+          onclick={() => (showSortDropdown = !showSortDropdown)}
+          class="h-10 px-3 flex items-center gap-2 bg-white/5 border border-white/10 text-gray-300 rounded-lg hover:bg-white/10 hover:text-white transition-all text-sm"
+          aria-label="Filter and sort users"
+          aria-expanded={showSortDropdown}
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
+          <span class="hidden sm:inline">Filter & Sort</span>
+        </button>
+
+        {#if showSortDropdown}
+          <div in:fade={{ duration: 120 }}
+               class="absolute right-0 mt-2 w-64 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-2 z-[70] overflow-hidden">
+
+            <!-- Show (filter role) -->
+            <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Show</div>
+            {#each roleOptions as opt (opt.value)}
+              <button onclick={() => applyRoleFilter(opt.value)}
+                      class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/10 hover:text-white {roleFilter === opt.value ? 'bg-blue-500/10 text-blue-300' : 'text-gray-300'}">
+                <span>{opt.label}</span>
+                {#if roleFilter === opt.value}
+                  <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                {/if}
+              </button>
+            {/each}
+
+            <div class="my-2 border-t border-white/10"></div>
+
+            <!-- Sort by -->
+            <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Sort by</div>
+            <button onclick={() => applySortField('name')}
+                    class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/10 hover:text-white {sortField === 'name' ? 'bg-blue-500/10 text-blue-300' : 'text-gray-300'}">
+              <span>Name</span>
+              {#if sortField === 'name'}
+                <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              {/if}
+            </button>
+            <button onclick={() => applySortField('usage')}
+                    class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/10 hover:text-white {sortField === 'usage' ? 'bg-blue-500/10 text-blue-300' : 'text-gray-300'}">
+              <span>Storage usage</span>
+              {#if sortField === 'usage'}
+                <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              {/if}
+            </button>
+
+            <div class="my-2 border-t border-white/10"></div>
+
+            <!-- Order -->
+            <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Order</div>
+            <button onclick={() => applySortDir('asc')}
+                    class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/10 hover:text-white {sortDir === 'asc' ? 'bg-blue-500/10 text-blue-300' : 'text-gray-300'}">
+              <span>{sortField === 'usage' ? 'Low → High' : 'A → Z'}</span>
+              {#if sortDir === 'asc'}
+                <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              {/if}
+            </button>
+            <button onclick={() => applySortDir('desc')}
+                    class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/10 hover:text-white {sortDir === 'desc' ? 'bg-blue-500/10 text-blue-300' : 'text-gray-300'}">
+              <span>{sortField === 'usage' ? 'High → Low' : 'Z → A'}</span>
+              {#if sortDir === 'desc'}
+                <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              {/if}
+            </button>
+          </div>
+        {/if}
+      </div>
     </div>
 
     <!-- Table -->
-    <div class="relative backdrop-blur-2xl bg-[#0a0a0f]/80 border border-white/10 rounded-2xl shadow-xl overflow-hidden">
+    <div class="relative backdrop-blur-2xl bg-[#0a0a0f]/80   rounded-2xl shadow-xl overflow-hidden">
       {#if isRefreshing}
-        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 animate-pulse"></div>
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-blue-500 to-cyan-500 animate-pulse"></div>
       {/if}
 
       {#if isLoading}
@@ -216,39 +404,47 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="text-left text-gray-500 border-b border-white/5 text-xs uppercase tracking-wider">
-                <th class="px-4 py-3 font-medium">User</th>
-                <th class="px-4 py-3 font-medium">Role</th>
-                <th class="px-4 py-3 font-medium">Storage Usage</th>
-                <th class="px-4 py-3 font-medium hidden md:table-cell">Files</th>
-                <th class="px-4 py-3 font-medium text-right">Actions</th>
+              <tr class="text-gray-500 border-b border-white/5 text-xs uppercase tracking-wider">
+                <th class="px-4 py-3 font-medium text-left">User</th>
+                <th class="px-4 py-3 font-medium text-center">Role</th>
+                <th class="px-4 py-3 font-medium text-left">Storage Usage</th>
+                <th class="px-4 py-3 font-medium hidden md:table-cell text-center">Files</th>
+                <th class="px-4 py-3 font-medium text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {#each users as user (user.id)}
+              {#each sortedUsers as user (user.id)}
                 <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                   <!-- User -->
                   <td class="px-4 py-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center shrink-0">
+                    <button
+                      type="button"
+                      onclick={() => openProfileModal(user)}
+                      title={user.walletAddress}
+                      class="group/owner flex items-left gap-3 px-2 py-1.5 rounded-lg
+                             hover:bg-white/5 hover:scale-[1.02] active:scale-[0.98]
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                             transition-all duration-200 ease-out"
+                    >
+                      <div class="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-blue-500/20 border border-white/10 group-hover/owner:border-blue-400/50 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)] flex items-center justify-center shrink-0 transition-all duration-200">
                         {#if user.avatarUrl}
                           <img src={user.avatarUrl} alt="" class="w-full h-full object-cover" />
                         {:else}
                           <span class="text-sm font-bold text-blue-300">{getInitial(user)}</span>
                         {/if}
                       </div>
-                      <div class="min-w-0">
-                        <p class="font-medium text-white truncate">{user.username || 'No username'}</p>
+                      <div class="min-w-0 text-left">
+                        <p class="font-medium text-white truncate group-hover/owner:text-blue-300 transition-colors">{user.username || 'No username'}</p>
                         <p class="text-xs text-gray-500 truncate font-mono">{formatAddress(user.walletAddress)}</p>
                       </div>
-                    </div>
+                    </button>
                   </td>
 
                   <!-- Role -->
-                  <td class="px-4 py-3">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
+                  <td class="px-4 py-3 text-center">
+                    <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-medium
                       {user.role === 'ADMIN'
-                        ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                        ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
                         : 'bg-white/5 text-gray-300 border border-white/10'}">
                       {user.role}
                     </span>
@@ -257,11 +453,11 @@
                   <!-- Storage -->
                   <td class="px-4 py-3 min-w-[200px]">
                     {#if user.role === 'ADMIN' || user.storageLimit === null}
-                      <div class="flex items-center gap-1.5 text-xs">
-                        <svg class="w-3.5 h-3.5 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="flex items-center justify-left gap-1.5 text-xs">
+                        <svg class="w-3.5 h-3.5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
-                        <span class="text-purple-300 font-medium">Unlimited</span>
+                        <span class="text-blue-300 font-medium">Unlimited</span>
                         <span class="text-gray-500">· {formatBytes(user.storage.usedBytes)} used</span>
                       </div>
                     {:else}
@@ -284,13 +480,13 @@
                   </td>
 
                   <!-- Files -->
-                  <td class="px-4 py-3 hidden md:table-cell text-gray-400">
+                  <td class="px-4 py-3 hidden md:table-cell text-gray-400 text-center">
                     {user._count?.documents ?? 0}
                   </td>
 
                   <!-- Actions -->
                   <td class="px-4 py-3">
-                    <div class="flex items-center justify-end">
+                    <div class="flex items-center justify-center">
                       {#if user.role === 'ADMIN'}
                         <span class="text-xs text-gray-500 italic">Unlimited (admin)</span>
                       {:else}
@@ -311,17 +507,77 @@
         </div>
 
         <!-- Pagination -->
-        {#if pagination.totalPages > 1}
-          <div class="flex items-center justify-between px-4 py-3 border-t border-white/5">
-            <p class="text-xs text-gray-500">Page {pagination.page} of {pagination.totalPages}</p>
-            <div class="flex items-center gap-1">
-              <button type="button" onclick={() => goToPage(pagination.page - 1)} disabled={pagination.page <= 1}
-                class="px-3 py-1.5 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Previous</button>
-              <button type="button" onclick={() => goToPage(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
-                class="px-3 py-1.5 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-white/5">
+          <p class="text-xs text-gray-500">
+            Showing <span class="text-gray-300 font-medium">{users.length}</span> of {pagination.total} users
+            {#if pagination.totalPages > 1}
+              · page <span class="text-gray-300 font-medium">{pagination.page}</span> of {pagination.totalPages}
+            {/if}
+          </p>
+          <div class="flex items-center gap-4">
+            <!-- Pagination limit selector (bottom) -->
+            <div class="relative shrink-0" data-limit-selector>
+              <button
+                type="button"
+                onclick={() => (limitSelectorOpen = !limitSelectorOpen)}
+                class="px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all"
+                aria-label="Select items per page"
+                aria-expanded={limitSelectorOpen}
+              >
+                <svg class="w-3.5 h-3.5 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                {pagination.limit} / page
+              </button>
+
+              {#if limitSelectorOpen}
+                <div in:fade={{ duration: 120 }}
+                     class="absolute right-0 mt-2 w-32 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-2 z-50 overflow-hidden">
+                  {#each paginationOptions as option}
+                    <button onclick={() => changeLimit(option)}
+                            class="w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-blue-500/10 hover:text-blue-300 {pagination.limit === option ? 'bg-blue-500/20 text-blue-300' : 'text-gray-300'}">
+                      {option} per page
+                    </button>
+                  {/each}
+                </div>
+              {/if}
             </div>
+
+            <!-- Pagination controls (only show if totalPages > 1) -->
+            {#if pagination.totalPages > 1}
+              <div class="flex items-center gap-1">
+                <!-- Prev -->
+                <button type="button" onclick={() => goToPage(pagination.page - 1)} disabled={pagination.page <= 1}
+                  aria-label="Previous page"
+                  class="w-7 h-7 flex items-center justify-center text-xs text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+
+                <!-- Page numbers -->
+                {#each pageNumbers as p}
+                  {#if p === '...'}
+                    <span class="w-7 h-7 flex items-center justify-center text-xs text-gray-600">…</span>
+                  {:else}
+                    <button type="button" onclick={() => goToPage(p)}
+                      aria-label={`Go to page ${p}`}
+                      aria-current={p === pagination.page ? 'page' : undefined}
+                      class="min-w-7 h-7 px-2 flex items-center justify-center text-xs rounded-lg border transition-colors
+                        {p === pagination.page
+                          ? 'bg-blue-500/20 border-blue-500/40 text-blue-300 font-semibold'
+                          : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}">
+                      {p}
+                    </button>
+                  {/if}
+                {/each}
+
+                <!-- Next -->
+                <button type="button" onclick={() => goToPage(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
+                  aria-label="Next page"
+                  class="w-7 h-7 flex items-center justify-center text-xs text-gray-300 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            {/if}
           </div>
-        {/if}
+        </div>
       {/if}
     </div>
   </div>
@@ -333,7 +589,7 @@
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick={closeLimitModal} aria-hidden="true"></div>
     <div class="relative w-full max-w-md bg-[#0a0a0f] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
          in:fly={{ y: 20, duration: 200 }}>
-      <div class="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500"></div>
+      <div class="h-1 bg-gradient-to-r from-blue-500 via-blue-500 to-cyan-500"></div>
       <div class="p-6">
         <h2 class="text-lg font-semibold text-white mb-1">Set Storage Limit</h2>
         <p class="text-xs text-gray-500 mb-5">
@@ -345,6 +601,7 @@
           <input
             id="limit-input"
             bind:value={limitValue}
+            oninput={() => (limitError = null)}
             type="number"
             min="0"
             step={limitUnit === 'GB' ? '0.5' : '1'}
@@ -352,14 +609,23 @@
           />
           <select
             bind:value={limitUnit}
+            onchange={() => (limitError = null)}
             aria-label="Storage limit unit"
             class="h-10 px-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500/50 text-sm"
           >
-            <option value="MB">MB</option>
-            <option value="GB">GB</option>
+            <option class="bg-[#0a0a0f] text-white" value="MB">MB</option>
+            <option class="bg-[#0a0a0f] text-white" value="GB">GB</option>
           </select>
         </div>
         <p class="mt-2 text-xs text-gray-500">= {formatBytes(limitBytesPreview)} ({limitBytesPreview.toLocaleString()} bytes)</p>
+
+        {#if limitError}
+          <div in:fade={{ duration: 150 }}
+               class="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-2">
+            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="flex-1">{limitError}</span>
+          </div>
+        {/if}
 
         <div class="flex justify-end gap-2 mt-6">
           <button type="button" onclick={closeLimitModal}
@@ -373,3 +639,10 @@
     </div>
   </div>
 {/if}
+
+<!-- ── Profile Preview Modal ── -->
+<ProfilePreviewModal
+  isOpen={showProfileModal}
+  onClose={closeProfileModal}
+  profile={selectedProfile}
+/>

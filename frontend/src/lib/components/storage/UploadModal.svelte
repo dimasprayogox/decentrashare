@@ -193,6 +193,36 @@
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  // ✅ Pre-flight storage quota check.
+  // Mengembalikan pesan error jika upload akan melebihi batas, atau null jika aman.
+  async function checkStorageQuota(filesToUpload: File[]): Promise<string | null> {
+    try {
+      const res = await storageService.getMyStorageUsage();
+      const usage = res?.data;
+      if (!usage) return null; // gagal ambil data → biarkan backend yang validasi
+
+      // Unlimited (mis. ADMIN): quotaBytes null → tidak ada batas
+      if (usage.unlimited === true || usage.quotaBytes === null || usage.quotaBytes === undefined) {
+        return null;
+      }
+
+      const incomingBytes = filesToUpload.reduce((sum, f) => sum + (f.size ?? 0), 0);
+      const projected = usage.usedBytes + incomingBytes;
+
+      if (projected > usage.quotaBytes) {
+        const remaining = Math.max(0, usage.quotaBytes - usage.usedBytes);
+        return `Storage limit exceeded. You have ${formatSize(remaining)} free of ${formatSize(usage.quotaBytes)}, `
+          + `but selected files total ${formatSize(incomingBytes)}. `
+          + `Remove some files or ask an admin to increase your limit.`;
+      }
+      return null;
+    } catch (err) {
+      // Jika cek gagal, jangan blokir — biarkan backend yang menolak bila perlu.
+      console.warn('[UploadModal] Storage quota pre-check failed:', err);
+      return null;
+    }
+  }
+
   // ── File Handlers ─────────────────────────────────────────
 
   function handleFiles(newFiles: FileList | null) {
@@ -309,6 +339,15 @@
         return;
       }
 
+      // ── STORAGE QUOTA PRE-FLIGHT CHECK ───────────────────
+      // Cek kuota sebelum upload ke IPFS agar feedback cepat dan tidak buang bandwidth.
+      setUploadStatus('Checking storage quota...');
+      const quotaError = await checkStorageQuota(uploadableFiles);
+      if (quotaError) {
+        setUploadError(quotaError);
+        return;
+      }
+
       if (duplicateFiles.length > 0) {
         setUploadSuccess(`${duplicateFiles.length} duplicate file${duplicateFiles.length === 1 ? '' : 's'} skipped because already recorded on-chain.`);
       }
@@ -329,6 +368,12 @@
       const uploadResult = await storageService.uploadMultipleFiles(formData) as BatchConfirmationResponse;
 
       if (!uploadResult.success) {
+        // Deteksi kuota penuh dari hasil per-file
+        const quotaResult = uploadResult.results?.find(r => r.errorCode === 'STORAGE_QUOTA_EXCEEDED');
+        if (quotaResult) {
+          setUploadError(quotaResult.error || 'Storage quota exceeded. Please free up space or ask an admin to increase your limit.');
+          return;
+        }
         throw new Error(uploadResult.message || 'Upload failed');
       }
 
@@ -368,7 +413,15 @@
       
     } catch (error: any) {
       console.error("Upload Error:", error);
-      setUploadError(error?.message || 'Failed to upload files');
+      // Deteksi kuota penuh dari error yang dilempar apiClient (HTTP 400)
+      const quotaFromData = error?.data?.results?.find?.((r: any) => r.errorCode === 'STORAGE_QUOTA_EXCEEDED');
+      if (quotaFromData) {
+        setUploadError(quotaFromData.error || 'Storage quota exceeded. Please free up space or ask an admin to increase your limit.');
+      } else if (error?.message?.includes('quota') || error?.message?.includes('STORAGE_QUOTA_EXCEEDED')) {
+        setUploadError('Storage quota exceeded. Please free up space or ask an admin to increase your limit.');
+      } else {
+        setUploadError(error?.message || 'Failed to upload files');
+      }
     } finally {
       isUploading = false;
       isConfirmingBatch = false;

@@ -121,10 +121,16 @@ export const handleLogin = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
+    // Serialize user untuk response (convert BigInt ke number)
+    const serializedUser = {
+      ...user,
+      storageLimit: user.storageLimit !== null ? Number(user.storageLimit) : null,
+    };
+
     return res.status(200).json({
       success: true,
       data: { 
-        user, 
+        user: serializedUser, 
         token, 
         refreshToken,
         isProfileComplete
@@ -235,10 +241,16 @@ export const handleRegister = async (req: Request, res: Response, next: NextFunc
     }
 
     // ── Return Success Response ──────────────────────────────
+    // Serialize user untuk response (convert BigInt ke number)
+    const serializedUser = {
+      ...result.user,
+      storageLimit: result.user.storageLimit !== null ? Number(result.user.storageLimit) : null,
+    };
+
     return res.status(201).json({
       success: true,
       data: { 
-        user: result.user, 
+        user: serializedUser, 
         token: result.token,
         refreshToken: result.refreshToken,
         isProfileComplete,
@@ -357,6 +369,10 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
         username: true,
         email: true,
         avatarUrl: true,
+        bio: true,
+        website: true,
+        role: true,
+        storageLimit: true,
         isRegistered: true,
         createdAt: true,
         updatedAt: true,
@@ -367,7 +383,13 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    return res.status(200).json({ success: true, data: user });
+    // Serialize BigInt to number
+    const serializedUser = {
+      ...user,
+      storageLimit: user.storageLimit !== null ? Number(user.storageLimit) : null,
+    };
+
+    return res.status(200).json({ success: true, data: serializedUser });
   } catch (error) {
     next(error);
   }

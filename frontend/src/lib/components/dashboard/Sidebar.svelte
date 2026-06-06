@@ -9,13 +9,13 @@
     subActive = '',
     currentUser = null,
     role = 'USER',
-    storageUsage = { usedBytes: 0, quotaBytes: 5 * 1024 * 1024 * 1024, usagePercent: 0 }
+    storageUsage = { usedBytes: 0, quotaBytes: 5 * 1024 * 1024 * 1024, usagePercent: 0, unlimited: false }
   }: {
     active?: string;
     subActive?: string;
     currentUser?: AuthUser | null;
     role?: 'USER' | 'ADMIN';
-    storageUsage?: { usedBytes: number; quotaBytes: number; usagePercent: number };
+    storageUsage?: { usedBytes: number; quotaBytes: number | null; usagePercent: number; unlimited?: boolean };
   } = $props();
 
   function formatBytes(bytes: number) {
@@ -25,9 +25,14 @@
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   }
 
+  // Unlimited bila flag unlimited true, atau quotaBytes null (mis. ADMIN)
+  const isUnlimited = $derived(storageUsage.unlimited === true || storageUsage.quotaBytes === null);
   const storagePercent = $derived(Math.min(100, Math.max(0, storageUsage.usagePercent || 0)));
   const storagePercentLabel = $derived(`${Math.round(storagePercent)}%`);
   const storageUsedLabel = $derived(formatBytes(storageUsage.usedBytes));
+  const storageQuotaLabel = $derived(storageUsage.quotaBytes ? formatBytes(storageUsage.quotaBytes) : '∞');
+  // Warna progress: merah saat hampir penuh
+  const isStorageCritical = $derived(!isUnlimited && storagePercent >= 90);
   
   // ── Internal State ──
   let isMobileOpen = $state(false);
@@ -201,6 +206,17 @@
       <span class="transition-transform group-hover:translate-x-0.5">Trash</span>
     </a>
 
+    <!-- Contract Activity (Admin Only) -->
+    {#if role === 'ADMIN'}
+      <a href="/contract-activity"
+         class="group relative flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-300
+                {active === 'contract-activity' ? STYLES.active : STYLES.inactive}">
+        {#if active === 'contract-activity'}{@html Icons.ActiveDot()}{/if}
+        <svg class="w-5 h-5 transition-all duration-300 {active === 'contract-activity' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] scale-110' : 'text-gray-500 group-hover:text-gray-300'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        <span class="transition-transform group-hover:translate-x-0.5">Smart Contract</span>
+      </a>
+    {/if}
+
     <!-- ⚙️ Settings with Submenu -->
     <div class="space-y-1">
       <button 
@@ -248,7 +264,6 @@
               {/if}
               {@html Icons.Admin((active === 'settings' && subActive === 'users'))}
               <span class="flex-1">Manage Users</span>
-              <span class="text-[9px] font-semibold uppercase tracking-wider text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded">Admin</span>
             </a>
 
             <!-- Set Storage Limit (admin only) -->
@@ -260,9 +275,8 @@
                 <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-400 rounded-r animate-pulse"></span>
               {/if}
               {@html Icons.Storage((active === 'settings' && subActive === 'set-limit'))}
-              <span class="flex-1">Set Storage Limit</span>
-              <span class="text-[9px] font-semibold uppercase tracking-wider text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded">Admin</span>
-            </a>
+              <span class="flex-1">Storage Limit</span>
+              </a>
           {/if}
           
          
@@ -308,17 +322,47 @@
                 border border-white/5 shadow-2xl
                 hover:shadow-[0_0_30px_rgba(59,130,246,0.1)] transition-shadow duration-300">
       <div class="absolute top-0 right-0 w-24 h-24 bg-blue-600/10 blur-[40px] -z-10 animate-pulse"></div>
-      
-      <div class="flex justify-between items-end mb-3">
-        <div>
-          <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Storage</p>
-          <p class="text-sm font-bold text-blue-400">
-            {storageUsedLabel} <span class="text-sm font-normal text-white"> Used </span>
-          </p>
+
+      {#if isUnlimited}
+        <!-- Unlimited (mis. ADMIN) -->
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-[10px] text-gray-500 uppercase tracking-widest">Storage</p>
+          <span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Unlimited
+          </span>
         </div>
-      </div>
-      
-     
+        <p class="text-sm font-bold text-purple-300">
+          {storageUsedLabel} <span class="text-sm font-normal text-gray-400">used</span>
+        </p>
+      {:else}
+        <!-- Used / Quota + percentage -->
+        <div class="flex justify-between items-end mb-3">
+          <div>
+            <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Storage</p>
+            <p class="text-sm font-bold {isStorageCritical ? 'text-red-400' : 'text-blue-400'}">
+              {storageUsedLabel}
+              <span class="text-sm font-normal text-gray-400">/ {storageQuotaLabel}</span>
+            </p>
+          </div>
+          <span class="text-sm font-bold {isStorageCritical ? 'text-red-400' : 'text-white'}">{storagePercentLabel}</span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+          <div
+            class="h-full rounded-full transition-all duration-700 ease-out
+              {isStorageCritical
+                ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                : 'bg-gradient-to-r from-blue-500 to-cyan-400'}"
+            style="width: {storagePercent}%">
+          </div>
+        </div>
+
+        {#if isStorageCritical}
+          <p class="mt-2 text-[10px] text-red-400/90">Storage almost full</p>
+        {/if}
+      {/if}
     </div>
   </div>
 </aside>
