@@ -702,7 +702,18 @@
                           <!-- RECORDED FILES LIST (Selalu muncul jika ada parsed.files) -->
                           {#if parsed.files && parsed.files.length > 0}
                             <div class="space-y-2 mt-4 pt-4 border-t border-white/5">
-                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Recorded Items ({parsed.files.length})</span>
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
+                                {#if log.action.includes('UPLOAD')}
+                                  Uploaded Files
+                                {:else if log.action.includes('CONFIRM')}
+                                  Confirmed Files
+                                {:else if log.action.includes('DOWNLOAD')}
+                                  Downloaded Files
+                                {:else}
+                                  Recorded Items
+                                {/if}
+                                ({parsed.files.length})
+                              </span>
                               <div class="rounded-xl border border-white/10 bg-black/20 divide-y divide-white/5 max-h-52 overflow-y-auto">
                                 {#each parsed.files as file, i (file.id ?? file.name + i)}
                                   <div class="flex items-center gap-2.5 px-3 py-2">

@@ -1964,7 +1964,7 @@ export const getSharedWithMeDocuments = async (userId: string) => {
  * Mengambil log aktivitas milik user (Terbaru ke Terlama)
  */
 export const getActivityLogs = async (userId: string) => {
-  return await prisma.activityLog.findMany({
+  const logs = await prisma.activityLog.findMany({
     where: {
       userId: userId
     },
@@ -1973,4 +1973,67 @@ export const getActivityLogs = async (userId: string) => {
     },
     take: 50, // Ambil 50 aktivitas terakhir saja biar ringan
   });
+
+  // Ambil unique blockchainTx
+  const txHashes = logs
+    .map(log => log.blockchainTx)
+    .filter((tx): tx is string => !!tx);
+
+  if (txHashes.length > 0) {
+    // Cari dokumen yang punya txHash tersebut
+    const documents = await prisma.document.findMany({
+      where: {
+        ownerId: userId,
+        blockchainTx: { in: txHashes }
+      },
+      select: {
+        id: true,
+        title: true,
+        blockchainTx: true
+      }
+    });
+
+    // Petakan dokumen ke txHash
+    const txToDocs = new Map<string, { id: string; name: string }[]>();
+    for (const doc of documents) {
+      if (doc.blockchainTx) {
+        const list = txToDocs.get(doc.blockchainTx) || [];
+        list.push({ id: doc.id, name: doc.title });
+        txToDocs.set(doc.blockchainTx, list);
+      }
+    }
+
+    // Update details log secara dinamis jika belum memiliki array files
+    return logs.map(log => {
+      if (log.blockchainTx) {
+        const docs = txToDocs.get(log.blockchainTx) || [];
+        if (docs.length > 0) {
+          try {
+            let detailsObj: any = {};
+            if (log.details) {
+              const trimmed = log.details.trim();
+              if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                detailsObj = JSON.parse(trimmed);
+              } else {
+                detailsObj = { raw: log.details };
+              }
+            }
+            // Jika files belum ada atau kosong, update dengan data dokumen dari DB
+            if (!detailsObj.files || detailsObj.files.length === 0) {
+              detailsObj.files = docs;
+              return {
+                ...log,
+                details: JSON.stringify(detailsObj)
+              };
+            }
+          } catch (e) {
+            // Abaikan jika parse gagal
+          }
+        }
+      }
+      return log;
+    });
+  }
+
+  return logs;
 };
