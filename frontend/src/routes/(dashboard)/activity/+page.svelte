@@ -351,6 +351,31 @@
     return null;
   }
 
+  function parsePrivacyChange(details: string | null | undefined): { from: string; to: string } | null {
+    if (!details) return null;
+    let text = details.trim();
+    if (text.startsWith('{') || text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.privacy) {
+          return parsed.privacy;
+        }
+        text = parsed.raw || '';
+      } catch {
+        // Fallback to plain text
+      }
+    }
+    const fromToMatch = text.match(/privacy changed from (.+?) to (.+?)$/i);
+    if (fromToMatch) {
+      return { from: fromToMatch[1], to: fromToMatch[2] };
+    }
+    const toMatch = text.match(/privacy changed to (.+?)$/i);
+    if (toMatch) {
+      return { from: '—', to: toMatch[1] };
+    }
+    return null;
+  }
+
   onMount(() => {
     loadLogs();
 
@@ -535,12 +560,12 @@
                 <!-- Status -->
                 <td class="px-6 py-4 text-center">
                   <div class="flex items-center justify-center">
-                    {#if log.blockchainTx}
+                    {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium shadow-[0_0_12px_rgba(168,85,247,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
                         Verified
                       </span>
-                    {:else if log.ipfsHash}
+                    {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                         IPFS Synced
@@ -560,6 +585,7 @@
                 {@const renameInfo = parseRename(log.details)}
                 {@const moveInfo = parseMove(log.details)}
                 {@const descriptionInfo = parseDescriptionEdit(log.details)}
+                {@const privacyInfo = parsePrivacyChange(log.details)}
                 <tr class="bg-black/20" in:fade={{ duration: 150 }}>
                   <td colspan="5" class="px-6 py-4">
                     <div class="rounded-2xl border border-white/10 bg-white/[0.01] p-5 shadow-inner">
@@ -569,13 +595,11 @@
                         <div class="flex items-center gap-2">
                           <span class="text-xs font-bold uppercase tracking-wider text-blue-400">{log.action.replace(/_/g, ' ')}</span>
                         </div>
-                        {#if log.blockchainTx}
+                        {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/20 text-purple-300">Verified On-Chain</span>
-                        {:else if log.ipfsHash}
+                        {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/20 text-blue-300">IPFS Synced</span>
-                        {:else}
-                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">System Record</span>
-                        {/if}
+                         {/if}
                       </div>
 
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
@@ -662,8 +686,25 @@
                             </div>
                           {/if}
 
-                          <!-- Detail Deskripsi Umum (Jika ada details teks mentah diluar rename/move/description) -->
-                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && (!parsed.files || parsed.files.length === 0)}
+                          <!-- Operasi CHANGE PRIVACY -->
+                          {#if privacyInfo}
+                            <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Privacy Change</span>
+                              <div class="grid grid-cols-1 gap-2">
+                                <div>
+                                  <span class="text-[10px] text-gray-500 block uppercase mb-0.5">Before</span>
+                                  <span class="text-xs text-rose-300 font-semibold line-through break-all">{privacyInfo.from}</span>
+                                </div>
+                                <div>
+                                  <span class="text-[10px] text-gray-500 block uppercase mb-0.5">After</span>
+                                  <span class="text-xs text-emerald-300 font-semibold break-all">{privacyInfo.to}</span>
+                                </div>
+                              </div>
+                            </div>
+                          {/if}
+
+                          <!-- Detail Deskripsi Umum (Jika ada details teks mentah diluar rename/move/description/privacy) -->
+                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && !privacyInfo && (!parsed.files || parsed.files.length === 0)}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Event Details</span>
                               <p class="text-gray-300 text-xs leading-relaxed break-words">{parsed.raw ?? formatDetails(log.details)}</p>
@@ -671,7 +712,7 @@
                           {/if}
 
                           <!-- RECORDED FILES LIST (Selalu muncul jika ada parsed.files) -->
-                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME'}
+                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'CHANGE_PRIVACY'}
                             <div class="space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
                                 {#if log.action.includes('UPLOAD')}

@@ -1826,7 +1826,13 @@ export const updateFoldersPrivacy = async (
               entityType: 'FOLDER',
               entityId: item.folderId,
               entityName: folder.name,
-              details: `Folder privacy changed to ${item.newPrivacy}`
+              details: JSON.stringify({
+                raw: `Folder privacy changed from ${folder.privacy} to ${item.newPrivacy}`,
+                privacy: {
+                  from: folder.privacy,
+                  to: item.newPrivacy
+                }
+              })
             }
           });
         } catch (err) {

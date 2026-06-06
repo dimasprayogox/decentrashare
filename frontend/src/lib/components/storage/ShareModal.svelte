@@ -504,7 +504,10 @@ async function handleUpdateUserRoles(): Promise<boolean> {
       existingSharedUsers = existingSharedUsers.filter(u => u.id !== userId);
       if (itemType === 'folder') { const nr = { ...existingUserRoles }; delete nr[userId]; existingUserRoles = nr; }
       showToastFeedback(`Access revoked for ${username}`);
-      if (existingSharedUsers.length === 0 && privacyLevel === 'SPECIFIC_USER') successMessage = 'Deleted access successfully';
+      if (existingSharedUsers.length === 0 && privacyLevel === 'SPECIFIC_USER') {
+        privacyLevel = 'PRIVATE';
+        successMessage = 'Access revoked. Privacy status auto-reset to Private.';
+      }
       onShared?.();
       return true;
     } catch (err: any) {
@@ -798,7 +801,34 @@ async function handleUpdateUserRoles(): Promise<boolean> {
         {#if privacyLevel === 'SPECIFIC_USER'}
           <div class="space-y-3 pt-2 border-t border-white/10" transition:fly={{ y: 20, duration: 200, easing: cubicOut }}>
             {#if selectedUsers.length > 0}
-              <div><p class="text-xs font-medium text-gray-400 mb-2">Will share with:</p><div class="flex flex-wrap gap-2">{#each selectedUsers as userId}<span class="inline-flex items-center gap-1 px-3 py-1.5 bg-violet-500/20 text-violet-300 text-xs rounded-full border border-violet-500/30"><div class="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-[8px] font-bold text-white">{getUserName(userId).charAt(0).toUpperCase()}</div>{getUserName(userId)}{#if itemType === 'folder'}<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/10 border border-white/20">{getUserRole(userId)}</span>{/if}<button onclick={() => removeSelectedUser(userId)} class="hover:text-white transition-colors ml-0.5" aria-label="Remove {getUserName(userId)}"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></span>{/each}</div></div>
+              <div>
+                <p class="text-xs font-medium text-gray-400 mb-2">Will share with:</p>
+                <div class="flex flex-wrap gap-2">
+                  {#each selectedUsers as userId}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-500/20 text-violet-300 text-xs rounded-full border border-violet-500/30">
+                      <div class="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-[8px] font-bold text-white">
+                        {getUserName(userId).charAt(0).toUpperCase()}
+                      </div>
+                      <span class="truncate max-w-[100px]">{getUserName(userId)}</span>
+                      {#if itemType === 'folder'}
+                        <select 
+                          value={getUserRole(userId)} 
+                          onchange={(e) => setUserRole(userId, e.currentTarget.value as 'VIEWER' | 'EDITOR')}
+                          class="text-[9px] bg-white/10 hover:bg-white/20 border border-white/20 rounded px-1.5 py-0.5 text-violet-200 focus:outline-none cursor-pointer transition-colors"
+                        >
+                          <option value="VIEWER" class="bg-[#1a1a1e] text-gray-300">Viewer</option>
+                          <option value="EDITOR" class="bg-[#1a1a1e] text-violet-300">Editor</option>
+                        </select>
+                      {/if}
+                      <button onclick={() => removeSelectedUser(userId)} class="hover:text-white transition-colors ml-0.5" aria-label="Remove {getUserName(userId)}">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </span>
+                  {/each}
+                </div>
+              </div>
             {/if}
             <div class="relative"><input type="text" bind:value={searchQuery} placeholder="Search users by username or wallet..." class="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all" autocomplete="off"/>{#if isSearching}<div class="absolute right-3 top-1/2 -translate-y-1/2"><div class="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div></div>{/if}</div>
             {#if searchResults.length > 0}

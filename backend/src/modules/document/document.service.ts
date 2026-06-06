@@ -1640,6 +1640,12 @@ export const updateDocumentsPrivacy = async (
     const results = [];
 
     for (const item of updates) {
+      // 0. Ambil privasi lama sebelum di-update
+      const oldDoc = await tx.document.findUnique({
+        where: { id: item.documentId },
+        select: { privacy: true }
+      });
+
       // 1. Update status privasi dokumen (hanya jika pemiliknya sesuai)
       const docUpdate = await tx.document.updateMany({
         where: { 
@@ -1676,7 +1682,13 @@ export const updateDocumentsPrivacy = async (
               fileHash: doc.fileHash,
               ipfsHash: doc.ipfsHash,
               blockchainTx: doc.blockchainTx,
-              details: `Document privacy changed to ${item.newPrivacy}`
+              details: JSON.stringify({
+                raw: `Document privacy changed from ${oldDoc?.privacy || 'UNKNOWN'} to ${item.newPrivacy}`,
+                privacy: {
+                  from: oldDoc?.privacy || 'UNKNOWN',
+                  to: item.newPrivacy
+                }
+              })
             }
           });
         }
