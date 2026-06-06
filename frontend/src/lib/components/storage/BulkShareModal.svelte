@@ -254,40 +254,31 @@
       return;
     }
 
-    const folders = targets.filter(t => t.type === 'folder');
-    const documents = targets.filter(t => t.type === 'document');
-    const specificFolders = folders.filter(t => getTargetPrivacy(t.id) === 'SPECIFIC_USER');
-    const specificDocuments = documents.filter(t => getTargetPrivacy(t.id) === 'SPECIFIC_USER');
-
     try {
       isProcessing = true;
       errorMessage = '';
 
-      if (documents.length > 0) {
-        await storageService.updateDocumentsPrivacy(documents.map(target => ({ documentId: target.id, newPrivacy: getTargetPrivacy(target.id) })));
-      }
-      if (folders.length > 0) {
-        await Promise.all(folders.map(target => storageService.updateFolderPrivacy(target.id, { newPrivacy: getTargetPrivacy(target.id) })));
-      }
-      if (specificDocuments.length > 0) {
-        await storageService.shareDocuments(specificDocuments.map(target => ({
-          documentId: target.id,
-          targetUsers: accessMode === 'all' ? globalUsers.map(user => user.id) : usersForTarget(target.id).map(user => user.id)
-        })));
-      }
-      if (specificFolders.length > 0) {
-        await storageService.shareFolders(specificFolders.map(target => {
-          const users = accessMode === 'all' ? globalUsers : usersForTarget(target.id);
-          return {
-            itemId: target.id,
-            itemType: 'folder' as const,
-            targetUsers: users.map(user => ({
-              userId: user.id,
-              role: accessMode === 'all' ? getGlobalRole(user.id) : roleForTarget(target.id, user.id)
+      const bulkTargets = targets.map(target => {
+        const privacy = getTargetPrivacy(target.id);
+        const users = privacy === 'SPECIFIC_USER'
+          ? (accessMode === 'all' ? globalUsers : usersForTarget(target.id)).map(user => ({
+              id: user.id,
+              username: user.username,
+              role: target.type === 'folder'
+                ? (accessMode === 'all' ? getGlobalRole(user.id) : roleForTarget(target.id, user.id))
+                : undefined
             }))
-          };
-        }));
-      }
+          : [];
+
+        return {
+          id: target.id,
+          type: target.type,
+          newPrivacy: privacy,
+          users
+        };
+      });
+
+      await storageService.bulkShare(bulkTargets);
 
       onCompleted(`${targets.length} item(s) successfully updated.`);
     } catch (error) {

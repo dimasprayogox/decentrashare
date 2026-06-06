@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db';
+import { getAllDescendantFolderIds } from '../folder/folder.service';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { Prisma, PrivacyLevel } from '@prisma/client';
@@ -1751,6 +1752,11 @@ export const shareDocumentsToUsers = async (
         data: { privacy: 'SPECIFIC_USER' }
       });
 
+      const targets = await tx.user.findMany({
+        where: { id: { in: item.targetUsers } },
+        select: { id: true, username: true, walletAddress: true }
+      });
+
       await tx.activityLog.create({
         data: {
           userId: ownerId,
@@ -1761,7 +1767,12 @@ export const shareDocumentsToUsers = async (
           fileHash: doc.fileHash,
           ipfsHash: doc.ipfsHash,
           blockchainTx: doc.blockchainTx,
-          details: `Document shared with ${item.targetUsers.length} user(s)`
+          details: JSON.stringify({
+            raw: `Document shared with ${targets.map(t => t.username).join(', ')}`,
+            share: {
+              users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
+            }
+          })
         }
       });
 
@@ -1826,6 +1837,11 @@ export const revokeDocumentsAccess = async (
         updatedPrivacy = updatedDoc.privacy;
       }
 
+      const targets = await tx.user.findMany({
+        where: { id: { in: item.targetUserIds } },
+        select: { id: true, username: true, walletAddress: true }
+      });
+
       await tx.activityLog.create({
         data: {
           userId: ownerId,
@@ -1836,7 +1852,12 @@ export const revokeDocumentsAccess = async (
           fileHash: doc.fileHash,
           ipfsHash: doc.ipfsHash,
           blockchainTx: doc.blockchainTx,
-          details: `Document access revoked for ${item.targetUserIds.length} user(s)`
+          details: JSON.stringify({
+            raw: `Document access revoked for ${targets.map(t => t.username).join(', ')}`,
+            revoke: {
+              users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
+            }
+          })
         }
       });
 
@@ -2061,4 +2082,160 @@ export const getActivityLogs = async (userId: string) => {
   }
 
   return logs;
+};
+
+export const bulkShareItems = async (
+  ownerId: string,
+  targets: Array<{
+    id: string;
+    type: 'document' | 'folder';
+    newPrivacy: PrivacyLevel;
+    users: Array<{ id: string; username: string; role?: 'VIEWER' | 'EDITOR' }>;
+  }>
+) => {
+  return await prisma.$transaction(async (tx) => {
+    const logs = [];
+
+    for (const target of targets) {
+      if (target.type === 'document') {
+        const doc = await tx.document.findFirst({
+          where: { id: target.id, ownerId, isArchived: false }
+        });
+        if (!doc) continue;
+
+        const oldPrivacy = doc.privacy;
+
+        // 1. Update privacy
+        await tx.document.update({
+          where: { id: target.id },
+          data: { privacy: target.newPrivacy }
+        });
+
+        // 2. Cleanup if not SPECIFIC_USER
+        if (target.newPrivacy !== 'SPECIFIC_USER') {
+          await tx.documentAccess.deleteMany({
+            where: { documentId: target.id }
+          });
+        } else if (target.users && target.users.length > 0) {
+          // Add users access
+          for (const u of target.users) {
+            if (u.id === ownerId) continue;
+            await tx.documentAccess.upsert({
+              where: {
+                documentId_userId: { documentId: target.id, userId: u.id }
+              },
+              update: {},
+              create: {
+                documentId: target.id,
+                userId: u.id
+              }
+            });
+          }
+        }
+
+        logs.push({
+          id: target.id,
+          type: 'document',
+          name: doc.title,
+          privacy: { from: oldPrivacy, to: target.newPrivacy },
+          users: target.users || []
+        });
+
+      } else if (target.type === 'folder') {
+        const folder = await tx.folder.findFirst({
+          where: { id: target.id, ownerId, isArchived: false }
+        });
+        if (!folder) continue;
+
+        const oldPrivacy = folder.privacy;
+
+        // Get descendant folders
+        const subtreeFolderIds = await getAllDescendantFolderIds(tx, [target.id]);
+        const subtreeDocuments = await tx.document.findMany({
+          where: { folderId: { in: subtreeFolderIds } },
+          select: { id: true }
+        });
+
+        // 1. Update privacy for folder + subfolders + documents
+        await tx.folder.updateMany({
+          where: { id: { in: subtreeFolderIds } },
+          data: { privacy: target.newPrivacy }
+        });
+        await tx.document.updateMany({
+          where: { folderId: { in: subtreeFolderIds } },
+          data: { privacy: target.newPrivacy }
+        });
+
+        // 2. Cleanup if not SPECIFIC_USER
+        if (target.newPrivacy !== 'SPECIFIC_USER') {
+          await tx.folderAccess.deleteMany({
+            where: { folderId: { in: subtreeFolderIds } }
+          });
+          await tx.documentAccess.deleteMany({
+            where: { documentId: { in: subtreeDocuments.map(d => d.id) } }
+          });
+        } else if (target.users && target.users.length > 0) {
+          // Add users access to folder + subfolders + documents
+          for (const u of target.users) {
+            if (u.id === ownerId) continue;
+            const role = u.role || 'VIEWER';
+
+            for (const fId of subtreeFolderIds) {
+              await tx.folderAccess.upsert({
+                where: {
+                  folderId_userId: { folderId: fId, userId: u.id }
+                },
+                update: { role },
+                create: {
+                  folderId: fId,
+                  userId: u.id,
+                  role
+                }
+              });
+            }
+
+            for (const doc of subtreeDocuments) {
+              await tx.documentAccess.upsert({
+                where: {
+                  documentId_userId: { documentId: doc.id, userId: u.id }
+                },
+                update: {},
+                create: {
+                  documentId: doc.id,
+                  userId: u.id
+                }
+              });
+            }
+          }
+        }
+
+        logs.push({
+          id: target.id,
+          type: 'folder',
+          name: folder.name,
+          privacy: { from: oldPrivacy, to: target.newPrivacy },
+          users: target.users || []
+        });
+      }
+    }
+
+    if (logs.length > 0) {
+      // Create single bulk activity log
+      await tx.activityLog.create({
+        data: {
+          userId: ownerId,
+          action: 'BULK_SHARE',
+          entityType: 'MULTIPLE',
+          entityId: 'BULK',
+          entityName: `${logs.length} items shared`,
+          details: JSON.stringify({
+            raw: `Bulk share completed for ${logs.length} item(s)`,
+            bulk: logs
+          })
+        }
+      });
+    }
+
+    return { success: true, count: logs.length };
+  });
 };

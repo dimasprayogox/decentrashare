@@ -1212,3 +1212,28 @@ export const handleGetActivityLogs = async (req: AuthRequest, res: Response) => 
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const handleBulkShare = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { targets } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    if (!Array.isArray(targets)) {
+      return res.status(400).json({ success: false, message: "Invalid format. Expected targets array." });
+    }
+
+    const result = await documentService.bulkShareItems(userId, targets);
+
+    return res.status(200).json({
+      success: true,
+      message: "Bulk share completed successfully.",
+      data: result
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};

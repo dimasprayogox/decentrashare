@@ -150,7 +150,8 @@
       case 'BULK_DOWNLOAD':
         return { bg: 'bg-sky-500/10 border-sky-500/20 text-sky-400', label: 'Bulk Download', icon: 'text-sky-400', iconBg: 'bg-sky-500/10' };
       case 'SHARE':
-        return { bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', label: 'Share', icon: 'text-emerald-400', iconBg: 'bg-emerald-500/10' };
+      case 'BULK_SHARE':
+        return { bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', label: action === 'BULK_SHARE' ? 'Bulk Share' : 'Share', icon: 'text-emerald-400', iconBg: 'bg-emerald-500/10' };
       case 'REVOKE':
         return { bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', label: 'Revoke', icon: 'text-rose-400', iconBg: 'bg-rose-500/10' };
       case 'RENAME':
@@ -198,6 +199,7 @@
       case 'BULK_DOWNLOAD':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11V5a2 2 0 00-2-2H7a2 2 0 00-2 2v6m14 0H5m14 0l-3 3m-8-3l3 3m1 0v6m-4-3l4 3 4-3"/></svg>`;
       case 'SHARE':
+      case 'BULK_SHARE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l4.632-2.316m0 0a3 3 0 102.686-2.686 3 3 0 00-2.686 2.686zm-4.632 2.316a3 3 0 11-4.737 3.535 3 3 0 014.737-3.535zm0 0l4.632 2.316m0 0a3 3 0 102.686 2.686 3 3 0 00-2.686-2.686z"/></svg>`;
       case 'REVOKE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>`;
@@ -372,6 +374,47 @@
     const toMatch = text.match(/privacy changed to (.+?)$/i);
     if (toMatch) {
       return { from: '—', to: toMatch[1] };
+    }
+    return null;
+  }
+
+  function parseShareRevoke(details: string | null | undefined): { type: 'share' | 'revoke'; users: Array<{ id: string; username: string; wallet: string }> } | null {
+    if (!details) return null;
+    let text = details.trim();
+    if (text.startsWith('{') || text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.share) {
+          return { type: 'share', users: parsed.share.users || [] };
+        }
+        if (parsed.revoke) {
+          return { type: 'revoke', users: parsed.revoke.users || [] };
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    return null;
+  }
+
+  function parseBulkShare(details: string | null | undefined): Array<{
+    id: string;
+    type: 'document' | 'folder';
+    name: string;
+    privacy: { from: string; to: string };
+    users: Array<{ id: string; username: string; role?: string }>;
+  }> | null {
+    if (!details) return null;
+    let text = details.trim();
+    if (text.startsWith('{') || text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.bulk) {
+          return parsed.bulk;
+        }
+      } catch {
+        // Fallback
+      }
     }
     return null;
   }
@@ -560,12 +603,12 @@
                 <!-- Status -->
                 <td class="px-6 py-4 text-center">
                   <div class="flex items-center justify-center">
-                    {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
+                    {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium shadow-[0_0_12px_rgba(168,85,247,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
                         Verified
                       </span>
-                    {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
+                    {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                         IPFS Synced
@@ -586,6 +629,8 @@
                 {@const moveInfo = parseMove(log.details)}
                 {@const descriptionInfo = parseDescriptionEdit(log.details)}
                 {@const privacyInfo = parsePrivacyChange(log.details)}
+                {@const shareRevokeInfo = parseShareRevoke(log.details)}
+                {@const bulkInfo = parseBulkShare(log.details)}
                 <tr class="bg-black/20" in:fade={{ duration: 150 }}>
                   <td colspan="5" class="px-6 py-4">
                     <div class="rounded-2xl border border-white/10 bg-white/[0.01] p-5 shadow-inner">
@@ -595,9 +640,9 @@
                         <div class="flex items-center gap-2">
                           <span class="text-xs font-bold uppercase tracking-wider text-blue-400">{log.action.replace(/_/g, ' ')}</span>
                         </div>
-                        {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
+                        {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/20 text-purple-300">Verified On-Chain</span>
-                        {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE'}
+                        {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/20 text-blue-300">IPFS Synced</span>
                          {/if}
                       </div>
@@ -611,7 +656,15 @@
                             <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Resource Information</span>
                             
                             <div class="flex items-center gap-2">
-                              <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-300 text-[10px] font-bold uppercase">{log.entityType === 'FOLDER' ? 'Folder' : 'Document'}</span>
+                              <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-300 text-[10px] font-bold uppercase">
+                                {#if log.entityType === 'MULTIPLE'}
+                                  Bulk
+                                {:else if log.entityType === 'FOLDER'}
+                                  Folder
+                                {:else}
+                                  Document
+                                {/if}
+                              </span>
                               <span class="text-gray-200 font-semibold text-sm truncate" title={log.entityName}>{log.entityName || '—'}</span>
                             </div>
 
@@ -703,8 +756,90 @@
                             </div>
                           {/if}
 
-                          <!-- Detail Deskripsi Umum (Jika ada details teks mentah diluar rename/move/description/privacy) -->
-                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && !privacyInfo && (!parsed.files || parsed.files.length === 0)}
+                          <!-- Operasi SHARE atau REVOKE -->
+                          {#if shareRevokeInfo}
+                            <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
+                                {shareRevokeInfo.type === 'share' ? 'Shared With' : 'Access Revoked From'}
+                              </span>
+                              <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                {#each shareRevokeInfo.users as user}
+                                  <div class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                      <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-[10px] font-bold text-white uppercase flex-shrink-0">
+                                        {user.username.charAt(0)}
+                                      </div>
+                                      <div class="min-w-0">
+                                        <span class="text-xs text-white font-semibold block truncate">{user.username}</span>
+                                        {#if user.wallet}
+                                          <span class="text-[9px] text-gray-500 font-mono block truncate">
+                                            {user.wallet.slice(0, 6)}...{user.wallet.slice(-4)}
+                                          </span>
+                                        {/if}
+                                      </div>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase {shareRevokeInfo.type === 'share' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                                      {shareRevokeInfo.type === 'share' ? 'Added' : 'Removed'}
+                                    </span>
+                                  </div>
+                                {/each}
+                              </div>
+                            </div>
+                          {/if}
+
+                          <!-- Operasi BULK SHARE -->
+                          {#if bulkInfo}
+                            <div class="space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Bulk Share Items ({bulkInfo.length})</span>
+                              <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                                {#each bulkInfo as item}
+                                  <div class="p-3 rounded-xl border border-white/5 bg-white/[0.01] space-y-2.5">
+                                    <div class="flex items-center gap-2">
+                                      <span class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-semibold uppercase text-gray-400">
+                                        {item.type}
+                                      </span>
+                                      <span class="text-xs font-semibold text-white truncate max-w-[200px]" title={item.name}>{item.name}</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 border-t border-white/5 pt-2">
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase mb-0.5">Before</span>
+                                        <span class="text-[10px] text-rose-300 font-bold uppercase line-through break-all">{item.privacy.from.replace(/_/g, ' ')}</span>
+                                      </div>
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase mb-0.5">After</span>
+                                        <span class="text-[10px] text-emerald-300 font-bold uppercase break-all">{item.privacy.to.replace(/_/g, ' ')}</span>
+                                      </div>
+                                    </div>
+                                    {#if item.users && item.users.length > 0}
+                                      <div class="border-t border-white/5 pt-2 space-y-1.5">
+                                        <span class="text-[9px] text-gray-500 uppercase font-semibold block font-mono">Access Users</span>
+                                        <div class="grid grid-cols-1 gap-1.5">
+                                          {#each item.users as user}
+                                            <div class="flex items-center justify-between p-1.5 rounded bg-white/5 border border-white/10 text-[10px]">
+                                              <div class="flex items-center gap-1.5 min-w-0">
+                                                <div class="w-5 h-5 rounded-full bg-violet-600/30 flex items-center justify-center text-[9px] font-bold text-violet-200 uppercase shrink-0 font-mono">
+                                                  {user.username.charAt(0)}
+                                                </div>
+                                                <span class="text-white truncate font-medium">{user.username}</span>
+                                              </div>
+                                              {#if user.role}
+                                                <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-violet-500/10 text-violet-400 border border-violet-500/20 font-mono">
+                                                  {user.role}
+                                                </span>
+                                              {/if}
+                                            </div>
+                                          {/each}
+                                        </div>
+                                      </div>
+                                    {/if}
+                                  </div>
+                                {/each}
+                              </div>
+                            </div>
+                          {/if}
+
+                          <!-- Detail Deskripsi Umum (Jika ada details teks mentah diluar rename/move/description/privacy/share/revoke/bulk) -->
+                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && !privacyInfo && !shareRevokeInfo && !bulkInfo && (!parsed.files || parsed.files.length === 0)}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Event Details</span>
                               <p class="text-gray-300 text-xs leading-relaxed break-words">{parsed.raw ?? formatDetails(log.details)}</p>
@@ -712,7 +847,7 @@
                           {/if}
 
                           <!-- RECORDED FILES LIST (Selalu muncul jika ada parsed.files) -->
-                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'CHANGE_PRIVACY'}
+                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'CHANGE_PRIVACY' && log.action !== 'SHARE' && log.action !== 'REVOKE' && log.action !== 'BULK_SHARE'}
                             <div class="space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
                                 {#if log.action.includes('UPLOAD')}

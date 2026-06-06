@@ -508,6 +508,19 @@ updateDocumentsPrivacy: async (updates: Array<{ documentId: string; newPrivacy: 
   });
 },
 
+bulkShare: async (targets: Array<{
+  id: string;
+  type: 'document' | 'folder';
+  newPrivacy: PrivacyLevel;
+  users: Array<{ id: string; username: string; role?: 'VIEWER' | 'EDITOR' }>;
+}>) => {
+  return apiClient<{ success: boolean; count: number }>('/documents/bulk-share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targets })
+  });
+},
+
 shareDocuments: async (shares: Array<{ documentId: string; targetUsers: string[] }>) => {
   return apiClient<ShareDocumentsResponse>('/documents/shared', {
     method: 'POST',

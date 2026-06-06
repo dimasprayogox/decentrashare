@@ -621,7 +621,7 @@ function buildInheritedFolderAccessEntries(
   return Array.from(inheritedAccess.entries()).map(([userId, role]) => ({ userId, role }));
 }
 
-async function getAllDescendantFolderIds(
+export async function getAllDescendantFolderIds(
   tx: any, // Prisma.TransactionClient
   rootFolderIds: string[],
   archivedState: boolean | null = false
@@ -1484,6 +1484,11 @@ export const shareFoldersFlexible = async (
         data: { privacy: 'SPECIFIC_USER' }
       });
 
+      const targets = await tx.user.findMany({
+        where: { id: { in: item.targetUsers.map(u => u.userId) } },
+        select: { id: true, username: true, walletAddress: true }
+      });
+
       try {
         await tx.activityLog.create({
           data: {
@@ -1492,7 +1497,12 @@ export const shareFoldersFlexible = async (
             entityType: 'FOLDER',
             entityId: item.folderId,
             entityName: folder.name,
-            details: `Folder shared with ${item.targetUsers.length} user(s)`
+            details: JSON.stringify({
+              raw: `Folder shared with ${targets.map(t => t.username).join(', ')}`,
+              share: {
+                users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
+              }
+            })
           }
         });
       } catch (err) {
@@ -1600,6 +1610,11 @@ export const revokeFoldersAccess = async (
         });
       }
 
+      const targets = await tx.user.findMany({
+        where: { id: { in: item.targetUserIds } },
+        select: { id: true, username: true, walletAddress: true }
+      });
+
       try {
         await tx.activityLog.create({
           data: {
@@ -1608,7 +1623,12 @@ export const revokeFoldersAccess = async (
             entityType: 'FOLDER',
             entityId: item.folderId,
             entityName: folder.name,
-            details: `Access revoked for ${item.targetUserIds.length} user(s)`
+            details: JSON.stringify({
+              raw: `Access revoked for ${targets.map(t => t.username).join(', ')}`,
+              revoke: {
+                users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
+              }
+            })
           }
         });
       } catch (err) {

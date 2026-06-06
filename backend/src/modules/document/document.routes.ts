@@ -18,6 +18,7 @@ import {
   handleRevokeAccess,
   handleGetSharedUsers,   
   handleGetAllDocumentsAdmin,
+  handleBulkShare,
   handleGetSystemStatsAdmin,
   handleGetRootDocuments,
   handleMoveDocuments,
@@ -52,6 +53,7 @@ router.patch("/restore", handleRestoreDocuments);
 router.delete('/destroy', handlePermanentDelete);
 // PATCH /api/documents/:id/privacy
 router.patch("/privacy", handleUpdateDocumentPrivacy);
+router.post("/bulk-share", handleBulkShare);
 
 
 
