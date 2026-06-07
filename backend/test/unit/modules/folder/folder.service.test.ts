@@ -478,32 +478,59 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.documentAccess.deleteMany).not.toHaveBeenCalled();
   });
 
-  test('given a specific-user folder containing a foreign-owned subfolder, when privacy changes to link-only, then the foreign subfolder stays in place and is cascaded to link-only', async () => {
+  test('given a specific-user folder containing a foreign-owned subfolder, when privacy changes to link-only, then the foreign subfolder is relocated to its owner root and reset to private', async () => {
     const { updateFoldersPrivacy } = await import('../../../../src/modules/folder/folder.service');
-    prisma.folder.findFirst.mockResolvedValue(folderFactory({ id: 'root', name: 'Root', ownerId: 'owner-1', privacy: 'SPECIFIC_USER' }));
+    // Root folder is owned by owner-1 and currently SPECIFIC_USER (shared).
+    prisma.folder.findFirst
+      // 1) initial root lookup inside updateFoldersPrivacy
+      .mockResolvedValueOnce(folderFactory({ id: 'root', name: 'Root', ownerId: 'owner-1', privacy: 'SPECIFIC_USER' }))
+      // 2) getUniqueRootFolderName for the relocated foreign folder (no duplicate)
+      .mockResolvedValueOnce(null);
     prisma.folder.findMany
-      // First getAllDescendantFolderIds (before relocation check): BFS children
+      // getAllDescendantFolderIds(['root']) BFS
       .mockResolvedValueOnce([{ id: 'foreign-child' }])
       .mockResolvedValueOnce([])
-      // Second getAllDescendantFolderIds (remainingSubtreeFolderIds): BFS children
-      .mockResolvedValueOnce([{ id: 'foreign-child' }])
+      // relocate: foldersToMove (ownerId !== owner-1)
+      .mockResolvedValueOnce([{ id: 'foreign-child', name: 'Foreign', ownerId: 'user-2', parentId: 'root' }])
+      // relocate: allSubtreeFolders
+      .mockResolvedValueOnce([
+        { id: 'root', parentId: null, ownerId: 'owner-1' },
+        { id: 'foreign-child', parentId: 'root', ownerId: 'user-2' },
+      ])
+      // relocate: rootOwnerFoldersToRescue (owner-1 folders, root has no in-subtree parent → skipped)
+      .mockResolvedValueOnce([{ id: 'root', name: 'Root', parentId: null }])
+      // topLevel loop: getAllDescendantFolderIds(['foreign-child'])
+      .mockResolvedValueOnce([])
+      // syncRescuedFolderSubtreeAccess: getAllDescendantFolderIds(['foreign-child'])
+      .mockResolvedValueOnce([])
+      // remainingSubtreeFolderIds: getAllDescendantFolderIds(['root']) (foreign-child now gone)
       .mockResolvedValueOnce([]);
-    prisma.folder.updateMany.mockResolvedValue({ count: 2 });
-    prisma.document.findMany.mockResolvedValue([{ id: 'owner-doc' }, { id: 'foreign-doc' }]);
+    prisma.document.findMany
+      // relocate: rootOwnerDocumentsToRescue
+      .mockResolvedValueOnce([])
+      // syncRescuedFolderSubtreeAccess: rescued documents
+      .mockResolvedValueOnce([])
+      // relocate: documentsToMove
+      .mockResolvedValueOnce([])
+      // relocate: documentsInsideMovedFolders
+      .mockResolvedValueOnce([])
+      // updatedDocuments after cascade
+      .mockResolvedValueOnce([]);
+    prisma.folder.updateMany.mockResolvedValue({ count: 1 });
+    prisma.folderAccess.deleteMany.mockResolvedValue({ count: 1 });
+    prisma.documentAccess.deleteMany.mockResolvedValue({ count: 0 });
 
     const result = await updateFoldersPrivacy('owner-1', [{ folderId: 'root', newPrivacy: 'LINK_ONLY' as any }]);
 
-    expect(result).toEqual([{ folderId: 'root', status: 'updated', newPrivacy: 'LINK_ONLY', accessRevoked: 0, cascadedFolders: 2, movedFolderCount: 0, movedDocumentCount: 0 }]);
-    // Nothing is relocated: foreign content keeps its place.
-    expect(prisma.folder.update).not.toHaveBeenCalled();
-    expect(prisma.document.update).not.toHaveBeenCalled();
-    // Whole subtree (including foreign-owned folder/doc) becomes link-only.
-    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['root', 'foreign-child'] } }, data: { privacy: 'LINK_ONLY' } });
-    expect(prisma.document.findMany).toHaveBeenCalledWith({ where: { folderId: { in: ['root', 'foreign-child'] } }, select: { id: true } });
-    expect(prisma.document.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['owner-doc', 'foreign-doc'] } }, data: { privacy: 'LINK_ONLY' } });
-    // Shared access rows are preserved (link-only stays accessible).
-    expect(prisma.folderAccess.deleteMany).not.toHaveBeenCalled();
-    expect(prisma.documentAccess.deleteMany).not.toHaveBeenCalled();
+    expect(result[0]).toMatchObject({ folderId: 'root', status: 'updated', newPrivacy: 'LINK_ONLY', movedFolderCount: 1 });
+    // Foreign subfolder is detached to the owning user's root and reset to private.
+    expect(prisma.folder.update).toHaveBeenCalledWith({
+      where: { id: 'foreign-child' },
+      data: { parentId: null, name: 'Foreign', privacy: 'PRIVATE', shareToken: null },
+    });
+    // Owner's own subtree is cascaded to link-only and its share access rows are revoked.
+    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['root'] }, ownerId: 'owner-1' }, data: { privacy: 'LINK_ONLY' } });
+    expect(prisma.folderAccess.deleteMany).toHaveBeenCalledWith({ where: { folderId: { in: ['root'] } } });
   });
 
   // --- downloadFolderArchive ---
