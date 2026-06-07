@@ -496,13 +496,13 @@
             {/if}
 
             {#if accessMode === 'all' && globalUsers.length > 0}
-              <UserRows users={globalUsers} showRole={hasSpecificFolders} getRole={getGlobalRole} setRole={setGlobalRole} removeUser={toggleGlobalUser} {initial} {isProcessing} />
+              {@render UserRows(globalUsers, hasSpecificFolders, getGlobalRole, setGlobalRole, toggleGlobalUser, initial, isProcessing)}
             {:else if accessMode === 'individual' && activeTarget}
               {@const currentUsers = usersForTarget(activeTarget.id)}
               <div>
                 <p class="text-xs font-medium text-gray-400 mb-2">Users for {activeTarget.name}:</p>
                 {#if currentUsers.length > 0}
-                  <UserRows users={currentUsers} showRole={activeTarget.type === 'folder'} getRole={(userId: string) => roleForTarget(activeTarget.id, userId)} setRole={(userId: string, role: FolderRole) => setRoleForTarget(activeTarget.id, userId, role)} removeUser={(user: ShareableUser) => toggleTargetUser(activeTarget.id, user)} {initial} {isProcessing} />
+                  {@render UserRows(currentUsers, activeTarget.type === 'folder', (userId) => roleForTarget(activeTarget.id, userId), (userId, role) => setRoleForTarget(activeTarget.id, userId, role), (user) => toggleTargetUser(activeTarget.id, user), initial, isProcessing)}
                 {:else}
                   <p class="text-xs text-gray-500 mb-2">No users selected for this item.</p>
                 {/if}

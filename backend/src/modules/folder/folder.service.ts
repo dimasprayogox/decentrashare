@@ -325,6 +325,17 @@ export const moveFolder = async (
       }
     }
 
+    let sourceFolderName = 'Root';
+    if (folder.parentId) {
+      const srcFolder = await tx.folder.findUnique({
+        where: { id: folder.parentId },
+        select: { name: true }
+      });
+      if (srcFolder) {
+        sourceFolderName = srcFolder.name;
+      }
+    }
+
     try {
       await tx.activityLog.create({
         data: {
@@ -333,7 +344,13 @@ export const moveFolder = async (
           entityType: 'FOLDER',
           entityId: folderId,
           entityName: folder.name,
-          details: `Folder moved to ${location}`
+          details: JSON.stringify({
+            raw: `Folder moved to ${location}`,
+            move: {
+              from: sourceFolderName,
+              to: targetFolderId ? location : 'Root'
+            }
+          })
         }
       });
     } catch (err) {

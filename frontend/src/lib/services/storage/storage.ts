@@ -521,6 +521,17 @@ bulkShare: async (targets: Array<{
   });
 },
 
+bulkMove: async (
+  targets: Array<{ id: string; type: 'document' | 'folder' }>,
+  targetFolderId: string | null
+) => {
+  return apiClient<{ success: boolean; count: number; appliedPrivacy?: string; location?: string }>('/documents/bulk-move', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targets, targetFolderId })
+  });
+},
+
 shareDocuments: async (shares: Array<{ documentId: string; targetUsers: string[] }>) => {
   return apiClient<ShareDocumentsResponse>('/documents/shared', {
     method: 'POST',

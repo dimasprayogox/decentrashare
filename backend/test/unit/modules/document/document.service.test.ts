@@ -206,6 +206,36 @@ describe('Feature: document privacy, access, and download behavior', () => {
     expect(prisma.document.updateMany).not.toHaveBeenCalled();
   });
 
+  test('given multiple items of mixed types, when bulkMoveItems runs, then all items are relocated inside a transaction', async () => {
+    const { bulkMoveItems } = await import('../../../../src/modules/document/document.service');
+    prisma.folder.findFirst
+      .mockResolvedValueOnce(folderFactory({ id: 'folder-2', privacy: 'PUBLIC' })) // targetFolder check
+      .mockResolvedValueOnce(folderFactory({ id: 'folder-sub', parentId: null, ownerId: 'user-1' })); // folder to move check
+    prisma.document.findFirst
+      .mockResolvedValueOnce(documentFactory({ id: 'doc-1', folderId: null, ownerId: 'user-1', title: 'Doc 1' })); // doc check
+    prisma.document.findMany.mockResolvedValueOnce([]); // descendant documents check
+    prisma.folder.findMany.mockResolvedValueOnce([]); // descendant folders check (getAllDescendantFolderIds)
+    
+    prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
+
+    const result = await bulkMoveItems('user-1', [
+      { id: 'doc-1', type: 'document' },
+      { id: 'folder-sub', type: 'folder' }
+    ], 'folder-2');
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(2);
+    expect(result.appliedPrivacy).toBe('PUBLIC');
+    expect(prisma.document.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'doc-1' },
+      data: { folderId: 'folder-2', privacy: 'PUBLIC' }
+    }));
+    expect(prisma.folder.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'folder-sub' },
+      data: { parentId: 'folder-2', privacy: 'PUBLIC' }
+    }));
+  });
+
   test('given a short keyword, when public documents are searched, then no database lookup is performed', async () => {
     const { searchPublicDocuments } = await import('../../../../src/modules/document/document.service');
 

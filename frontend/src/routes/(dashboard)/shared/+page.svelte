@@ -229,19 +229,14 @@
   }
 
   async function handleExecuteMove() {
-    const documentIds = moveTargets.filter(target => target.type === 'document').map(target => target.id);
-    const folderTargets = moveTargets.filter(target => target.type === 'folder');
-
     try {
       isMoveProcessing = true;
       moveError = '';
 
-      if (documentIds.length > 0) {
-        await storageService.moveDocuments(documentIds, moveTargetFolderId);
-      }
-
-      for (const folder of folderTargets) {
-        await storageService.moveFolder(folder.id, moveTargetFolderId);
+      const targets = moveTargets.map(target => ({ id: target.id, type: target.type }));
+      const response = await storageService.bulkMove(targets, moveTargetFolderId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to move items.');
       }
 
       moveSuccess = 'Item moved successfully.';

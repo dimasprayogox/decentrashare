@@ -1147,27 +1147,15 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       moveError = "";
       moveSuccess = "";
 
-      let movedDocuments = 0;
-      let movedFolders = 0;
-      let appliedPrivacy = '';
-
-      if (documentIds.length > 0) {
-        const documentResponse = await storageService.moveDocuments(documentIds, moveTargetFolderId);
-        if (!documentResponse.success) {
-          throw new Error(documentResponse.message || 'Failed to move documents.');
-        }
-        movedDocuments = documentResponse.data?.count ?? documentIds.length;
-        appliedPrivacy = documentResponse.data?.appliedPrivacy ?? appliedPrivacy;
+      const targets = moveTargets.map(target => ({ id: target.id, type: target.type }));
+      const response = await storageService.bulkMove(targets, moveTargetFolderId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to move items.');
       }
 
-      for (const folder of folderTargets) {
-        const folderResponse = await storageService.moveFolder(folder.id, moveTargetFolderId);
-        if (!folderResponse.success) {
-          throw new Error(folderResponse.message || `Failed to move folder ${folder.name}.`);
-        }
-        movedFolders += 1;
-        appliedPrivacy = folderResponse.data?.appliedPrivacy ?? appliedPrivacy;
-      }
+      const movedFolders = moveTargets.filter(t => t.type === 'folder').length;
+      const movedDocuments = moveTargets.filter(t => t.type === 'document').length;
+      const appliedPrivacy = response.data?.appliedPrivacy || response.appliedPrivacy || '';
 
       const parts = [];
       if (movedFolders > 0) parts.push(`${movedFolders} folder(s)`);

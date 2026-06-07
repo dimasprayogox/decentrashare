@@ -158,9 +158,10 @@
       case 'EDIT_METADATA':
       case 'EDIT_DESCRIPTION':
       case 'MOVE':
+      case 'BULK_MOVE':
         return { 
           bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', 
-          label: action === 'RENAME' ? 'Rename' : action === 'MOVE' ? 'Move' : action === 'EDIT_METADATA' ? 'Edit Metadata' : 'Edit Description', 
+          label: action === 'RENAME' ? 'Rename' : action === 'MOVE' ? 'Move' : action === 'BULK_MOVE' ? 'Bulk Move' : action === 'EDIT_METADATA' ? 'Edit Metadata' : 'Edit Description', 
           icon: 'text-amber-400', 
           iconBg: 'bg-amber-500/10' 
         };
@@ -208,6 +209,7 @@
       case 'EDIT_DESCRIPTION':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
       case 'MOVE':
+      case 'BULK_MOVE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`;
       case 'ARCHIVE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>`;
@@ -335,12 +337,18 @@
     return null;
   }
 
-  function parseMove(details: string | null | undefined): string | null {
+  function parseMove(details: string | null | undefined): { from: string; to: string } | null {
     if (!details) return null;
     let text = details.trim();
     if (text.startsWith('{') || text.startsWith('[')) {
       try {
         const parsed = JSON.parse(text);
+        if (parsed.move) {
+          return {
+            from: parsed.move.from || 'Root',
+            to: parsed.move.to || 'Root'
+          };
+        }
         text = parsed.raw || '';
       } catch {
         // Fallback to plain text
@@ -348,7 +356,7 @@
     }
     const match = text.match(/(?:Document|Folder) moved to (.+?)$/i);
     if (match) {
-      return match[1];
+      return { from: '—', to: match[1] };
     }
     return null;
   }
@@ -403,6 +411,28 @@
     name: string;
     privacy: { from: string; to: string };
     users: Array<{ id: string; username: string; role?: string }>;
+  }> | null {
+    if (!details) return null;
+    let text = details.trim();
+    if (text.startsWith('{') || text.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.bulk) {
+          return parsed.bulk;
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    return null;
+  }
+
+  function parseBulkMove(details: string | null | undefined): Array<{
+    id: string;
+    type: 'document' | 'folder';
+    name: string;
+    from: string;
+    to: string;
   }> | null {
     if (!details) return null;
     let text = details.trim();
@@ -603,12 +633,12 @@
                 <!-- Status -->
                 <td class="px-6 py-4 text-center">
                   <div class="flex items-center justify-center">
-                    {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
+                    {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium shadow-[0_0_12px_rgba(168,85,247,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
                         Verified
                       </span>
-                    {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
+                    {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                         IPFS Synced
@@ -631,6 +661,7 @@
                 {@const privacyInfo = parsePrivacyChange(log.details)}
                 {@const shareRevokeInfo = parseShareRevoke(log.details)}
                 {@const bulkInfo = parseBulkShare(log.details)}
+                {@const bulkMoveInfo = parseBulkMove(log.details)}
                 <tr class="bg-black/20" in:fade={{ duration: 150 }}>
                   <td colspan="5" class="px-6 py-4">
                     <div class="rounded-2xl border border-white/10 bg-white/[0.01] p-5 shadow-inner">
@@ -638,11 +669,11 @@
                       <!-- Header Status Aksi -->
                       <div class="flex items-center justify-between gap-4 mb-4 border-b border-white/5 pb-3">
                         <div class="flex items-center gap-2">
-                          <span class="text-xs font-bold uppercase tracking-wider text-blue-400">{log.action.replace(/_/g, ' ')}</span>
+                           <span class="text-xs font-bold uppercase tracking-wider text-blue-400">{log.action.replace(/_/g, ' ')}</span>
                         </div>
-                        {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
+                        {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/20 text-purple-300">Verified On-Chain</span>
-                        {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE'}
+                        {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/20 text-blue-300">IPFS Synced</span>
                          {/if}
                       </div>
@@ -715,9 +746,15 @@
                           {#if moveInfo}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Move Location Change</span>
-                              <div class="flex items-center gap-2">
-                                <span class="text-gray-400 text-xs">Destination:</span>
-                                <span class="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold uppercase text-[10px]">{moveInfo}</span>
+                              <div class="grid grid-cols-1 gap-2">
+                                <div>
+                                  <span class="text-[10px] text-gray-500 block uppercase mb-0.5">Before</span>
+                                  <span class="text-xs text-rose-300 font-semibold line-through break-all">{moveInfo.from}</span>
+                                </div>
+                                <div>
+                                  <span class="text-[10px] text-gray-500 block uppercase mb-0.5">After</span>
+                                  <span class="text-xs text-emerald-300 font-semibold break-all">{moveInfo.to}</span>
+                                </div>
                               </div>
                             </div>
                           {/if}
@@ -838,8 +875,37 @@
                             </div>
                           {/if}
 
+                          <!-- Operasi BULK MOVE -->
+                          {#if bulkMoveInfo}
+                            <div class="space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Bulk Move Items ({bulkMoveInfo.length})</span>
+                              <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                                {#each bulkMoveInfo as item}
+                                  <div class="p-3 rounded-xl border border-white/5 bg-white/[0.01] space-y-2.5">
+                                    <div class="flex items-center gap-2">
+                                      <span class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-semibold uppercase text-gray-400 font-mono">
+                                        {item.type}
+                                      </span>
+                                      <span class="text-xs font-semibold text-white truncate max-w-[200px]" title={item.name}>{item.name}</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 border-t border-white/5 pt-2">
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase mb-0.5 font-mono">Before</span>
+                                        <span class="text-[10px] text-rose-300 font-bold break-all line-through">{item.from}</span>
+                                      </div>
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase mb-0.5 font-mono">After</span>
+                                        <span class="text-[10px] text-emerald-300 font-bold break-all">{item.to}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                {/each}
+                              </div>
+                            </div>
+                          {/if}
+
                           <!-- Detail Deskripsi Umum (Jika ada details teks mentah diluar rename/move/description/privacy/share/revoke/bulk) -->
-                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && !privacyInfo && !shareRevokeInfo && !bulkInfo && (!parsed.files || parsed.files.length === 0)}
+                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && !privacyInfo && !shareRevokeInfo && !bulkInfo && !bulkMoveInfo && (!parsed.files || parsed.files.length === 0)}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Event Details</span>
                               <p class="text-gray-300 text-xs leading-relaxed break-words">{parsed.raw ?? formatDetails(log.details)}</p>
@@ -847,7 +913,7 @@
                           {/if}
 
                           <!-- RECORDED FILES LIST (Selalu muncul jika ada parsed.files) -->
-                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'CHANGE_PRIVACY' && log.action !== 'SHARE' && log.action !== 'REVOKE' && log.action !== 'BULK_SHARE'}
+                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'CHANGE_PRIVACY' && log.action !== 'SHARE' && log.action !== 'REVOKE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
                             <div class="space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
                                 {#if log.action.includes('UPLOAD')}

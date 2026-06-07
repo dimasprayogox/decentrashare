@@ -1173,15 +1173,37 @@ export const moveMultipleDocuments = async (
     }
 
     if (movedCount > 0) {
+      const uniqueSourceFolderIds = [...new Set(documents.map(d => d.folderId).filter(Boolean))] as string[];
+      const sourceFolders = uniqueSourceFolderIds.length > 0
+        ? (await tx.folder.findMany({
+            where: { id: { in: uniqueSourceFolderIds } },
+            select: { id: true, name: true }
+          })) || []
+        : [];
+      const folderIdToName = new Map<string, string>();
+      for (const f of sourceFolders) {
+        folderIdToName.set(f.id, f.name);
+      }
+      const targetFolderName = targetFolderId ? (targetFolder?.name || 'Folder') : 'Root';
+
       await tx.activityLog.createMany({
-        data: documents.map((doc) => ({
-          userId,
-          action: 'MOVE',
-          entityType: 'DOCUMENT',
-          entityId: doc.id,
-          entityName: doc.title,
-          details: `Document moved to ${targetFolderId ? 'Folder' : 'Root'}`
-        }))
+        data: documents.map((doc) => {
+          const fromName = doc.folderId ? (folderIdToName.get(doc.folderId) || 'Folder') : 'Root';
+          return {
+            userId,
+            action: 'MOVE',
+            entityType: 'DOCUMENT',
+            entityId: doc.id,
+            entityName: doc.title,
+            details: JSON.stringify({
+              raw: `Document moved to ${targetFolderId ? 'Folder' : 'Root'}`,
+              move: {
+                from: fromName,
+                to: targetFolderName
+              }
+            })
+          };
+        })
       });
     }
 
@@ -1752,10 +1774,10 @@ export const shareDocumentsToUsers = async (
         data: { privacy: 'SPECIFIC_USER' }
       });
 
-      const targets = await tx.user.findMany({
+      const targets = (await tx.user.findMany({
         where: { id: { in: item.targetUsers } },
         select: { id: true, username: true, walletAddress: true }
-      });
+      })) || [];
 
       await tx.activityLog.create({
         data: {
@@ -1837,10 +1859,10 @@ export const revokeDocumentsAccess = async (
         updatedPrivacy = updatedDoc.privacy;
       }
 
-      const targets = await tx.user.findMany({
+      const targets = (await tx.user.findMany({
         where: { id: { in: item.targetUserIds } },
         select: { id: true, username: true, walletAddress: true }
-      });
+      })) || [];
 
       await tx.activityLog.create({
         data: {
@@ -2237,5 +2259,192 @@ export const bulkShareItems = async (
     }
 
     return { success: true, count: logs.length };
+  });
+};
+
+export const bulkMoveItems = async (
+  ownerId: string,
+  targets: Array<{ id: string; type: 'document' | 'folder' }>,
+  targetFolderId: string | null
+) => {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Fetch destination folder name
+    let targetFolderName = 'Root';
+    let targetPrivacy: PrivacyLevel = 'PRIVATE';
+    let targetFolder: any = null;
+
+    if (targetFolderId) {
+      targetFolder = await tx.folder.findFirst({
+        where: {
+          id: targetFolderId,
+          isArchived: false,
+          OR: [
+            { ownerId },
+            { sharedWith: { some: { userId: ownerId, role: 'EDITOR' } } }
+          ]
+        },
+        include: { sharedWith: true }
+      });
+      if (!targetFolder) {
+        throw new Error('Target folder not found or unauthorized.');
+      }
+      targetFolderName = targetFolder.name;
+      targetPrivacy = targetFolder.privacy;
+    }
+
+    const logs = [];
+
+    // 2. Perform moving and collect logs
+    for (const target of targets) {
+      if (target.type === 'document') {
+        const doc = await tx.document.findFirst({
+          where: {
+            id: target.id,
+            isArchived: false,
+            OR: [
+              { ownerId },
+              { folder: { sharedWith: { some: { userId: ownerId, role: 'EDITOR' } } } }
+            ]
+          }
+        });
+        if (!doc) continue;
+
+        let sourceFolderName = 'Root';
+        if (doc.folderId) {
+          const src = await tx.folder.findFirst({ where: { id: doc.folderId }, select: { name: true } });
+          if (src) sourceFolderName = src.name;
+        }
+
+        await tx.document.update({
+          where: { id: target.id },
+          data: {
+            folderId: targetFolderId,
+            privacy: targetPrivacy
+          }
+        });
+
+        await syncMovedDocumentAccess(tx, doc, targetFolder);
+
+        logs.push({
+          id: target.id,
+          type: 'document',
+          name: doc.title,
+          from: sourceFolderName,
+          to: targetFolderName
+        });
+
+      } else if (target.type === 'folder') {
+        const folder = await tx.folder.findFirst({
+          where: {
+            id: target.id,
+            isArchived: false,
+            OR: [
+              { ownerId },
+              { sharedWith: { some: { userId: ownerId, role: 'EDITOR' } } }
+            ]
+          }
+        });
+        if (!folder) continue;
+
+        let sourceFolderName = 'Root';
+        if (folder.parentId) {
+          const src = await tx.folder.findFirst({ where: { id: folder.parentId }, select: { name: true } });
+          if (src) sourceFolderName = src.name;
+        }
+
+        // Relocate folder
+        let subtreeFolderIds = await getAllDescendantFolderIds(tx, [target.id]);
+        const subtreeDocuments = await tx.document.findMany({
+          where: { folderId: { in: subtreeFolderIds } },
+          select: { id: true }
+        });
+
+        await tx.folder.updateMany({
+          where: { id: { in: subtreeFolderIds } },
+          data: { privacy: targetPrivacy }
+        });
+        await tx.document.updateMany({
+          where: { folderId: { in: subtreeFolderIds } },
+          data: { privacy: targetPrivacy }
+        });
+
+        await tx.folder.update({
+          where: { id: target.id },
+          data: {
+            parentId: targetFolderId,
+            privacy: targetPrivacy
+          }
+        });
+
+        await tx.folderAccess.deleteMany({
+          where: { folderId: { in: subtreeFolderIds } }
+        });
+        if (subtreeDocuments.length > 0) {
+          await tx.documentAccess.deleteMany({
+            where: { documentId: { in: subtreeDocuments.map(d => d.id) } }
+          });
+        }
+
+        if (targetPrivacy === 'SPECIFIC_USER' && targetFolder) {
+          // Get inherited folder access
+          const targetFolderAccess = await tx.folderAccess.findMany({
+            where: { folderId: targetFolderId }
+          });
+          if (targetFolderAccess.length > 0) {
+            await tx.folderAccess.createMany({
+              data: subtreeFolderIds.flatMap((fId) =>
+                targetFolderAccess.map((access) => ({
+                  folderId: fId,
+                  userId: access.userId,
+                  role: access.role
+                }))
+              ),
+              skipDuplicates: true
+            });
+
+            const docAccess = subtreeDocuments.flatMap((d) =>
+              targetFolderAccess
+                .filter((access) => access.userId !== folder.ownerId)
+                .map((access) => ({
+                  documentId: d.id,
+                  userId: access.userId
+                }))
+            );
+            if (docAccess.length > 0) {
+              await tx.documentAccess.createMany({
+                data: docAccess,
+                skipDuplicates: true
+              });
+            }
+          }
+        }
+
+        logs.push({
+          id: target.id,
+          type: 'folder',
+          name: folder.name,
+          from: sourceFolderName,
+          to: targetFolderName
+        });
+      }
+    }
+
+    if (logs.length > 0) {
+      await tx.activityLog.create({
+        data: {
+          userId: ownerId,
+          action: 'BULK_MOVE',
+          entityType: 'MULTIPLE',
+          entityId: 'BULK',
+          entityName: `${logs.length} items moved`,
+          details: JSON.stringify({
+            raw: `Bulk move completed for ${logs.length} item(s)`,
+            bulk: logs
+          })
+        }
+      });
+    }
+
+    return { success: true, count: logs.length, appliedPrivacy: targetPrivacy, location: targetFolderName };
   });
 };
