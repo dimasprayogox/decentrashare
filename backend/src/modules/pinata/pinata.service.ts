@@ -96,7 +96,7 @@ export const createUserPinGroup = async (userId: string, username: string): Prom
       return user.pinataGroupId;
     }
     
-    const groupName = `user-${userId}-${username}`;
+    const groupName = `user-${userId}-${username}`.slice(0, 50);
     
     // Idempotent: Check if group already exists in Pinata.
     // NOTE: pinata-web3 v0.5.4 `groups.list()` takes NO args and returns a
@@ -153,7 +153,7 @@ export const ensureUserPinGroup = async (userId: string, username: string): Prom
     }
     
     // ── 2. Prepare group name (consistent naming convention) ────────────
-    const groupName = `user-${userId}-${username}`;
+    const groupName = `user-${userId}-${username}`.slice(0, 50);
     
     // ── 3. IDEMPOTENT CHECK: See if group already exists in Pinata ─────
     // This prevents duplicate groups when re-registering in development.

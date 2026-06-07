@@ -4683,3 +4683,7 @@
 {"level":"info","message":"SIGTERM received, shutting down gracefully...","timestamp":"2026-06-06 03:18:34"}
 {"level":"info","message":"HTTP server closed","timestamp":"2026-06-06 03:18:34"}
 {"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-06-06 03:18:34"}
+{"error":"HTTP error: {\"error\":{\"reason\":\"INVALID_NAME\",\"details\":\"A {name} string 50 characters or less is required\",\"message\":\"A {name} string 50 characters or less is required\"}}","level":"warn","message":"⚠️ Failed to create Pinata group during registration (non-critical)","timestamp":"2026-06-07 20:04:21","userId":"e9a8c61a-8207-4d4d-b306-567971de2178","username":"fikripuki"}
+{"level":"info","message":"📁 Created Pinata group \"user-1f5b511c-ceac-499e-8dfa-235b34f253bc-gendutpu\" for newly registered user 1f5b511c-ceac-499e-8dfa-235b34f253bc","timestamp":"2026-06-07 20:05:01"}
+{"level":"info","message":"📁 Created Pinata group \"user-bb0a050d-53e9-4338-a1f8-279f4e17d941-denispuk\" for newly registered user bb0a050d-53e9-4338-a1f8-279f4e17d941","timestamp":"2026-06-07 20:05:03"}
+{"level":"info","message":"📁 Created Pinata group \"user-e9a8c61a-8207-4d4d-b306-567971de2178-fikripuk\" for newly registered user e9a8c61a-8207-4d4d-b306-567971de2178","timestamp":"2026-06-07 20:05:03"}
