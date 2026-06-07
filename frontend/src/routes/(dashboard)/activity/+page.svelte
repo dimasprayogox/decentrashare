@@ -337,7 +337,7 @@
     return null;
   }
 
-  function parseMove(details: string | null | undefined): { from: string; to: string } | null {
+  function parseMove(details: string | null | undefined): { from: string; to: string; privacy?: { from: string; to: string } } | null {
     if (!details) return null;
     let text = details.trim();
     if (text.startsWith('{') || text.startsWith('[')) {
@@ -346,7 +346,8 @@
         if (parsed.move) {
           return {
             from: parsed.move.from || 'Root',
-            to: parsed.move.to || 'Root'
+            to: parsed.move.to || 'Root',
+            privacy: parsed.move.privacy || null
           };
         }
         text = parsed.raw || '';
@@ -744,16 +745,46 @@
 
                           <!-- Operasi MOVE (Jika terdeteksi) -->
                           {#if moveInfo}
-                            <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
-                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Move Location Change</span>
-                              <div class="grid grid-cols-1 gap-2">
-                                <div>
-                                  <span class="text-[10px] text-gray-500 block uppercase mb-0.5">Before</span>
-                                  <span class="text-xs text-rose-300 font-semibold line-through break-all">{moveInfo.from}</span>
+                            <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3.5">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Move Details</span>
+                              
+                              <div class="grid grid-cols-2 gap-4">
+                                <!-- Location Change -->
+                                <div class="space-y-2 border-r border-white/5 pr-4">
+                                  <span class="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">Location</span>
+                                  <div class="space-y-1.5">
+                                    <div>
+                                      <span class="text-[9px] text-gray-500 block uppercase font-mono">Before</span>
+                                      <span class="text-xs text-rose-300 font-semibold line-through break-all">{moveInfo.from}</span>
+                                    </div>
+                                    <div>
+                                      <span class="text-[9px] text-gray-500 block uppercase font-mono">After</span>
+                                      <span class="text-xs text-emerald-300 font-semibold break-all">{moveInfo.to}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <span class="text-[10px] text-gray-500 block uppercase mb-0.5">After</span>
-                                  <span class="text-xs text-emerald-300 font-semibold break-all">{moveInfo.to}</span>
+
+                                <!-- Privacy Change -->
+                                <div class="space-y-2 pl-2">
+                                  <span class="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">Privacy Level</span>
+                                  {#if moveInfo.privacy}
+                                    <div class="space-y-1.5">
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase font-mono">Before</span>
+                                        <span class="text-xs text-rose-300 font-semibold line-through break-all">
+                                          {(moveInfo.privacy.from || 'PRIVATE').replace(/_/g, ' ')}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase font-mono">After</span>
+                                        <span class="text-xs text-emerald-300 font-semibold break-all">
+                                          {(moveInfo.privacy.to || 'PRIVATE').replace(/_/g, ' ')}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  {:else}
+                                    <div class="text-xs text-gray-400 italic mt-3">Unchanged</div>
+                                  {/if}
                                 </div>
                               </div>
                             </div>
@@ -840,11 +871,15 @@
                                     <div class="grid grid-cols-2 gap-2 border-t border-white/5 pt-2">
                                       <div>
                                         <span class="text-[9px] text-gray-500 block uppercase mb-0.5">Before</span>
-                                        <span class="text-[10px] text-rose-300 font-bold uppercase line-through break-all">{item.privacy.from.replace(/_/g, ' ')}</span>
+                                        <span class="text-[10px] text-rose-300 font-bold uppercase line-through break-all">
+                                          {(item.privacy?.from || (typeof item.privacy === 'string' ? item.privacy : '') || 'PRIVATE').replace(/_/g, ' ')}
+                                        </span>
                                       </div>
                                       <div>
                                         <span class="text-[9px] text-gray-500 block uppercase mb-0.5">After</span>
-                                        <span class="text-[10px] text-emerald-300 font-bold uppercase break-all">{item.privacy.to.replace(/_/g, ' ')}</span>
+                                        <span class="text-[10px] text-emerald-300 font-bold uppercase break-all">
+                                          {(item.privacy?.to || 'PRIVATE').replace(/_/g, ' ')}
+                                        </span>
                                       </div>
                                     </div>
                                     {#if item.users && item.users.length > 0}
@@ -888,14 +923,39 @@
                                       </span>
                                       <span class="text-xs font-semibold text-white truncate max-w-[200px]" title={item.name}>{item.name}</span>
                                     </div>
-                                    <div class="grid grid-cols-2 gap-2 border-t border-white/5 pt-2">
-                                      <div>
-                                        <span class="text-[9px] text-gray-500 block uppercase mb-0.5 font-mono">Before</span>
-                                        <span class="text-[10px] text-rose-300 font-bold break-all line-through">{item.from}</span>
+                                    <div class="grid grid-cols-2 gap-4 border-t border-white/5 pt-2.5">
+                                      <!-- Location Change -->
+                                      <div class="space-y-1.5 border-r border-white/5 pr-2">
+                                        <span class="text-[8px] uppercase font-bold text-gray-500 tracking-wider block font-mono">Location</span>
+                                        <div>
+                                          <span class="text-[8px] text-gray-500 block uppercase font-mono">Before</span>
+                                          <span class="text-[10px] text-rose-300 font-semibold line-through break-all">{item.from}</span>
+                                        </div>
+                                        <div>
+                                          <span class="text-[8px] text-gray-500 block uppercase font-mono">After</span>
+                                          <span class="text-[10px] text-emerald-300 font-semibold break-all">{item.to}</span>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <span class="text-[9px] text-gray-500 block uppercase mb-0.5 font-mono">After</span>
-                                        <span class="text-[10px] text-emerald-300 font-bold break-all">{item.to}</span>
+
+                                      <!-- Privacy Change -->
+                                      <div class="space-y-1.5 pl-1">
+                                        <span class="text-[8px] uppercase font-bold text-gray-500 tracking-wider block font-mono">Privacy</span>
+                                        {#if item.privacy}
+                                          <div>
+                                            <span class="text-[8px] text-gray-500 block uppercase font-mono">Before</span>
+                                            <span class="text-[10px] text-rose-300 font-semibold line-through break-all">
+                                              {(item.privacy.from || 'PRIVATE').replace(/_/g, ' ')}
+                                            </span>
+                                          </div>
+                                          <div>
+                                            <span class="text-[8px] text-gray-500 block uppercase font-mono">After</span>
+                                            <span class="text-[10px] text-emerald-300 font-semibold break-all">
+                                              {(item.privacy.to || 'PRIVATE').replace(/_/g, ' ')}
+                                            </span>
+                                          </div>
+                                        {:else}
+                                          <div class="text-[10px] text-gray-400 italic mt-2.5">Unchanged</div>
+                                        {/if}
                                       </div>
                                     </div>
                                   </div>

@@ -236,6 +236,30 @@ describe('Feature: document privacy, access, and download behavior', () => {
     }));
   });
 
+  test('given only one document item, when bulkMoveItems runs, then it is logged as a single MOVE action with details', async () => {
+    const { bulkMoveItems } = await import('../../../../src/modules/document/document.service');
+    prisma.folder.findFirst.mockResolvedValueOnce(folderFactory({ id: 'folder-2', privacy: 'PUBLIC' }));
+    prisma.document.findFirst.mockResolvedValueOnce(documentFactory({ id: 'doc-1', folderId: null, ownerId: 'user-1', title: 'Doc 1', privacy: 'PRIVATE' }));
+    
+    prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
+
+    const result = await bulkMoveItems('user-1', [
+      { id: 'doc-1', type: 'document' }
+    ], 'folder-2');
+
+    expect(result.success).toBe(true);
+    expect(result.count).toBe(1);
+    expect(prisma.activityLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        action: 'MOVE',
+        entityType: 'DOCUMENT',
+        entityId: 'doc-1',
+        entityName: 'Doc 1',
+        details: expect.stringContaining('"privacy":{"from":"PRIVATE","to":"PUBLIC"}')
+      })
+    }));
+  });
+
   test('given a short keyword, when public documents are searched, then no database lookup is performed', async () => {
     const { searchPublicDocuments } = await import('../../../../src/modules/document/document.service');
 

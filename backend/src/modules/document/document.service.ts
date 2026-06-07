@@ -2330,7 +2330,8 @@ export const bulkMoveItems = async (
           type: 'document',
           name: doc.title,
           from: sourceFolderName,
-          to: targetFolderName
+          to: targetFolderName,
+          privacy: { from: doc.privacy, to: targetPrivacy }
         });
 
       } else if (target.type === 'folder') {
@@ -2424,12 +2425,32 @@ export const bulkMoveItems = async (
           type: 'folder',
           name: folder.name,
           from: sourceFolderName,
-          to: targetFolderName
+          to: targetFolderName,
+          privacy: { from: folder.privacy, to: targetPrivacy }
         });
       }
     }
 
-    if (logs.length > 0) {
+    if (logs.length === 1) {
+      const single = logs[0];
+      await tx.activityLog.create({
+        data: {
+          userId: ownerId,
+          action: 'MOVE',
+          entityType: single.type.toUpperCase() as any,
+          entityId: single.id,
+          entityName: single.name,
+          details: JSON.stringify({
+            raw: `${single.type === 'document' ? 'Document' : 'Folder'} moved to ${targetFolderName}`,
+            move: {
+              from: single.from,
+              to: single.to,
+              privacy: single.privacy
+            }
+          })
+        }
+      });
+    } else if (logs.length > 1) {
       await tx.activityLog.create({
         data: {
           userId: ownerId,
