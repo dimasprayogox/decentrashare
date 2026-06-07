@@ -107,7 +107,7 @@ export const registerUser = async (
   user: Omit<User, 'password'>;
   token: string;
   refreshToken: string;
-  pinataSetup?: 'in_progress';
+  pinataSetup?: 'ready' | 'pending';
 }> => {
   const address = walletAddress.toLowerCase();
 

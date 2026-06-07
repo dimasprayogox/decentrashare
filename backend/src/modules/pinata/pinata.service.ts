@@ -98,35 +98,27 @@ export const createUserPinGroup = async (userId: string, username: string): Prom
     
     const groupName = `user-${userId}-${username}`;
     
-    // Idempotent: Check if group already exists in Pinata
+    // Idempotent: Check if group already exists in Pinata.
+    // NOTE: pinata-web3 v0.5.4 `groups.list()` takes NO args and returns a
+    // plain array via a builder (`.name()`, `.limit()`), not `{ groups: [] }`.
     try {
-      const existingGroups = await pinata.groups.list({
-        groupName: groupName,
-        limit: 1
-      });
-      
-      if (existingGroups.groups?.[0]?.id) {
+      const existingGroups = await pinata.groups.list().name(groupName).limit(1);
+      const match = existingGroups?.find(g => g.name === groupName) ?? existingGroups?.[0];
+
+      if (match?.id) {
         await prisma.user.update({
           where: { id: userId },
-          data: { pinataGroupId: existingGroups.groups[0].id }
+          data: { pinataGroupId: match.id }
         });
         logger.info(`🔗 Re-associated existing Pinata group "${groupName}" with user ${userId}`);
-        return existingGroups.groups[0].id;
+        return match.id;
       }
     } catch (listError: any) {
       logger.warn('⚠️ Could not check existing Pinata groups during registration', { userId, error: listError.message });
     }
     
     // Create new group
-    const group = await pinata.groups.create({
-      name: groupName,
-      groupPinPolicy: {
-        regions: [{ 
-          desiredRegions: ['us-east-1'],
-          minReplicationCount: 1 
-        }]
-      }
-    });
+    const group = await pinata.groups.create({ name: groupName });
     
     // Save to database
     await prisma.user.update({
@@ -164,23 +156,23 @@ export const ensureUserPinGroup = async (userId: string, username: string): Prom
     const groupName = `user-${userId}-${username}`;
     
     // ── 3. IDEMPOTENT CHECK: See if group already exists in Pinata ─────
-    // This prevents duplicate groups when re-registering in development
+    // This prevents duplicate groups when re-registering in development.
+    // NOTE: pinata-web3 v0.5.4 `groups.list()` takes NO args and returns a
+    // plain array via a builder (`.name()`, `.limit()`), not `{ groups: [] }`.
     try {
-      const existingGroups = await pinata.groups.list({
-        groupName: groupName,  // Filter by exact name match
-        limit: 1
-      });
-      
-      if (existingGroups.groups?.[0]?.id) {
+      const existingGroups = await pinata.groups.list().name(groupName).limit(1);
+      const match = existingGroups?.find(g => g.name === groupName) ?? existingGroups?.[0];
+
+      if (match?.id) {
         // ✅ Group exists in Pinata but not linked in DB (e.g., after hard delete)
         // Re-associate it with this user to avoid creating duplicate
         await prisma.user.update({
           where: { id: userId },
-          data: { pinataGroupId: existingGroups.groups[0].id }
+          data: { pinataGroupId: match.id }
         });
         
         logger.info(`🔗 Re-associated existing Pinata group "${groupName}" with user ${userId}`);
-        return existingGroups.groups[0].id;
+        return match.id;
       }
     } catch (listError: any) {
       // ⚠️ If listing groups fails, continue to create (non-critical fallback)
@@ -192,15 +184,7 @@ export const ensureUserPinGroup = async (userId: string, username: string): Prom
     }
     
     // ── 4. CREATE: Group doesn't exist, create new one ──────────────────
-    const group = await pinata.groups.create({
-      name: groupName,
-      groupPinPolicy: {
-        regions: [{ 
-          desiredRegions: ['us-east-1'], // Adjust based on your Pinata plan/region
-          minReplicationCount: 1 
-        }]
-      }
-    });
+    const group = await pinata.groups.create({ name: groupName });
     
     // ── 5. SAVE: Link group ID to user in database ──────────────────────
     await prisma.user.update({

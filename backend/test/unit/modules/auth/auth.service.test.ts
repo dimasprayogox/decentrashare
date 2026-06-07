@@ -46,7 +46,12 @@ describe('Feature: wallet authentication and session lifecycle', () => {
     Object.values(logger).forEach(fn => fn.mockReset());
     randomBytes.mockReturnValue({ toString: () => 'random-nonce' });
     jwtSign.mockImplementation((payload: any) => `${payload.type}-token`);
-    pinata.groups.list.mockResolvedValue({ groups: [] });
+    const defaultListBuilder: any = {
+      name: () => defaultListBuilder,
+      limit: () => defaultListBuilder,
+      then: (cb: (v: any[]) => any) => Promise.resolve([]).then(cb),
+    };
+    pinata.groups.list.mockReturnValue(defaultListBuilder);
     pinata.groups.create.mockResolvedValue({ id: 'group-1' });
   });
 
@@ -177,7 +182,12 @@ describe('Feature: wallet authentication and session lifecycle', () => {
     prisma.user.findFirst.mockResolvedValue(null);
     prisma.user.update.mockResolvedValue(updatedUser);
     verifyMetamaskSignature.mockReturnValue(true);
-    pinata.groups.list.mockResolvedValue({ groups: [] });
+    const listBuilder: any = {
+      name: () => listBuilder,
+      limit: () => listBuilder,
+      then: (cb: (v: any[]) => any) => Promise.resolve([]).then(cb),
+    };
+    pinata.groups.list.mockReturnValue(listBuilder);
     pinata.groups.create.mockResolvedValue({ id: 'group-new' });
 
     const result = await registerUser('0xABC', 'sig', { username: ' alice ', email: 'ALICE@example.com' });
@@ -193,7 +203,6 @@ describe('Feature: wallet authentication and session lifecycle', () => {
     });
     expect(pinata.groups.create).toHaveBeenCalledWith({
       name: `user-${updatedUser.id}-${updatedUser.username}`,
-      groupPinPolicy: { regions: [{ desiredRegions: ['us-east-1'], minReplicationCount: 1 }] },
     });
     expect(result).toEqual({
       user: { ...updatedUser, nonce: undefined, refreshToken: undefined },

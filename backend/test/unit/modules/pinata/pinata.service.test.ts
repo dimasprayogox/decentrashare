@@ -10,6 +10,19 @@ const pinata = {
 };
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
 
+// pinata-web3 v0.5.4: `groups.list()` returns a chainable builder
+// (`.name().limit()`) that resolves to a plain array. This helper builds a
+// mock that mirrors that shape, resolving to the given items.
+function listBuilder(items: any[]) {
+  const builder: any = {
+    name: () => builder,
+    limit: () => builder,
+    offset: () => builder,
+    then: (onfulfilled: (v: any[]) => any) => Promise.resolve(items).then(onfulfilled),
+  };
+  return builder;
+}
+
 mock.module('../../../../src/config/db', () => ({ prisma }));
 mock.module('../../../../src/config/pinata', () => ({ pinata }));
 mock.module('../../../../src/utils/logger', () => ({ logger }));
@@ -122,7 +135,7 @@ describe('Feature: Pinata file cleanup and user group provisioning', () => {
   test('given Pinata already has a matching group, when group provisioning runs, then the group is re-associated to the user', async () => {
     const { createUserPinGroup } = await import('../../../../src/modules/pinata/pinata.service');
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null });
-    pinata.groups.list.mockResolvedValue({ groups: [{ id: 'group-existing' }] });
+    pinata.groups.list.mockReturnValue(listBuilder([{ id: 'group-existing', name: 'user-user-1-alice' }]));
     prisma.user.update.mockResolvedValue({});
 
     const result = await createUserPinGroup('user-1', 'alice');
@@ -137,7 +150,7 @@ describe('Feature: Pinata file cleanup and user group provisioning', () => {
   test('given no stored or existing Pinata group, when group provisioning runs, then a new group is created and saved', async () => {
     const { createUserPinGroup } = await import('../../../../src/modules/pinata/pinata.service');
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null });
-    pinata.groups.list.mockResolvedValue({ groups: [] });
+    pinata.groups.list.mockReturnValue(listBuilder([]));
     pinata.groups.create.mockResolvedValue({ id: 'group-new' });
     prisma.user.update.mockResolvedValue({});
 
@@ -146,7 +159,6 @@ describe('Feature: Pinata file cleanup and user group provisioning', () => {
     expect(result).toBe('group-new');
     expect(pinata.groups.create).toHaveBeenCalledWith({
       name: 'user-user-1-alice',
-      groupPinPolicy: { regions: [{ desiredRegions: ['us-east-1'], minReplicationCount: 1 }] },
     });
   });
 
@@ -175,7 +187,7 @@ describe('Feature: Pinata file cleanup and user group provisioning', () => {
   test('given group exists on Pinata but not in DB, when ensureUserPinGroup runs, then it links group in DB', async () => {
     const { ensureUserPinGroup } = await import('../../../../src/modules/pinata/pinata.service');
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null });
-    pinata.groups.list.mockResolvedValue({ groups: [{ id: 'existing-pinata-group' }] });
+    pinata.groups.list.mockReturnValue(listBuilder([{ id: 'existing-pinata-group', name: 'user-user-1-alice' }]));
     prisma.user.update.mockResolvedValue({});
 
     const result = await ensureUserPinGroup('user-1', 'alice');
