@@ -27,7 +27,7 @@ export class PinataCleanupService {
   static async unpin(ipfsHash: string): Promise<PinCleanupResult> {
     try {
       // Pinata SDK v3+ syntax
-      await pinata.pin.delete(ipfsHash);
+      await pinata.unpin([ipfsHash]);
       
       logger.info(`🗑️ Successfully unpinned: ${ipfsHash}`);
       return { success: true, ipfsHash, message: 'Unpinned successfully' };

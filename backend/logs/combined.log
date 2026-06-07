@@ -4687,3 +4687,12 @@
 {"level":"info","message":"📁 Created Pinata group \"user-1f5b511c-ceac-499e-8dfa-235b34f253bc-gendutpu\" for newly registered user 1f5b511c-ceac-499e-8dfa-235b34f253bc","timestamp":"2026-06-07 20:05:01"}
 {"level":"info","message":"📁 Created Pinata group \"user-bb0a050d-53e9-4338-a1f8-279f4e17d941-denispuk\" for newly registered user bb0a050d-53e9-4338-a1f8-279f4e17d941","timestamp":"2026-06-07 20:05:03"}
 {"level":"info","message":"📁 Created Pinata group \"user-e9a8c61a-8207-4d4d-b306-567971de2178-fikripuk\" for newly registered user e9a8c61a-8207-4d4d-b306-567971de2178","timestamp":"2026-06-07 20:05:03"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-06-07 21:04:47"}
+{"level":"info","message":"Unpinning 2 expired files from Pinata...","timestamp":"2026-06-07 21:04:48"}
+{"error":"undefined is not an object (evaluating 'pinata.pin.delete')","level":"error","message":"❌ Failed to unpin QmTestDummyHashForAutoDeleteVerification","timestamp":"2026-06-07 21:04:48"}
+{"error":"undefined is not an object (evaluating 'pinata.pin.delete')","level":"error","message":"❌ Failed to unpin bafkreidlnbb4vih5zfypepuuy6tth464yzh6bskfrwnmakq2i65vrgusdy","timestamp":"2026-06-07 21:04:48"}
+{"deletedDocuments":2,"deletedFolders":1,"level":"info","message":"Expired trash cleanup completed","timestamp":"2026-06-07 21:04:48"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-06-07 21:05:28"}
+{"level":"info","message":"Unpinning 1 expired files from Pinata...","timestamp":"2026-06-07 21:05:28"}
+{"level":"info","message":"🗑️ Successfully unpinned: QmTestDummyHashForAutoDeleteVerification","timestamp":"2026-06-07 21:05:30"}
+{"deletedDocuments":1,"deletedFolders":1,"level":"info","message":"Expired trash cleanup completed","timestamp":"2026-06-07 21:05:30"}

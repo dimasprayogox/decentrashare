@@ -8,7 +8,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
-import { createUserPinGroup } from '../pinata/pinata.service';
+import { createUserPinGroup, PinataCleanupService } from '../pinata/pinata.service';
 import { ZipArchive } from 'archiver';
 
 /**
@@ -1554,14 +1554,30 @@ export const restoreDocuments = async (documentIds: string[], userId: string) =>
  * Permanently delete multiple documents and log their blockchain metadata for audit
  */
 export const destroyMultipleDocuments = async (documentIds: string[], userId: string) => {
+  // 1. Ambil data dokumen sebelum transaksi database (untuk log & unpin)
+  const docs = await prisma.document.findMany({
+    where: { id: { in: documentIds }, ownerId: userId, isArchived: true }
+  });
+
+  if (docs.length === 0) return { count: 0 };
+
+  const ipfsHashesToUnpin = docs.map((doc) => doc.ipfsHash).filter((hash): hash is string => Boolean(hash));
+
+  // Unpin dari Pinata (dilakukan di luar transaksi database agar tidak menahan lock database)
+  if (ipfsHashesToUnpin.length > 0) {
+    logger.info(`Unpinning ${ipfsHashesToUnpin.length} files from Pinata for manual destroy...`);
+    await Promise.allSettled(
+      ipfsHashesToUnpin.map(async (hash) => {
+        try {
+          await PinataCleanupService.unpin(hash);
+        } catch (err: any) {
+          logger.warn(`Failed to unpin ${hash} during manual destroy: ${err.message}`);
+        }
+      })
+    );
+  }
+
   return await prisma.$transaction(async (tx) => {
-    // 1. Ambil data dokumen (untuk log)
-    const docs = await tx.document.findMany({
-      where: { id: { in: documentIds }, ownerId: userId, isArchived: true }
-    });
-
-    if (docs.length === 0) return { count: 0 };
-
     // 2. CATAT KE ACTIVITY LOG (Sesuai skema baru)
     if (docs.length === 1) {
       const doc = docs[0];

@@ -1,5 +1,6 @@
 import { prisma } from '../config/db';
 import { logger } from '../utils/logger';
+import { PinataCleanupService } from '../modules/pinata/pinata.service';
 
 interface TrashCleanupConfig {
   retentionDays: number;
@@ -75,9 +76,19 @@ export const runExpiredTrashCleanup = async (config: TrashCleanupConfig = DEFAUL
             { folderId: { notIn: folderIdsToDelete } }
           ]
         },
-        select: { id: true, title: true, deletedAt: true },
+        select: { id: true, title: true, deletedAt: true, ipfsHash: true },
         orderBy: { deletedAt: 'asc' },
         take: remainingBatchSize
+      })
+    : [];
+
+  const folderDocuments = folderIdsToDelete.length > 0
+    ? await prisma.document.findMany({
+        where: {
+          folderId: { in: folderIdsToDelete },
+          isArchived: true
+        },
+        select: { id: true, ipfsHash: true }
       })
     : [];
 
@@ -86,40 +97,49 @@ export const runExpiredTrashCleanup = async (config: TrashCleanupConfig = DEFAUL
     return { deletedFolders: 0, deletedDocuments: 0 };
   }
 
+  const allDocumentIds = [
+    ...expiredDocuments.map((doc) => doc.id),
+    ...folderDocuments.map((doc) => doc.id)
+  ];
+
+  const ipfsHashesToUnpin = [
+    ...expiredDocuments.map((doc) => doc.ipfsHash),
+    ...folderDocuments.map((doc) => doc.ipfsHash)
+  ].filter((hash): hash is string => Boolean(hash));
+
   if (config.dryRun) {
     logger.info('[DRY RUN] Would permanently delete expired trash items', {
       folders: folderIdsToDelete.length,
-      documents: expiredDocuments.length
+      documents: allDocumentIds.length,
+      unpins: ipfsHashesToUnpin.length
     });
-    return { deletedFolders: folderIdsToDelete.length, deletedDocuments: expiredDocuments.length };
+    return { deletedFolders: folderIdsToDelete.length, deletedDocuments: allDocumentIds.length };
+  }
+
+  // Unpin from Pinata
+  if (ipfsHashesToUnpin.length > 0) {
+    logger.info(`Unpinning ${ipfsHashesToUnpin.length} expired files from Pinata...`);
+    await Promise.allSettled(
+      ipfsHashesToUnpin.map(async (hash) => {
+        try {
+          await PinataCleanupService.unpin(hash);
+        } catch (err: any) {
+          logger.warn(`Failed to unpin ${hash} during trash cleanup: ${err.message}`);
+        }
+      })
+    );
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    const documentIds = expiredDocuments.map((document) => document.id);
-
-    if (documentIds.length > 0) {
-      await tx.documentAccess.deleteMany({
-        where: { documentId: { in: documentIds } }
-      });
-    }
-
-    await tx.folderAccess.deleteMany({
-      where: { folderId: { in: folderIdsToDelete } }
-    });
-
-    const folderDocuments = await tx.document.findMany({
-      where: {
-        folderId: { in: folderIdsToDelete },
-        isArchived: true
-      },
-      select: { id: true }
-    });
-
-    const allDocumentIds = [...documentIds, ...folderDocuments.map((document: { id: string }) => document.id)];
-
     if (allDocumentIds.length > 0) {
       await tx.documentAccess.deleteMany({
         where: { documentId: { in: allDocumentIds } }
+      });
+    }
+
+    if (folderIdsToDelete.length > 0) {
+      await tx.folderAccess.deleteMany({
+        where: { folderId: { in: folderIdsToDelete } }
       });
     }
 

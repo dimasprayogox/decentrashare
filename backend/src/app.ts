@@ -19,7 +19,6 @@ import { config } from './config/env'
 import { logger, requestLogger } from './utils/logger'
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware'
 import routes from './routes'
-import { logger } from './utils/logger.js';
 
 const app = express()
 
@@ -107,6 +106,10 @@ app.get('/', (req, res) => {
 if (process.env.ENABLE_JOBS !== 'false') {
   void runOrphanedPinCleanup().catch((error: unknown) => {
     logger.error('Initial orphaned pin cleanup crashed', { error });
+  });
+
+  void runExpiredTrashCleanup().catch((error: unknown) => {
+    logger.error('Initial expired trash cleanup crashed', { error });
   });
 
   // Cleanup orphaned pins

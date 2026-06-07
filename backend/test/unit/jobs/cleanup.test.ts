@@ -85,14 +85,14 @@ describe('Jobs: Cleanup Tasks', () => {
       expect(prisma.document.findMany).toHaveBeenCalled();
     });
 
-    test('given expired trash items, when job runs, then permanently deletes them and associated access lists from DB', async () => {
+    test('given expired trash items, when job runs, then permanently deletes them and associated access lists from DB and unpins from Pinata', async () => {
       const { runExpiredTrashCleanup } = await import('../../../src/jobs/cleanup-expired-trash');
       
       const mockExpiredFolders = [
         { id: 'folder-1', name: 'Folder 1', deletedAt: new Date() }
       ];
       const mockExpiredDocs = [
-        { id: 'doc-1', title: 'Doc 1', deletedAt: new Date() }
+        { id: 'doc-1', title: 'Doc 1', deletedAt: new Date(), ipfsHash: 'QmHashExpired' }
       ];
 
       // Setup prisma findMany responses
@@ -102,18 +102,20 @@ describe('Jobs: Cleanup Tasks', () => {
       
       prisma.document.findMany
         .mockResolvedValueOnce(mockExpiredDocs) // for expiredDocuments
-        .mockResolvedValueOnce([]); // for folderDocuments check inside transaction
+        .mockResolvedValueOnce([]); // for folderDocuments check
 
       prisma.folderAccess.deleteMany.mockResolvedValue({ count: 1 });
       prisma.documentAccess.deleteMany.mockResolvedValue({ count: 1 });
       prisma.document.deleteMany.mockResolvedValue({ count: 1 });
       prisma.folder.deleteMany.mockResolvedValue({ count: 1 });
+      PinataCleanupService.unpin.mockResolvedValue({ success: true });
 
       const result = await runExpiredTrashCleanup({ retentionDays: 60, batchSize: 100, dryRun: false });
 
       expect(result).toEqual({ deletedFolders: 1, deletedDocuments: 1 });
       expect(prisma.folder.deleteMany).toHaveBeenCalled();
       expect(prisma.document.deleteMany).toHaveBeenCalled();
+      expect(PinataCleanupService.unpin).toHaveBeenCalledWith('QmHashExpired');
     });
   });
 });

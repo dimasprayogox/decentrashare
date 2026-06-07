@@ -2,7 +2,8 @@ import { prisma } from '../../config/db';
 import { logger } from '../../utils/logger';
 import { prepareFolderArchive, sanitizeDocuments } from '../document/document.service';
 import crypto from 'node:crypto';
-import { AccessRoleFolder, PrivacyLevel } from '@prisma/client'; // Kuncinya di sini agar tidak undefined
+import { AccessRoleFolder, PrivacyLevel } from '@prisma/client';
+import { PinataCleanupService } from '../pinata/pinata.service';
 
 /** * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN (Sesuai kode kamu)
  */
@@ -1326,7 +1327,9 @@ export const restoreFolders = async (folderIds: string[], userId: string) => {
 
 // ✅ PERMANENT DELETE: Destroy folders + ALL descendants (recursive cascade)
 export const destroyFolders = async (folderIds: string[], userId: string) => {
-  return await prisma.$transaction(async (tx) => {
+  let ipfsHashesToUnpin: string[] = [];
+
+  const result = await prisma.$transaction(async (tx) => {
     // 1. Validate: only destroy folders that are already archived (safety check)
     const folders = await tx.folder.findMany({
       where: {
@@ -1367,10 +1370,11 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
         folderId: { in: ownedFolderIdValues },
         ownerId: userId
       },
-      select: { id: true }
+      select: { id: true, ipfsHash: true }
     });
 
     const documentIdsToDestroy = documentsToDestroy.map((document: { id: string }) => document.id);
+    ipfsHashesToUnpin = documentsToDestroy.map((d: any) => d.ipfsHash).filter((hash): hash is string => Boolean(hash));
 
     if (documentIdsToDestroy.length > 0) {
       await tx.documentAccess.deleteMany({
@@ -1407,6 +1411,22 @@ export const destroyFolders = async (folderIds: string[], userId: string) => {
 
     return { count: validRootFolderIds.length };
   });
+
+  // Unpin dari Pinata setelah transaksi database sukses dilakukan
+  if (result.count > 0 && ipfsHashesToUnpin.length > 0) {
+    logger.info(`Unpinning ${ipfsHashesToUnpin.length} files from Pinata for folder manual destroy...`);
+    await Promise.allSettled(
+      ipfsHashesToUnpin.map(async (hash) => {
+        try {
+          await PinataCleanupService.unpin(hash);
+        } catch (err: any) {
+          logger.warn(`Failed to unpin ${hash} during folder destroy: ${err.message}`);
+        }
+      })
+    );
+  }
+
+  return result;
 };
 
 const getPublicContributorFolderIds = async (userId: string) => {
