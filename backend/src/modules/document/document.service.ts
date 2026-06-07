@@ -1,5 +1,5 @@
 import { prisma } from '../../config/db';
-import { getAllDescendantFolderIds, relocateOwnedContentFromSharedSubtree } from '../folder/folder.service';
+import { getAllDescendantFolderIds, relocateOwnedContentFromSharedSubtree, checkFolderWriteAccess } from '../folder/folder.service';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { Prisma, PrivacyLevel } from '@prisma/client';
@@ -1067,17 +1067,12 @@ export const moveMultipleDocuments = async (
 
     if (targetFolderId) {
       const folder = await tx.folder.findFirst({
-        where: {
-          id: targetFolderId,
-          OR: [
-            { ownerId: userId },
-            { sharedWith: { some: { userId: userId, role: 'EDITOR' } } }
-          ]
-        },
+        where: { id: targetFolderId },
         include: { sharedWith: true }
       });
 
-      if (!folder) throw new Error("Target folder not found or No Permission.");
+      const canWrite = folder && (folder.ownerId === userId || await checkFolderWriteAccess(tx, targetFolderId, userId));
+      if (!folder || !canWrite) throw new Error("Target folder not found or No Permission.");
       targetPrivacy = folder.privacy;
       targetFolder = folder;
     }
@@ -2351,17 +2346,11 @@ export const bulkMoveItems = async (
 
     if (targetFolderId) {
       targetFolder = await tx.folder.findFirst({
-        where: {
-          id: targetFolderId,
-          isArchived: false,
-          OR: [
-            { ownerId },
-            { sharedWith: { some: { userId: ownerId, role: 'EDITOR' } } }
-          ]
-        },
+        where: { id: targetFolderId },
         include: { sharedWith: true }
       });
-      if (!targetFolder) {
+      const canWrite = targetFolder && !targetFolder.isArchived && (targetFolder.ownerId === ownerId || await checkFolderWriteAccess(tx, targetFolderId, ownerId));
+      if (!targetFolder || !canWrite) {
         throw new Error('Target folder not found or unauthorized.');
       }
       targetFolderName = targetFolder.name;

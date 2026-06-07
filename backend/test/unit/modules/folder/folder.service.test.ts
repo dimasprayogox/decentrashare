@@ -801,5 +801,41 @@ describe('Feature: folder management behavior', () => {
 
     await expect(getFolderContents('folder-1', undefined)).rejects.toThrow('Authentication required');
   });
+
+  test('given a parent folder owned by user-1, and a child folder owned by user-2 inside it, when checkFolderWriteAccess is called for user-1 on the child folder, then it returns true', async () => {
+    const { checkFolderWriteAccess } = await import('../../../../src/modules/folder/folder.service');
+    // First query: child folder (owned by user-2, parent is parent-folder)
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({ id: 'child-folder', ownerId: 'user-2', parentId: 'parent-folder', sharedWith: [] }))
+      // Second query: parent folder (owned by user-1)
+      .mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-1', parentId: null, sharedWith: [] }));
+
+    const result = await checkFolderWriteAccess(prisma, 'child-folder', 'user-1');
+    expect(result).toBe(true);
+  });
+
+  test('given a parent folder owned by user-1, and a child folder owned by user-2 inside it, when getUserFolders is called for user-1 inside the parent-folder, then the child folder accessRole is mapped to EDITOR', async () => {
+    const { getUserFolders } = await import('../../../../src/modules/folder/folder.service');
+    
+    // We mock checkFolderWriteAccess inside getUserFolders:
+    // First query: checkFolderWriteAccess for parent-folder: parent-folder is owned by user-1, returns true
+    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-1', parentId: null, sharedWith: [] }));
+    
+    // getUserFolders:
+    prisma.folder.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'child-folder',
+          ownerId: 'user-2',
+          sharedWith: [],
+        },
+      ]); // main folders query
+
+    const result = await getUserFolders('user-1', 'parent-folder');
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('child-folder');
+    expect(result[0].accessRole).toBe('EDITOR');
+  });
 });
+
 

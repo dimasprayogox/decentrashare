@@ -8,6 +8,62 @@ import { AccessRoleFolder, PrivacyLevel } from '@prisma/client'; // Kuncinya di 
  */
 // src/lib/server/services/folder.service.ts
 
+export const checkFolderWriteAccess = async (
+  tx: any,
+  folderId: string,
+  userId: string
+): Promise<boolean> => {
+  let currentFolderId: string | null = folderId;
+
+  while (currentFolderId) {
+    const folder = await tx.folder.findUnique({
+      where: { id: currentFolderId },
+      include: { sharedWith: true }
+    });
+
+    if (!folder) return false;
+    if (folder.isArchived || folder.deletedAt) return false;
+
+    if (folder.ownerId === userId) return true;
+
+    const access = folder.sharedWith?.find((a: any) => a.userId === userId);
+    if (access && ['EDITOR', 'ADMIN'].includes(access.role)) return true;
+    if (access && access.role === 'VIEWER') return false;
+
+    currentFolderId = folder.parentId;
+  }
+
+  return false;
+};
+
+export const checkFolderReadAccess = async (
+  tx: any,
+  folderId: string,
+  userId: string
+): Promise<boolean> => {
+  let currentFolderId: string | null = folderId;
+
+  while (currentFolderId) {
+    const folder = await tx.folder.findUnique({
+      where: { id: currentFolderId },
+      include: { sharedWith: true }
+    });
+
+    if (!folder) return false;
+    if (folder.isArchived || folder.deletedAt) return false;
+
+    if (folder.ownerId === userId) return true;
+    if (folder.privacy === 'PUBLIC' || folder.privacy === 'LINK_ONLY') return true;
+
+    const access = folder.sharedWith?.find((a: any) => a.userId === userId);
+    if (access) return true;
+
+    currentFolderId = folder.parentId;
+  }
+
+  return false;
+};
+
 /**
  * LOGIKA MANAJEMEN FOLDER, PRIVACY, DAN ADMIN
  */
@@ -24,12 +80,11 @@ export const createFolder = async (
 
   if (parentId) {
     const parentFolder = await prisma.folder.findUnique({
-      where: { id: parentId },
-      include: { sharedWith: true }
+      where: { id: parentId }
     });
-    const parentAccess = parentFolder?.sharedWith.find(access => access.userId === userId);
-    const canCreate = parentFolder?.ownerId === userId || ['EDITOR', 'ADMIN'].includes(parentAccess?.role || '');
     if (!parentFolder) throw new Error('Parent folder not found.');
+
+    const canCreate = parentFolder.ownerId === userId || await checkFolderWriteAccess(prisma, parentId, userId);
     if (!canCreate) {
       const error: any = new Error('You only have viewer access to this folder');
       error.status = 403;
@@ -125,11 +180,10 @@ export const renameFolder = async (
   const folderName = newName.trim();
 
   const folder = await prisma.folder.findUnique({
-    where: { id: folderId },
-    include: { sharedWith: { where: { userId }, select: { role: true } } }
+    where: { id: folderId }
   });
 
-  const canRename = folder?.ownerId === userId || folder?.sharedWith.some(access => access.role === 'EDITOR');
+  const canRename = folder && (folder.ownerId === userId || await checkFolderWriteAccess(prisma, folderId, userId));
   if (!folder || !canRename) {
     throw new Error("Folder not found or unauthorized.");
   }
@@ -182,11 +236,10 @@ export const moveFolder = async (
 ) => {
   return await prisma.$transaction(async (tx) => {
     const folder = await tx.folder.findUnique({
-      where: { id: folderId },
-      include: { sharedWith: { where: { userId }, select: { role: true } } }
+      where: { id: folderId }
     });
 
-    const canMoveSource = folder?.ownerId === userId || folder?.sharedWith.some(access => access.role === 'EDITOR');
+    const canMoveSource = folder && (folder.ownerId === userId || await checkFolderWriteAccess(tx, folderId, userId));
     if (!folder || !canMoveSource || folder.isArchived) {
       throw new Error('Folder not found or unauthorized.');
     }
@@ -206,8 +259,7 @@ export const moveFolder = async (
         include: { sharedWith: true }
       });
 
-      const targetUserAccess = targetFolder?.sharedWith.find(access => access.userId === userId);
-      const canMoveToTarget = targetFolder?.ownerId === userId || targetUserAccess?.role === 'EDITOR';
+      const canMoveToTarget = targetFolder && (targetFolder.ownerId === userId || await checkFolderWriteAccess(tx, targetFolderId, userId));
       if (!targetFolder || !canMoveToTarget || targetFolder.isArchived) {
         throw new Error('Target folder not found or unauthorized.');
       }
@@ -573,11 +625,9 @@ export const getFolderDetail = async (folderId: string, userId: string) => {
   if (!folder) throw new Error("Folder not found.");
 
   // Cek akses (Owner atau Shared User)
-  const hasAccess = folder.ownerId === userId || await prisma.folderAccess.findUnique({
-    where: { folderId_userId: { folderId, userId } }
-  });
+  const hasAccess = await checkFolderReadAccess(prisma, folderId, userId);
 
-  if (!hasAccess && folder.privacy !== 'PUBLIC' && folder.privacy !== 'LINK_ONLY') {
+  if (!hasAccess) {
     throw new Error("Access denied.");
   }
 
@@ -1425,8 +1475,13 @@ export const getUserFolders = async (userId: string, parentId: string | null = n
     orderBy: { createdAt: 'desc' }
   });
 
+  const hasParentWriteAccess = parentId ? await checkFolderWriteAccess(prisma, parentId, userId) : false;
+
   return folders.map(folder => {
-    const accessRole = folder.ownerId === userId ? undefined : folder.sharedWith[0]?.role;
+    let accessRole = folder.ownerId === userId ? undefined : folder.sharedWith[0]?.role;
+    if (folder.ownerId !== userId && hasParentWriteAccess && accessRole !== 'EDITOR') {
+      accessRole = 'EDITOR';
+    }
     const { sharedWith, ...folderData } = folder;
     return {
       ...folderData,
