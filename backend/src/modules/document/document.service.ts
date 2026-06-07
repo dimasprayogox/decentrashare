@@ -8,7 +8,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { generateFileHash } from '../../utils/hash';
 import blockchainService from '../blockchain/blockchain.service';
-import { createUserPinGroup, ensureUserPinGroup } from '../pinata/pinata.service';
+import { createUserPinGroup } from '../pinata/pinata.service';
 import { ZipArchive } from 'archiver';
 
 /**
@@ -605,16 +605,7 @@ export const uploadMultipleFiles = async (
     select: { pinataGroupId: true, username: true, storageLimit: true }
   });
   
-  // Ensure the user has a personal Pinata group so all their files stay
-  // neatly organized in the Pinata dashboard. If the user doesn't have one
-  // yet (e.g. registered before this feature, or group creation failed at
-  // registration), create/re-associate it on demand. This is idempotent and
-  // non-blocking: if it fails, uploads simply proceed ungrouped.
-  let userGroupId = user?.pinataGroupId || null;
-
-  if (!userGroupId) {
-    userGroupId = await ensureUserPinGroup(userId, user?.username || 'user');
-  }
+  const userGroupId = user?.pinataGroupId || null;
   
   if (userGroupId) {
     logger.debug(`[Pinata] Using user's personal group for document uploads`, {

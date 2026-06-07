@@ -177,9 +177,10 @@ describe('Feature: wallet authentication and session lifecycle', () => {
     prisma.user.findFirst.mockResolvedValue(null);
     prisma.user.update.mockResolvedValue(updatedUser);
     verifyMetamaskSignature.mockReturnValue(true);
+    pinata.groups.list.mockResolvedValue({ groups: [] });
+    pinata.groups.create.mockResolvedValue({ id: 'group-new' });
 
     const result = await registerUser('0xABC', 'sig', { username: ' alice ', email: 'ALICE@example.com' });
-    await new Promise(resolve => setTimeout(resolve, 0));
 
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { walletAddress: '0xabc' },
@@ -198,7 +199,7 @@ describe('Feature: wallet authentication and session lifecycle', () => {
       user: { ...updatedUser, nonce: undefined, refreshToken: undefined },
       token: 'access-token',
       refreshToken: 'refresh-token',
-      pinataSetup: 'in_progress',
+      pinataSetup: 'ready',
     });
   });
 

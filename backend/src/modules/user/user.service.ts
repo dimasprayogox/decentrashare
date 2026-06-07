@@ -2,7 +2,6 @@
 import { prisma } from '../../config/db';
 import { logger } from '../../utils/logger';
 import { pinata } from '../../config/pinata';
-import { ensureUserPinGroup } from '../pinata/pinata.service';
 import fs from 'fs';
 import { File, Blob } from 'formdata-node'; // Sesuai dengan cara upload multiple sebelumnya
 
@@ -186,14 +185,6 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
     if (!user) {
       throw new Error('User not found');
     }
-
-    // Ensure the user has a personal Pinata group so the avatar is stored
-    // neatly alongside their other files in the Pinata dashboard. Creates one
-    // on demand for users who don't have it yet (idempotent, non-blocking).
-    let groupId = user.pinataGroupId;
-    if (!groupId) {
-      groupId = await ensureUserPinGroup(userId, user.username || 'user');
-    }
     
     // Extract old IPFS hash for cleanup (if exists)
     if (user.avatarUrl) {
@@ -232,11 +223,11 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
       wrapWithDirectory: false
     };
 
-    if (groupId) {
-      pinataOptions.groupId = groupId;
+    if (user.pinataGroupId) {
+      pinataOptions.groupId = user.pinataGroupId;
       logger.debug(`[Pinata] Using user's personal group for avatar`, { 
         userId, 
-        groupId: groupId 
+        groupId: user.pinataGroupId 
       });
     }
 
@@ -283,7 +274,7 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
       userId,
       oldHash: oldAvatarHash,
       newHash: newIpfsHash,
-      pinataGroupId: groupId || 'ungrouped',
+      pinataGroupId: user.pinataGroupId || 'ungrouped',
       contentType: 'avatar'
     });
     

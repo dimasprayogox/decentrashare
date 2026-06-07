@@ -197,30 +197,35 @@ export const registerUser = async (
 
   logger.info(`[AUTH] New user registered: ${address}`);
 
-  // ── ✅ ASYNC: Create Pinata Group (NON-BLOCKING) ───────────
-  // Fire-and-forget: Don't await, don't block registration response
-  createUserPinGroup(updatedUser.id, updatedUser.username)
-    .then(groupId => {
-      if (groupId) {
-        logger.info(`✅ Pinata group ready for user ${updatedUser.id}: ${groupId}`);
-      }
-    })
-    .catch(err => {
-      // Log but don't throw - registration already succeeded
-      logger.error(`❌ Background Pinata group creation failed for user ${updatedUser.id}`, {
-        error: err.message,
-        username: updatedUser.username
-      });
-      // Optional: Add to retry queue here if you have BullMQ/Redis setup
+  // ── Create Pinata Group (AWAITED) ──────────────────────────
+  // Create the user's personal Pinata group at registration time so every
+  // file they upload later is neatly organized in the Pinata dashboard.
+  // We await it (instead of fire-and-forget) so the group is reliably ready
+  // before we respond. createUserPinGroup is idempotent and never throws —
+  // it returns null on failure, which keeps registration resilient.
+  let pinataGroupId: string | null = null;
+  try {
+    pinataGroupId = await createUserPinGroup(updatedUser.id, updatedUser.username);
+    if (pinataGroupId) {
+      logger.info(`✅ Pinata group ready for user ${updatedUser.id}: ${pinataGroupId}`);
+    } else {
+      logger.warn(`⚠️ Pinata group not created for user ${updatedUser.id} (will retry on first upload)`);
+    }
+  } catch (err: any) {
+    // Defensive: createUserPinGroup already swallows errors, but guard anyway
+    // so a Pinata outage can never block a successful registration.
+    logger.error(`❌ Pinata group creation failed for user ${updatedUser.id}`, {
+      error: err?.message,
+      username: updatedUser.username
     });
+  }
 
-  // ── Return Response (without waiting for Pinata) ───────────
+  // ── Return Response ────────────────────────────────────────
   return { 
     user: serializeUserForResponse(updatedUser), 
     token: accessToken, 
     refreshToken,
-    // ✅ Optional: Inform frontend that Pinata setup is in progress
-    pinataSetup: 'in_progress'
+    pinataSetup: pinataGroupId ? 'ready' : 'pending'
   };
 };
 
