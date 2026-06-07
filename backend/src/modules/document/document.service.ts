@@ -2115,7 +2115,7 @@ export const getActivityLogs = async (userId: string) => {
     orderBy: {
       createdAt: 'desc'
     },
-    take: 50, // Ambil 50 aktivitas terakhir saja biar ringan
+    take: 100, // Ambil 100 aktivitas terakhir saja biar sesuai batas database
   });
 
   // Ambil unique blockchainTx

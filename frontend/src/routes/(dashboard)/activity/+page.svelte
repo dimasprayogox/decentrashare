@@ -168,11 +168,14 @@
       case 'CHANGE_PRIVACY':
         return { bg: 'bg-teal-500/10 border-teal-500/20 text-teal-400', label: 'Privacy', icon: 'text-teal-400', iconBg: 'bg-teal-500/10' };
       case 'ARCHIVE':
-        return { bg: 'bg-orange-500/10 border-orange-500/20 text-orange-400', label: 'Archive', icon: 'text-orange-400', iconBg: 'bg-orange-500/10' };
+      case 'BULK_ARCHIVE':
+        return { bg: 'bg-orange-500/10 border-orange-500/20 text-orange-400', label: action === 'ARCHIVE' ? 'Archive' : 'Bulk Archive', icon: 'text-orange-400', iconBg: 'bg-orange-500/10' };
       case 'RESTORE':
-        return { bg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400', label: 'Restore', icon: 'text-cyan-400', iconBg: 'bg-cyan-500/10' };
+      case 'BULK_RESTORE':
+        return { bg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400', label: action === 'RESTORE' ? 'Restore' : 'Bulk Restore', icon: 'text-cyan-400', iconBg: 'bg-cyan-500/10' };
       case 'PERMANENT_DELETE':
-        return { bg: 'bg-red-500/10 border-red-500/20 text-red-400', label: 'Permanent Delete', icon: 'text-red-400', iconBg: 'bg-red-500/10' };
+      case 'BULK_PERMANENT_DELETE':
+        return { bg: 'bg-red-500/10 border-red-500/20 text-red-400', label: action === 'PERMANENT_DELETE' ? 'Permanent Delete' : 'Bulk Delete', icon: 'text-red-400', iconBg: 'bg-red-500/10' };
       case 'CONFIRM_CHAIN':
       case 'BLOCKCHAIN_CONFIRM':
         return { bg: 'bg-purple-500/10 border-purple-500/20 text-purple-400', label: 'Blockchain', icon: 'text-purple-400', iconBg: 'bg-purple-500/10' };
@@ -212,10 +215,13 @@
       case 'BULK_MOVE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`;
       case 'ARCHIVE':
+      case 'BULK_ARCHIVE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>`;
       case 'RESTORE':
+      case 'BULK_RESTORE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v6h6M3.51 13a9 9 0 102.13-9.36L3 7"/></svg>`;
       case 'PERMANENT_DELETE':
+      case 'BULK_PERMANENT_DELETE':
         return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-8 0h10"/></svg>`;
       case 'CONFIRM_CHAIN':
       case 'BLOCKCHAIN_CONFIRM':
