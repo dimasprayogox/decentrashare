@@ -297,7 +297,7 @@ export const moveFolder = async (
       throw new Error(`Folder "${folder.name}" already exists in this location`);
     }
 
-    const relocation = await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: folder.ownerId });
+    const relocation = await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: folder.ownerId, destinationFolderId: targetFolderId });
     if (relocation.movedFolderCount > 0 || relocation.movedDocumentCount > 0) {
       subtreeFolderIds = await getAllDescendantFolderIds(tx, [folderId]);
     }
@@ -764,9 +764,9 @@ const getUniqueRootDocumentTitle = async (tx: any, ownerId: string, desiredTitle
 
 export const relocateOwnedContentFromSharedSubtree = async (
   tx: any,
-  params: { subtreeFolderIds: string[]; rootOwnerId: string; onlyOwnerId?: string }
+  params: { subtreeFolderIds: string[]; rootOwnerId: string; onlyOwnerId?: string; destinationFolderId?: string | null }
 ) => {
-  const { subtreeFolderIds, rootOwnerId, onlyOwnerId } = params;
+  const { subtreeFolderIds, rootOwnerId, onlyOwnerId, destinationFolderId } = params;
   const ownerFilter = onlyOwnerId ? { ownerId: onlyOwnerId } : { ownerId: { not: rootOwnerId } };
 
   const foldersToMoveResult = await tx.folder.findMany({
@@ -777,7 +777,15 @@ export const relocateOwnedContentFromSharedSubtree = async (
     },
     select: { id: true, name: true, ownerId: true, parentId: true }
   });
-  const foldersToMove = Array.isArray(foldersToMoveResult) ? foldersToMoveResult : [];
+  const foldersToMove: any[] = [];
+  for (const folder of (Array.isArray(foldersToMoveResult) ? foldersToMoveResult : [])) {
+    const hasAccess = destinationFolderId
+      ? await checkFolderReadAccess(tx, destinationFolderId, folder.ownerId)
+      : false;
+    if (!hasAccess) {
+      foldersToMove.push(folder);
+    }
+  }
 
   const allSubtreeFoldersResult = await tx.folder.findMany({
     where: { id: { in: subtreeFolderIds }, isArchived: false },
@@ -996,7 +1004,15 @@ export const relocateOwnedContentFromSharedSubtree = async (
     },
     select: { id: true, title: true, ownerId: true, folderId: true }
   });
-  const documentsToMove = Array.isArray(documentsToMoveResult) ? documentsToMoveResult : [];
+  const documentsToMove: any[] = [];
+  for (const document of (Array.isArray(documentsToMoveResult) ? documentsToMoveResult : [])) {
+    const hasAccess = destinationFolderId
+      ? await checkFolderReadAccess(tx, destinationFolderId, document.ownerId)
+      : false;
+    if (!hasAccess) {
+      documentsToMove.push(document);
+    }
+  }
 
   for (const document of documentsToMove) {
     const targetParent = await findNearestAccessibleParent(document.folderId, document.ownerId);

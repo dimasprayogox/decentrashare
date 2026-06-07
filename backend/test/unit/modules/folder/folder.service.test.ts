@@ -405,10 +405,12 @@ describe('Feature: folder management behavior', () => {
   test('given a subfolder containing a foreign document is moved, when the move runs, then the foreign document is rescued to the nearest parent folder', async () => {
     const { moveFolder } = await import('../../../../src/modules/folder/folder.service');
     
-    prisma.folder.findUnique
-      .mockResolvedValueOnce(folderFactory({ id: 'subfolder-1', ownerId: 'user-a', name: 'Subfolder', parentId: 'parent-folder' }))
-      .mockResolvedValueOnce(folderFactory({ id: 'target-folder', ownerId: 'user-a', name: 'Target', privacy: 'PRIVATE', sharedWith: [] }))
-      .mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-b', name: 'Parent', privacy: 'SPECIFIC_USER', sharedWith: [] }));
+    prisma.folder.findUnique.mockImplementation(async ({ where }: any) => {
+      if (where.id === 'subfolder-1') return folderFactory({ id: 'subfolder-1', ownerId: 'user-a', name: 'Subfolder', parentId: 'parent-folder' });
+      if (where.id === 'target-folder') return folderFactory({ id: 'target-folder', ownerId: 'user-a', name: 'Target', privacy: 'PRIVATE', sharedWith: [] });
+      if (where.id === 'parent-folder') return folderFactory({ id: 'parent-folder', ownerId: 'user-b', name: 'Parent', privacy: 'SPECIFIC_USER', sharedWith: [] });
+      return null;
+    });
 
     prisma.folder.findMany
       .mockResolvedValueOnce([])
@@ -439,6 +441,40 @@ describe('Feature: folder management behavior', () => {
         privacy: 'SPECIFIC_USER'
       }
     });
+  });
+
+  test('given a subfolder containing a foreign document is moved, and the destination is STILL shared with the foreign document\'s owner, when the move runs, then the foreign document is NOT rescued', async () => {
+    const { moveFolder } = await import('../../../../src/modules/folder/folder.service');
+    
+    prisma.folder.findUnique.mockImplementation(async ({ where }: any) => {
+      if (where.id === 'subfolder-1') return folderFactory({ id: 'subfolder-1', ownerId: 'user-a', name: 'Subfolder', parentId: 'parent-folder' });
+      if (where.id === 'target-folder') return folderFactory({ id: 'target-folder', ownerId: 'user-a', name: 'Target', privacy: 'SPECIFIC_USER', sharedWith: [{ userId: 'user-b', role: 'EDITOR' }] });
+      if (where.id === 'parent-folder') return folderFactory({ id: 'parent-folder', ownerId: 'user-b', name: 'Parent', privacy: 'SPECIFIC_USER', sharedWith: [] });
+      return null;
+    });
+
+    prisma.folder.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: 'subfolder-1', parentId: 'parent-folder', ownerId: 'user-a' }
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    prisma.document.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: 'doc-1', title: 'Doc', ownerId: 'user-b', folderId: 'subfolder-1' }
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    prisma.folder.update.mockResolvedValue(folderFactory({ id: 'subfolder-1', parentId: 'target-folder', privacy: 'SPECIFIC_USER' }));
+
+    const result = await moveFolder('subfolder-1', 'user-a', 'target-folder');
+
+    expect(prisma.document.update).not.toHaveBeenCalled();
   });
 
   test('given a folder is moved to an editable target, when move runs, then subtree privacy and document privacy follow the target', async () => {
@@ -835,6 +871,156 @@ describe('Feature: folder management behavior', () => {
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('child-folder');
     expect(result[0].accessRole).toBe('EDITOR');
+  });
+
+  test('given a folder shared with role EDITOR to user-1, when checkFolderWriteAccess is called, then it returns true', async () => {
+    const { checkFolderWriteAccess } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({
+      id: 'folder-1',
+      ownerId: 'owner-1',
+      parentId: null,
+      sharedWith: [{ userId: 'user-1', role: 'EDITOR' }]
+    }));
+
+    const result = await checkFolderWriteAccess(prisma, 'folder-1', 'user-1');
+    expect(result).toBe(true);
+  });
+
+  test('given a folder shared with role VIEWER to user-1, when checkFolderWriteAccess is called, then it returns false', async () => {
+    const { checkFolderWriteAccess } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({
+      id: 'folder-1',
+      ownerId: 'owner-1',
+      parentId: null,
+      sharedWith: [{ userId: 'user-1', role: 'VIEWER' }]
+    }));
+
+    const result = await checkFolderWriteAccess(prisma, 'folder-1', 'user-1');
+    expect(result).toBe(false);
+  });
+
+  test('given a child folder inside a parent folder shared with role VIEWER to user-1, when checkFolderWriteAccess is called, then it returns false', async () => {
+    const { checkFolderWriteAccess } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({
+        id: 'child-folder',
+        ownerId: 'user-2',
+        parentId: 'parent-folder',
+        sharedWith: []
+      }))
+      .mockResolvedValueOnce(folderFactory({
+        id: 'parent-folder',
+        ownerId: 'owner-1',
+        parentId: null,
+        sharedWith: [{ userId: 'user-1', role: 'VIEWER' }]
+      }));
+
+    const result = await checkFolderWriteAccess(prisma, 'child-folder', 'user-1');
+    expect(result).toBe(false);
+  });
+
+  test('given a parent folder owned by user-1, and a child folder owned by user-2 but archived, when checkFolderWriteAccess is called for user-1, then it returns false', async () => {
+    const { checkFolderWriteAccess } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({
+      id: 'child-folder',
+      ownerId: 'user-2',
+      parentId: 'parent-folder',
+      isArchived: true,
+      sharedWith: []
+    }));
+
+    const result = await checkFolderWriteAccess(prisma, 'child-folder', 'user-1');
+    expect(result).toBe(false);
+  });
+
+  test('given a private folder with no sharing, when checkFolderReadAccess is called, then it returns false', async () => {
+    const { checkFolderReadAccess } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({
+      id: 'folder-1',
+      ownerId: 'owner-1',
+      privacy: 'PRIVATE',
+      sharedWith: []
+    }));
+
+    const result = await checkFolderReadAccess(prisma, 'folder-1', 'user-2');
+    expect(result).toBe(false);
+  });
+
+  test('given a private folder nested in a folder owned by user-1, when checkFolderReadAccess is called for user-1, then it returns true', async () => {
+    const { checkFolderReadAccess } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({
+        id: 'child-folder',
+        ownerId: 'user-2',
+        parentId: 'parent-folder',
+        sharedWith: []
+      }))
+      .mockResolvedValueOnce(folderFactory({
+        id: 'parent-folder',
+        ownerId: 'user-1',
+        parentId: null,
+        sharedWith: []
+      }));
+
+    const result = await checkFolderReadAccess(prisma, 'child-folder', 'user-1');
+    expect(result).toBe(true);
+  });
+
+  test('given a PUBLIC folder, when checkFolderReadAccess is called, then it returns true', async () => {
+    const { checkFolderReadAccess } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({
+      id: 'folder-1',
+      ownerId: 'owner-1',
+      privacy: 'PUBLIC',
+      sharedWith: []
+    }));
+
+    const result = await checkFolderReadAccess(prisma, 'folder-1', 'user-2');
+    expect(result).toBe(true);
+  });
+
+  test('scenario: user-1 creates parent folder, user-2 creates subfolder, user-1 creates nested folder inside subfolder', async () => {
+    const { checkFolderWriteAccess } = await import('../../../../src/modules/folder/folder.service');
+
+    prisma.folder.findUnique.mockImplementation(async ({ where }: any) => {
+      if (where.id === 'parent-folder') {
+        return folderFactory({
+          id: 'parent-folder',
+          ownerId: 'user-1',
+          parentId: null,
+          privacy: 'SPECIFIC_USER',
+          sharedWith: [{ userId: 'user-2', role: 'EDITOR' }]
+        });
+      }
+      if (where.id === 'subfolder-2') {
+        return folderFactory({
+          id: 'subfolder-2',
+          ownerId: 'user-2',
+          parentId: 'parent-folder',
+          privacy: 'SPECIFIC_USER',
+          sharedWith: []
+        });
+      }
+      if (where.id === 'subfolder-1-nested') {
+        return folderFactory({
+          id: 'subfolder-1-nested',
+          ownerId: 'user-1',
+          parentId: 'subfolder-2',
+          privacy: 'SPECIFIC_USER',
+          sharedWith: []
+        });
+      }
+      return null;
+    });
+
+    const canUser2WriteParent = await checkFolderWriteAccess(prisma, 'parent-folder', 'user-2');
+    expect(canUser2WriteParent).toBe(true);
+
+    const canUser1WriteSubfolder2 = await checkFolderWriteAccess(prisma, 'subfolder-2', 'user-1');
+    expect(canUser1WriteSubfolder2).toBe(true);
+
+    const canUser1WriteSubfolder1Nested = await checkFolderWriteAccess(prisma, 'subfolder-1-nested', 'user-1');
+    expect(canUser1WriteSubfolder1Nested).toBe(true);
   });
 });
 

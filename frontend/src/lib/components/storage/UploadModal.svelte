@@ -905,12 +905,6 @@ if (payload.length === 1) {
             <span>Upload {files.length > 0 ? `${files.length} File${files.length > 1 ? 's' : ''}` : ''}</span>
           {/if}
         </button>
-        
-        {#if isConfirmingBatch}
-          <p class="text-[9px] text-purple-400/80 text-center mt-2">
-            Single wallet signature for all files
-          </p>
-        {/if}
       </div>
     </div>
   </div>

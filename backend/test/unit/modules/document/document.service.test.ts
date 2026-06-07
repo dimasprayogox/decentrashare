@@ -245,9 +245,12 @@ describe('Feature: document privacy, access, and download behavior', () => {
       .mockResolvedValueOnce(folderFactory({ id: 'target-folder', ownerId: 'user-a', name: 'Target', privacy: 'PRIVATE', sharedWith: [] })) // targetFolder check
       .mockResolvedValueOnce(folderFactory({ id: 'subfolder-1', ownerId: 'user-a', name: 'Subfolder', parentId: 'parent-folder' })); // folder to move check
       
-    // Mocks inside relocateOwnedContentFromSharedSubtree & getAllDescendantFolderIds
-    prisma.folder.findUnique
-      .mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-b', name: 'Parent', privacy: 'SPECIFIC_USER', sharedWith: [] }));
+    prisma.folder.findUnique.mockImplementation(async ({ where }: any) => {
+      if (where.id === 'parent-folder') return folderFactory({ id: 'parent-folder', ownerId: 'user-b', name: 'Parent', privacy: 'SPECIFIC_USER', sharedWith: [] });
+      if (where.id === 'target-folder') return folderFactory({ id: 'target-folder', ownerId: 'user-a', name: 'Target', privacy: 'PRIVATE', sharedWith: [] });
+      if (where.id === 'subfolder-1') return folderFactory({ id: 'subfolder-1', ownerId: 'user-a', name: 'Subfolder', parentId: 'parent-folder' });
+      return null;
+    });
 
     prisma.folder.findMany.mockResolvedValue([]);
     prisma.document.findMany.mockResolvedValue([]);

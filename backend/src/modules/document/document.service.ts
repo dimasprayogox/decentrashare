@@ -1077,17 +1077,25 @@ export const moveMultipleDocuments = async (
       targetFolder = folder;
     }
 
-    const documents: Array<{ id: string; title: string; folderId: string | null; ownerId: string }> = await tx.document.findMany({
+    const allDocs = await tx.document.findMany({
       where: {
         id: { in: documentIds },
-        isArchived: false,
-        OR: [
-          { ownerId: userId },
-          { folder: { sharedWith: { some: { userId, role: 'EDITOR' } } } }
-        ]
+        isArchived: false
       },
       select: { id: true, title: true, folderId: true, ownerId: true }
     });
+
+    const documents: Array<{ id: string; title: string; folderId: string | null; ownerId: string }> = [];
+    for (const doc of allDocs) {
+      if (doc.ownerId === userId) {
+        documents.push(doc);
+      } else if (doc.folderId) {
+        const canWrite = await checkFolderWriteAccess(tx, doc.folderId, userId);
+        if (canWrite) {
+          documents.push(doc);
+        }
+      }
+    }
 
     if (documents.length === 0) {
       return {
@@ -1622,15 +1630,13 @@ export const updateDocumentMetadata = async (
   const doc = await prisma.document.findFirst({
     where: {
       id: documentId,
-      isArchived: false,
-      OR: [
-        { ownerId: userId },
-        { folder: { sharedWith: { some: { userId, role: 'EDITOR' } } } }
-      ]
+      isArchived: false
     }
   });
 
-  if (!doc) {
+  const canWrite = doc && (doc.ownerId === userId || (doc.folderId ? await checkFolderWriteAccess(prisma, doc.folderId, userId) : false));
+
+  if (!doc || !canWrite) {
     throw new Error("Document not found or unauthorized.");
   }
 
@@ -2365,14 +2371,13 @@ export const bulkMoveItems = async (
         const doc = await tx.document.findFirst({
           where: {
             id: target.id,
-            isArchived: false,
-            OR: [
-              { ownerId },
-              { folder: { sharedWith: { some: { userId: ownerId, role: 'EDITOR' } } } }
-            ]
+            isArchived: false
           }
         });
         if (!doc) continue;
+
+        const canWrite = doc.ownerId === ownerId || (doc.folderId ? await checkFolderWriteAccess(tx, doc.folderId, ownerId) : false);
+        if (!canWrite) continue;
 
         let sourceFolderName = 'Root';
         if (doc.folderId) {
@@ -2403,14 +2408,13 @@ export const bulkMoveItems = async (
         const folder = await tx.folder.findFirst({
           where: {
             id: target.id,
-            isArchived: false,
-            OR: [
-              { ownerId },
-              { sharedWith: { some: { userId: ownerId, role: 'EDITOR' } } }
-            ]
+            isArchived: false
           }
         });
         if (!folder) continue;
+
+        const canWrite = folder.ownerId === ownerId || await checkFolderWriteAccess(tx, folder.id, ownerId);
+        if (!canWrite) continue;
 
         let sourceFolderName = 'Root';
         if (folder.parentId) {
@@ -2421,7 +2425,7 @@ export const bulkMoveItems = async (
         // Relocate folder
         let subtreeFolderIds = await getAllDescendantFolderIds(tx, [target.id]);
 
-        const relocation = await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: folder.ownerId });
+        const relocation = await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: folder.ownerId, destinationFolderId: targetFolderId });
         if (relocation.movedFolderCount > 0 || relocation.movedDocumentCount > 0) {
           subtreeFolderIds = await getAllDescendantFolderIds(tx, [target.id]);
         }
