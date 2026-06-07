@@ -180,7 +180,7 @@ export const handlePreviewDocument = async (req: AuthRequest, res: Response) => 
     nodeStream.pipe(res);
 
     // ✅ 6. Log activity (async, non-blocking)
-    documentService.logDownloadActivity(userId, documentId, document.fileName, document.ipfsHash)
+    documentService.logDownloadActivity(userId, documentId, document.title, document.ipfsHash)
       .catch(err => logger.error('Failed to log preview:', err));
 
   } catch (error: any) {
@@ -234,7 +234,7 @@ export const handleDownloadDocument = async (req: AuthRequest, res: Response, ne
     nodeStream.pipe(res);
 
     // Log activity (async)
-    documentService.logDownloadActivity(userId, documentId, document.fileName, document.ipfsHash)
+    documentService.logDownloadActivity(userId, documentId, document.title, document.ipfsHash)
       .catch(err => logger.error('Failed to log download:', err));
 
   } catch (error: any) {

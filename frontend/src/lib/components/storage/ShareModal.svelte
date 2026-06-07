@@ -506,6 +506,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
       showToastFeedback(`Access revoked for ${username}`);
       if (existingSharedUsers.length === 0 && privacyLevel === 'SPECIFIC_USER') {
         privacyLevel = 'PRIVATE';
+        currentPrivacy = 'PRIVATE';
         successMessage = 'Access revoked. Privacy status auto-reset to Private.';
       }
       onShared?.();

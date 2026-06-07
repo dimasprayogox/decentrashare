@@ -1928,3 +1928,33 @@ export const getPublicFolderByToken = async (shareToken: string) => {
 
   return folder;
 };
+
+/**
+ * Log activity for folder downloads (recursive zip)
+ */
+export const logFolderDownloadActivity = async (
+  userId: string,
+  folderId: string,
+  folderName: string,
+  metadata: Array<{ id: string; title: string; fileName: string; ipfsHash: string }>,
+  summary: { successfullyAdded: number }
+) => {
+  try {
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: 'DOWNLOAD',
+        entityType: 'FOLDER',
+        entityId: folderId,
+        entityName: folderName,
+        details: JSON.stringify({
+          downloadedCount: summary.successfullyAdded,
+          files: metadata.map(m => ({ id: m.id, name: m.title }))
+        })
+      }
+    });
+    logger.info(`📝 Folder download activity logged: ${folderName}`, { folderId, userId });
+  } catch (error: any) {
+    logger.error('❌ Failed to log folder download activity', { folderId, error: error.message });
+  }
+};

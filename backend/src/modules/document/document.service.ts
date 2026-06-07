@@ -553,7 +553,7 @@ export const logBulkDownloadActivity = async (
           requestedCount: summary.totalRequested,
           downloadedCount: summary.successfullyAdded,
           deniedCount: summary.accessDenied,
-          files: metadata.map(m => ({ id: m.id, name: m.fileName }))
+          files: metadata.map(m => ({ id: m.id, name: m.title }))
         })
       }
     });

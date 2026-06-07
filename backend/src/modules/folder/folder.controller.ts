@@ -284,6 +284,8 @@ export const handleDownloadFolder = async (req: AuthRequest, res: Response, next
         documentCount: metadata.length,
         summary
       });
+      folderService.logFolderDownloadActivity(userId, id, folderName, metadata, summary)
+        .catch(err => logger.error('Failed to log folder download activity:', err));
     });
 
     stream.on('error', (err: any) => {

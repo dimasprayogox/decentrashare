@@ -268,7 +268,7 @@
   }
 
   // Ambil data terstruktur dari field details (untuk ditampilkan di panel detail)
-  function parseDetails(details: string | null | undefined): {
+  function parseDetails(details: string | null | undefined, log?: any): {
     files: { id?: string; name: string }[];
     path?: string;
     txHash?: string;
@@ -276,18 +276,30 @@
   } {
     if (!details) return { files: [] };
     const trimmed = details.trim();
-    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-      return { files: [], raw: details };
+    let result: any = { files: [] };
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        const data = JSON.parse(trimmed);
+        const files = Array.isArray(data.files)
+          ? data.files.map((f: any) => (typeof f === 'string' ? { name: f } : { id: f?.id, name: f?.name ?? 'Unnamed' }))
+          : [];
+        result = { files, path: data.path, txHash: data.txHash };
+      } catch {
+        result = { files: [], raw: details };
+      }
+    } else {
+      result = { files: [], raw: details };
     }
-    try {
-      const data = JSON.parse(trimmed);
-      const files = Array.isArray(data.files)
-        ? data.files.map((f: any) => (typeof f === 'string' ? { name: f } : { id: f?.id, name: f?.name ?? 'Unnamed' }))
-        : [];
-      return { files, path: data.path, txHash: data.txHash };
-    } catch {
-      return { files: [], raw: details };
+
+    if (log && result.files.length === 0) {
+      if (log.action === 'ARCHIVE' || log.action === 'PERMANENT_DELETE') {
+        result.files = [{
+          id: log.entityId,
+          name: log.entityName || 'Unnamed Item'
+        }];
+      }
     }
+    return result;
   }
 
   function parseRename(details: string | null | undefined): { from: string; to: string } | null {
@@ -646,12 +658,12 @@
                 <!-- Status -->
                 <td class="px-6 py-4 text-center">
                   <div class="flex items-center justify-center">
-                    {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
+                    {#if log.blockchainTx && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY'].includes(log.action)}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium shadow-[0_0_12px_rgba(168,85,247,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
                         Verified
                       </span>
-                    {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
+                    {:else if log.ipfsHash && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY'].includes(log.action)}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                         IPFS Synced
@@ -667,7 +679,7 @@
               </tr>
 
               {#if isExpanded}
-                {@const parsed = parseDetails(log.details)}
+                {@const parsed = parseDetails(log.details, log)}
                 {@const renameInfo = parseRename(log.details)}
                 {@const moveInfo = parseMove(log.details)}
                 {@const descriptionInfo = parseDescriptionEdit(log.details)}
@@ -820,7 +832,7 @@
                           {/if}
 
                           <!-- Operasi CHANGE PRIVACY -->
-                          {#if privacyInfo}
+                          {#if log.action === 'CHANGE_PRIVACY' && privacyInfo}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Privacy Change</span>
                               <div class="grid grid-cols-1 gap-2">
@@ -1019,6 +1031,8 @@
                                   Confirmed Files
                                 {:else if log.action.includes('DOWNLOAD')}
                                   Downloaded Files
+                                {:else if log.action === 'ARCHIVE' || log.action === 'PERMANENT_DELETE'}
+                                  Deleted Files
                                 {:else}
                                   Recorded Items
                                 {/if}
