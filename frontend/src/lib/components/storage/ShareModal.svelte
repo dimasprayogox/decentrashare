@@ -543,7 +543,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
   }
   async function handleCopyOrShareLink() {
     try {
-      const shareUrl = `${window.location.origin}/storage/shared/${itemId}`;
+      const shareUrl = `${window.location.origin}/shared/link/${itemType}/${itemId}`;
       if (navigator.share && privacyLevel !== 'PRIVATE') {
         await navigator.share({ title: itemName, text: `Check out this ${itemType}: ${itemName}`, url: shareUrl });
         showToastFeedback('🔗 Link shared!');
@@ -553,7 +553,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        const shareUrl = `${window.location.origin}/storage/shared/${itemId}`;
+        const shareUrl = `${window.location.origin}/shared/link/${itemType}/${itemId}`;
         await navigator.clipboard.writeText(shareUrl);
         showToastFeedback('🔗 Link copied (fallback)');
       }

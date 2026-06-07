@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
+  import { fade, scale } from 'svelte/transition';
 
   import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
@@ -21,6 +21,7 @@
   let currentFolder = $state<(Pick<Folder, 'id' | 'name' | 'parentId' | 'owner'> & { owners?: Folder['owner'][] }) | null>(null);
   let isSearching = $state(false);
   let isFolderLoading = $state(false);
+  let isDownloading = $state(false);
   let searchError = $state('');
   let viewMode = $state(2);
   let currentUser = $state<{ id: string; username: string; walletAddress: string } | null>(null);
@@ -31,6 +32,8 @@
     field: 'updatedAt',
     direction: 'desc'
   });
+
+  const isProcessing = $derived(isSearching || isFolderLoading || isDownloading);
 
   const publicFolders = $derived(folders.filter(folder => folder.privacy === 'PUBLIC'));
   const publicItems = $derived(items.filter(item => item.privacy === 'PUBLIC'));
@@ -130,7 +133,9 @@
       items = [];
       searchError = error instanceof Error ? error.message : 'Failed to search public folders and documents.';
     } finally {
-      if (currentSeq === requestSeq) isSearching = false;
+      if (currentSeq === requestSeq) {
+        setTimeout(() => { isSearching = false; }, 200);
+      }
     }
   }
 
@@ -142,14 +147,20 @@
   }
 
   async function handleDownload(id: string, type: 'folder' | 'document' = 'document') {
-    if (type === 'folder') {
-      const folder = [...folders, ...browseFolders].find(item => item.id === id);
-      await storageService.downloadFolder(id, folder?.name);
-      return;
+    try {
+      isDownloading = true;
+      if (type === 'folder') {
+        const folder = [...folders, ...browseFolders].find(item => item.id === id);
+        await storageService.downloadFolder(id, folder?.name);
+      } else {
+        const item = [...items, ...browseItems].find(document => document.id === id);
+        await storageService.downloadDocument(id, item?.title || item?.fileName);
+      }
+    } catch (error: unknown) {
+      searchError = error instanceof Error ? error.message : 'Failed to download item.';
+    } finally {
+      isDownloading = false;
     }
-
-    const item = [...items, ...browseItems].find(document => document.id === id);
-    await storageService.downloadDocument(id, item?.title || item?.fileName);
   }
 
   async function openFolder(folder: { id: string } | null) {
@@ -177,7 +188,7 @@
     } catch (error: unknown) {
       searchError = error instanceof Error ? error.message : 'Failed to open public folder.';
     } finally {
-      isFolderLoading = false;
+      setTimeout(() => { isFolderLoading = false; }, 200);
     }
   }
 
@@ -210,6 +221,15 @@
 </script>
 
 <main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto">
+  {#if isProcessing}
+    <div class="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+      <div class="bg-[#121214] p-8 rounded-[40px] border border-white/10 shadow-2xl flex flex-col items-center" in:scale>
+        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h3 class="text-white font-bold text-lg">DecentraShare Sync</h3>
+        <p class="text-gray-500 text-sm italic">Wait a minute...</p>
+      </div>
+    </div>
+  {/if}
   <header class="mb-8 space-y-4">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
       <div class="min-w-0">

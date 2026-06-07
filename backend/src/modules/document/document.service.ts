@@ -123,7 +123,7 @@ export const validateDocumentAccess = async (documentId: string, userId: string)
     (access) => access.userId === userId
   );
   
-  if (hasDirectAccess || document.privacy === 'PUBLIC') {
+  if (hasDirectAccess || document.privacy === 'PUBLIC' || document.privacy === 'LINK_ONLY') {
     return document;
   }
 

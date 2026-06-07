@@ -577,7 +577,7 @@ export const getFolderDetail = async (folderId: string, userId: string) => {
     where: { folderId_userId: { folderId, userId } }
   });
 
-  if (!hasAccess && folder.privacy !== 'PUBLIC') {
+  if (!hasAccess && folder.privacy !== 'PUBLIC' && folder.privacy !== 'LINK_ONLY') {
     throw new Error("Access denied.");
   }
 
@@ -1739,8 +1739,11 @@ export const getFolderContents = async (folderId: string, userId?: string, share
   // 1. Jika Folder PUBLIC -> Semua orang bisa lihat
   if (folder.privacy === 'PUBLIC') return await getSanitizedFiles();
 
-  // 2. Jika Folder LINK_ONLY -> Cek apakah tokennya cocok
+  // 2. Jika Folder LINK_ONLY -> Authenticated user yang punya link bisa akses
   if (folder.privacy === 'LINK_ONLY') {
+    if (userId) {
+      return await getSanitizedFiles();
+    }
     if (shareToken && folder.shareToken === shareToken) {
       return await getSanitizedFiles();
     }

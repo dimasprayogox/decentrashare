@@ -22,6 +22,7 @@
   let isLoading = $state(true);
   let isRefreshing = $state(false);
   let isBulkDownloading = $state(false);
+  let isDownloading = $state(false);
   let errorMessage = $state('');
   let successMessage = $state('');
   let viewMode = $state(2);
@@ -67,7 +68,7 @@
   const selectedFolders = $derived(folders.filter(folder => selectedItems.includes(folder.id)));
   const selectedDocuments = $derived(items.filter(item => selectedItems.includes(item.id)));
   const selectedCount = $derived(selectedFolders.length + selectedDocuments.length);
-  const isProcessing = $derived(isLoading || isRefreshing || isMoveProcessing || isRenameProcessing || isBulkDownloading);
+  const isProcessing = $derived(isLoading || isRefreshing || isMoveProcessing || isRenameProcessing || isBulkDownloading || isDownloading);
   const isBulkActionProcessing = $derived(isProcessing);
   const selectedTypeValue = $derived(selectedFolders.length > 0 && selectedDocuments.length > 0 ? 'mixed' : selectedFolders.length > 0 ? 'folders' : selectedDocuments.length > 0 ? 'documents' : 'items');
 
@@ -253,6 +254,7 @@
 
   async function handleDownload(id: string, type: 'folder' | 'document') {
     try {
+      isDownloading = true;
       errorMessage = '';
       successMessage = '';
 
@@ -267,6 +269,8 @@
       successMessage = 'Item downloaded successfully.';
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to download item.';
+    } finally {
+      isDownloading = false;
     }
   }
 
@@ -335,8 +339,10 @@
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared folder contents.';
     } finally {
-      isLoading = false;
-      isRefreshing = false;
+      setTimeout(() => {
+        isLoading = false;
+        isRefreshing = false;
+      }, 200);
     }
   }
 
@@ -389,8 +395,10 @@
       selectedItems = [];
       errorMessage = error instanceof Error ? error.message : 'Failed to load shared items.';
     } finally {
-      isLoading = false;
-      isRefreshing = false;
+      setTimeout(() => {
+        isLoading = false;
+        isRefreshing = false;
+      }, 200);
     }
   }
 
