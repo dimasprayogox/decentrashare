@@ -270,25 +270,29 @@
   // Ambil data terstruktur dari field details (untuk ditampilkan di panel detail)
   function parseDetails(details: string | null | undefined, log?: any): {
     files: { id?: string; name: string }[];
+    folders?: { id?: string; name: string }[];
     path?: string;
     txHash?: string;
     raw?: string;
   } {
     if (!details) return { files: [] };
     const trimmed = details.trim();
-    let result: any = { files: [] };
+    let result: any = { files: [], folders: [] };
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       try {
         const data = JSON.parse(trimmed);
         const files = Array.isArray(data.files)
           ? data.files.map((f: any) => (typeof f === 'string' ? { name: f } : { id: f?.id, name: f?.name ?? 'Unnamed' }))
           : [];
-        result = { files, path: data.path, txHash: data.txHash };
+        const folders = Array.isArray(data.folders)
+          ? data.folders.map((fd: any) => ({ id: fd?.id, name: fd?.name ?? 'Unnamed' }))
+          : [];
+        result = { files, folders, path: data.path, txHash: data.txHash };
       } catch {
-        result = { files: [], raw: details };
+        result = { files: [], folders: [], raw: details };
       }
     } else {
-      result = { files: [], raw: details };
+      result = { files: [], folders: [], raw: details };
     }
 
     if (log && result.files.length === 0) {
@@ -658,12 +662,12 @@
                 <!-- Status -->
                 <td class="px-6 py-4 text-center">
                   <div class="flex items-center justify-center">
-                    {#if log.blockchainTx && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY'].includes(log.action)}
+                    {#if log.blockchainTx && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY', 'DOWNLOAD', 'BULK_DOWNLOAD', 'ARCHIVE', 'PERMANENT_DELETE', 'RESTORE', 'BULK_ARCHIVE', 'BULK_RESTORE', 'BULK_PERMANENT_DELETE'].includes(log.action)}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium shadow-[0_0_12px_rgba(168,85,247,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
                         Verified
                       </span>
-                    {:else if log.ipfsHash && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY'].includes(log.action)}
+                    {:else if log.ipfsHash && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY', 'DOWNLOAD', 'BULK_DOWNLOAD', 'ARCHIVE', 'PERMANENT_DELETE', 'RESTORE', 'BULK_ARCHIVE', 'BULK_RESTORE', 'BULK_PERMANENT_DELETE'].includes(log.action)}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                         IPFS Synced
@@ -831,6 +835,40 @@
                             </div>
                           {/if}
 
+                          <!-- Operasi DOWNLOAD FOLDER -->
+                          {#if log.action === 'DOWNLOAD' && log.entityType === 'FOLDER'}
+                            <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Folder Download Details</span>
+                              
+                              <div class="flex items-center gap-2.5 p-3 rounded-lg bg-white/5 border border-white/10">
+                                <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                                  <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                  <span class="text-xs text-white font-semibold block truncate" title={log.entityName}>{log.entityName}</span>
+                                  <span class="text-[10px] text-gray-500 block">Total Files: {parsed.files.length}</span>
+                                </div>
+                              </div>
+
+                              {#if parsed.files && parsed.files.length > 0}
+                                <div class="space-y-2 pt-1">
+                                  <span class="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">Files Packaged</span>
+                                  <div class="rounded-xl border border-white/10 bg-black/20 divide-y divide-white/5 max-h-40 overflow-y-auto">
+                                    {#each parsed.files as file, i (file.id ?? file.name + i)}
+                                      <div class="flex items-center gap-2.5 px-3 py-2">
+                                        <span class="w-5 h-5 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-[9px] font-bold text-blue-300">{i + 1}</span>
+                                        <svg class="w-3 h-3 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                        <span class="flex-1 min-w-0 text-gray-300 text-[11px] truncate" title={file.name}>{file.name}</span>
+                                      </div>
+                                    {/each}
+                                  </div>
+                                </div>
+                              {:else}
+                                <div class="text-xs text-gray-400 italic py-1">This folder has no files.</div>
+                              {/if}
+                            </div>
+                          {/if}
+
                           <!-- Operasi CHANGE PRIVACY -->
                           {#if log.action === 'CHANGE_PRIVACY' && privacyInfo}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
@@ -901,6 +939,43 @@
                                   {/if}
                                 </div>
                               </div>
+                            </div>
+                          {/if}
+
+                          <!-- Operasi BULK DOWNLOAD -->
+                          {#if log.action === 'BULK_DOWNLOAD'}
+                            <div class="space-y-4">
+                              <!-- Downloaded Folders -->
+                              {#if parsed.folders && parsed.folders.length > 0}
+                                <div class="space-y-2">
+                                  <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Downloaded Folders ({parsed.folders.length})</span>
+                                  <div class="rounded-xl border border-white/10 bg-black/20 divide-y divide-white/5 max-h-40 overflow-y-auto">
+                                    {#each parsed.folders as folder, i (folder.id ?? folder.name + i)}
+                                      <div class="flex items-center gap-2.5 px-3 py-2">
+                                        <span class="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-[9px] font-bold text-amber-300">{i + 1}</span>
+                                        <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                        <span class="flex-1 min-w-0 text-gray-300 text-xs truncate" title={folder.name}>{folder.name}</span>
+                                      </div>
+                                    {/each}
+                                  </div>
+                                </div>
+                              {/if}
+
+                              <!-- Downloaded Files -->
+                              {#if parsed.files && parsed.files.length > 0}
+                                <div class="space-y-2">
+                                  <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Downloaded Files ({parsed.files.length})</span>
+                                  <div class="rounded-xl border border-white/10 bg-black/20 divide-y divide-white/5 max-h-40 overflow-y-auto">
+                                    {#each parsed.files as file, i (file.id ?? file.name + i)}
+                                      <div class="flex items-center gap-2.5 px-3 py-2">
+                                        <span class="w-5 h-5 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-[9px] font-bold text-blue-300">{i + 1}</span>
+                                        <svg class="w-3.5 h-3.5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                        <span class="flex-1 min-w-0 text-gray-300 text-xs truncate" title={file.name}>{file.name}</span>
+                                      </div>
+                                    {/each}
+                                  </div>
+                                </div>
+                              {/if}
                             </div>
                           {/if}
 
@@ -1014,7 +1089,7 @@
                           {/if}
 
                           <!-- Detail Deskripsi Umum (Jika ada details teks mentah diluar rename/move/description/privacy/share/revoke/bulk) -->
-                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && !privacyInfo && !shareRevokeInfo && !bulkInfo && !bulkMoveInfo && (!parsed.files || parsed.files.length === 0)}
+                          {#if log.details && !renameInfo && !moveInfo && !descriptionInfo && !privacyInfo && !shareRevokeInfo && !bulkInfo && !bulkMoveInfo && (!parsed.files || parsed.files.length === 0) && !(log.action === 'DOWNLOAD' && log.entityType === 'FOLDER') && log.action !== 'BULK_DOWNLOAD'}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Event Details</span>
                               <p class="text-gray-300 text-xs leading-relaxed break-words">{parsed.raw ?? formatDetails(log.details)}</p>
@@ -1022,7 +1097,7 @@
                           {/if}
 
                           <!-- RECORDED FILES LIST (Selalu muncul jika ada parsed.files) -->
-                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'CHANGE_PRIVACY' && log.action !== 'SHARE' && log.action !== 'REVOKE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
+                          {#if parsed.files && parsed.files.length > 0 && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'CHANGE_PRIVACY' && log.action !== 'SHARE' && log.action !== 'REVOKE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE' && log.action !== 'BULK_DOWNLOAD' && !(log.action === 'DOWNLOAD' && log.entityType === 'FOLDER')}
                             <div class="space-y-2">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
                                 {#if log.action.includes('UPLOAD')}
@@ -1031,8 +1106,10 @@
                                   Confirmed Files
                                 {:else if log.action.includes('DOWNLOAD')}
                                   Downloaded Files
-                                {:else if log.action === 'ARCHIVE' || log.action === 'PERMANENT_DELETE'}
+                                {:else if log.action === 'ARCHIVE' || log.action === 'PERMANENT_DELETE' || log.action === 'BULK_ARCHIVE' || log.action === 'BULK_PERMANENT_DELETE'}
                                   Deleted Files
+                                {:else if log.action === 'RESTORE' || log.action === 'BULK_RESTORE'}
+                                  Restored Files
                                 {:else}
                                   Recorded Items
                                 {/if}

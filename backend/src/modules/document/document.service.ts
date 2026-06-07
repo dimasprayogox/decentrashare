@@ -524,6 +524,7 @@ export const bulkDownloadDocuments = async (input: BulkDownloadInput, userId: st
 
   return {
     ...archive,
+    folders: accessibleFolders.map(f => ({ id: f.id, name: f.name })),
     summary: {
       ...archive.summary,
       totalRequested: documentIds.length + folderIds.length,
@@ -539,6 +540,7 @@ export const logBulkDownloadActivity = async (
   userId: string,
   documentIds: string[],
   metadata: Array<{ id: string; title: string; fileName: string; ipfsHash: string }>,
+  folders: Array<{ id: string; name: string }>,
   summary: { totalRequested: number; successfullyAdded: number; accessDenied: number }
 ) => {
   try {
@@ -553,7 +555,8 @@ export const logBulkDownloadActivity = async (
           requestedCount: summary.totalRequested,
           downloadedCount: summary.successfullyAdded,
           deniedCount: summary.accessDenied,
-          files: metadata.map(m => ({ id: m.id, name: m.title }))
+          files: metadata.map(m => ({ id: m.id, name: m.title })),
+          folders: folders
         })
       }
     });
@@ -1331,22 +1334,43 @@ export const archiveDocuments = async (documentIds: string[], userId: string) =>
       }
     });
 
-    try {
-      await tx.activityLog.createMany({
-        data: docs.map(doc => ({
-          userId,
-          action: 'ARCHIVE',
-          entityType: 'DOCUMENT',
-          entityId: doc.id,
-          entityName: doc.title,
-          fileHash: doc.fileHash,
-          ipfsHash: doc.ipfsHash,
-          blockchainTx: doc.blockchainTx,
-          details: `Document archived: ${doc.title}`
-        }))
-      });
-    } catch (err) {
-      logger.error('Failed to log archiveDocuments activity:', err);
+    if (docs.length === 1) {
+      const doc = docs[0];
+      try {
+        await tx.activityLog.create({
+          data: {
+            userId,
+            action: 'ARCHIVE',
+            entityType: 'DOCUMENT',
+            entityId: doc.id,
+            entityName: doc.title,
+            fileHash: doc.fileHash,
+            ipfsHash: doc.ipfsHash,
+            blockchainTx: doc.blockchainTx,
+            details: `Document archived: ${doc.title}`
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log archiveDocuments activity:', err);
+      }
+    } else if (docs.length > 1) {
+      try {
+        await tx.activityLog.create({
+          data: {
+            userId,
+            action: 'BULK_ARCHIVE',
+            entityType: 'MULTIPLE',
+            entityId: docs[0].id,
+            entityName: `Bulk archive: ${docs.length} files`,
+            details: JSON.stringify({
+              successCount: docs.length,
+              files: docs.map(doc => ({ id: doc.id, name: doc.title }))
+            })
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log bulk archiveDocuments activity:', err);
+      }
     }
 
     return result;
@@ -1472,23 +1496,46 @@ export const restoreDocuments = async (documentIds: string[], userId: string) =>
       }
     }
 
-    try {
-      await tx.activityLog.createMany({
-        data: documents.map(doc => {
-          const renamedItem = rootRenamed.find(r => r.id === doc.id);
-          const entityName = renamedItem ? renamedItem.restoredTitle : doc.title;
-          return {
+    if (documents.length === 1) {
+      const doc = documents[0];
+      const renamedItem = rootRenamed.find(r => r.id === doc.id);
+      const entityName = renamedItem ? renamedItem.restoredTitle : doc.title;
+      try {
+        await tx.activityLog.create({
+          data: {
             userId,
             action: 'RESTORE',
             entityType: 'DOCUMENT',
             entityId: doc.id,
             entityName,
             details: `Document restored: ${entityName}`
-          };
-        })
-      });
-    } catch (err) {
-      logger.error('Failed to log restoreDocuments activity:', err);
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log restoreDocuments activity:', err);
+      }
+    } else if (documents.length > 1) {
+      try {
+        await tx.activityLog.create({
+          data: {
+            userId,
+            action: 'BULK_RESTORE',
+            entityType: 'MULTIPLE',
+            entityId: documents[0].id,
+            entityName: `Bulk restore: ${documents.length} files`,
+            details: JSON.stringify({
+              successCount: documents.length,
+              files: documents.map(doc => {
+                const renamedItem = rootRenamed.find(r => r.id === doc.id);
+                const entityName = renamedItem ? renamedItem.restoredTitle : doc.title;
+                return { id: doc.id, name: entityName };
+              })
+            })
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log bulk restoreDocuments activity:', err);
+      }
     }
 
     return {
@@ -1513,22 +1560,43 @@ export const destroyMultipleDocuments = async (documentIds: string[], userId: st
     if (docs.length === 0) return { count: 0 };
 
     // 2. CATAT KE ACTIVITY LOG (Sesuai skema baru)
-    try {
-      await tx.activityLog.createMany({
-        data: docs.map(doc => ({
-          userId: userId,
-          action: "PERMANENT_DELETE",
-          entityType: "DOCUMENT",
-          entityId: doc.id,
-          entityName: doc.title,
-          fileHash: doc.fileHash,
-          ipfsHash: doc.ipfsHash,
-          blockchainTx: doc.blockchainTx,
-          details: "Document and its access records permanently purged."
-        }))
-      });
-    } catch (err) {
-      logger.error('Failed to log destroyMultipleDocuments activity:', err);
+    if (docs.length === 1) {
+      const doc = docs[0];
+      try {
+        await tx.activityLog.create({
+          data: {
+            userId: userId,
+            action: 'PERMANENT_DELETE',
+            entityType: 'DOCUMENT',
+            entityId: doc.id,
+            entityName: doc.title,
+            fileHash: doc.fileHash,
+            ipfsHash: doc.ipfsHash,
+            blockchainTx: doc.blockchainTx,
+            details: 'Document and its access records permanently purged.'
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log destroyMultipleDocuments activity:', err);
+      }
+    } else if (docs.length > 1) {
+      try {
+        await tx.activityLog.create({
+          data: {
+            userId: userId,
+            action: 'BULK_PERMANENT_DELETE',
+            entityType: 'MULTIPLE',
+            entityId: docs[0].id,
+            entityName: `Bulk delete: ${docs.length} files`,
+            details: JSON.stringify({
+              successCount: docs.length,
+              files: docs.map(doc => ({ id: doc.id, name: doc.title }))
+            })
+          }
+        });
+      } catch (err) {
+        logger.error('Failed to log bulk destroyMultipleDocuments activity:', err);
+      }
     }
 
     // --- LANGKAH BARU: BERSIHKAN RELASI ---

@@ -331,7 +331,7 @@ describe('Feature: document privacy, access, and download behavior', () => {
     const result = await destroyMultipleDocuments(['doc-1'], 'user-1');
 
     expect(result).toEqual({ count: 1 });
-    expect(prisma.activityLog.createMany).toHaveBeenCalled();
+    expect(prisma.activityLog.create).toHaveBeenCalled();
     expect(prisma.documentAccess.deleteMany).toHaveBeenCalledWith({ where: { documentId: { in: ['doc-1'] } } });
     expect(prisma.document.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['doc-1'] }, ownerId: 'user-1', isArchived: true } });
   });
@@ -573,6 +573,8 @@ describe('Feature: document privacy, access, and download behavior', () => {
     const result = await bulkDownloadDocuments({ documentIds: ['doc-1'], folderIds: ['folder-1'] }, 'user-1');
     expect(result.stream).toBeDefined();
     expect(result.summary.totalRequested).toBe(2);
+    expect(result.folders).toBeDefined();
+    expect(result.folders[0].name).toBe('Folder');
   });
 
   test('given empty bulk download input, when bulkDownloadDocuments runs, then throws error', async () => {

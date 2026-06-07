@@ -282,7 +282,7 @@ export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Respons
     }
 
     // ✅ 1. Get ZIP stream from service
-    const { stream, finalize, metadata, summary } = await documentService.bulkDownloadDocuments({ documentIds, folderIds }, userId);
+    const { stream, finalize, metadata, folders, summary } = await documentService.bulkDownloadDocuments({ documentIds, folderIds }, userId);
 
     // ✅ 2. Set headers for ZIP download
     const zipFileName = `decentrashare-export-${new Date().toISOString().slice(0, 10)}.zip`;
@@ -292,7 +292,7 @@ export const handleBulkDownloadDocuments = async (req: AuthRequest, res: Respons
     res.setHeader('Cache-Control', 'no-cache');
 
     // ✅ 3. Log bulk download activity (async, non-blocking)
-    documentService.logBulkDownloadActivity(userId, [...documentIds, ...folderIds], metadata, summary);
+    documentService.logBulkDownloadActivity(userId, [...documentIds, ...folderIds], metadata, folders || [], summary);
 
     // ✅ 4. Pipe ZIP stream to response
     stream.pipe(res);
