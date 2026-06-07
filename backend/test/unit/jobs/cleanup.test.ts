@@ -9,7 +9,17 @@ const PinataCleanupService = {
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
 
 mock.module('../../../src/config/db.js', () => ({ prisma }));
-mock.module('../../../src/modules/pinata/pinata.service', () => ({ PinataCleanupService }));
+// NOTE: bun's `mock.module` is global and persistent across files. Other
+// service modules (document.service, user.service) import named exports from
+// pinata.service, so this mock must expose the full public surface — otherwise
+// later suites fail with "Export named '...' not found".
+mock.module('../../../src/modules/pinata/pinata.service', () => ({
+  PinataCleanupService,
+  createUserPinGroup: mock(async () => null),
+  ensureUserPinGroup: mock(async () => null),
+  uploadFileWithUserContext: mock(async () => ({ ipfsHash: '', pinataUrl: '', metadata: { name: '', keyvalues: {} }, groupId: null })),
+  getUserPinsFromPinata: mock(async () => []),
+}));
 mock.module('../../../src/utils/logger', () => ({ logger }));
 mock.module('../../../src/utils/logger.js', () => ({ logger }));
 

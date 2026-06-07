@@ -1,1 +1,104 @@
 @import "tailwindcss";
+
+/* ----------------------------------------------------------------------------
+   Landing page animations
+---------------------------------------------------------------------------- */
+
+/* Scroll-reveal: elements start hidden and animate in once `.in-view` is set
+   by the `inView` action. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Floating blobs / orbs */
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(0, -28px) scale(1.05); }
+}
+.animate-float-slow { animation: float-slow 9s ease-in-out infinite; }
+
+@keyframes float-slower {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(20px, 24px) scale(1.08); }
+}
+.animate-float-slower { animation: float-slower 13s ease-in-out infinite; }
+
+/* Slow continuous rotation (orbit rings) */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 28s linear infinite; }
+
+@keyframes spin-reverse-slow {
+  from { transform: rotate(360deg); }
+  to   { transform: rotate(0deg); }
+}
+.animate-spin-reverse-slow { animation: spin-reverse-slow 22s linear infinite; }
+
+/* Animated gradient text */
+@keyframes gradient-pan {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-text {
+  background-size: 200% auto;
+  animation: gradient-pan 6s ease infinite;
+}
+
+/* Marquee for the logo/stat strip */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* Shine sweep used on buttons & cards */
+@keyframes shine {
+  0%   { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(220%); }
+}
+
+/* Subtle rising particle */
+@keyframes rise {
+  0%   { transform: translateY(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-120px); opacity: 0; }
+}
+
+/* Grid drift for hero backdrop */
+@keyframes grid-pan {
+  from { background-position: 0 0; }
+  to   { background-position: 0 40px; }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .animate-float-slow,
+  .animate-float-slower,
+  .animate-spin-slow,
+  .animate-spin-reverse-slow,
+  .animate-gradient-text,
+  .animate-marquee {
+    animation: none !important;
+  }
+}
