@@ -1825,25 +1825,28 @@ export const updateFoldersPrivacy = async (
       }
 
       const subtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
+      // PUBLIC and LINK_ONLY keep the folder shared/accessible, so mixed-owner
+      // content stays in place and is cascaded to the new privacy. Only PRIVATE
+      // (and other non-shared levels) relocate foreign content back to its owner.
+      const keepMixedOwnerContentInPlace = item.newPrivacy === 'PUBLIC' || item.newPrivacy === 'LINK_ONLY';
       const shouldRelocateMixedOwnerContent = folder.privacy === 'SPECIFIC_USER'
         && item.newPrivacy !== 'SPECIFIC_USER'
-        && item.newPrivacy !== 'PUBLIC';
+        && !keepMixedOwnerContentInPlace;
       const relocation = shouldRelocateMixedOwnerContent
         ? await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: ownerId })
         : { movedFolderCount: 0, movedDocumentCount: 0 };
 
       const remainingSubtreeFolderIds = await getAllDescendantFolderIds(tx, [item.folderId]);
-      const publicCascade = item.newPrivacy === 'PUBLIC';
 
       const folderUpdate = await tx.folder.updateMany({
-        where: publicCascade
+        where: keepMixedOwnerContentInPlace
           ? { id: { in: remainingSubtreeFolderIds } }
           : { id: { in: remainingSubtreeFolderIds }, ownerId },
         data: { privacy: item.newPrivacy }
       });
 
       const updatedDocuments = await tx.document.findMany({
-        where: publicCascade
+        where: keepMixedOwnerContentInPlace
           ? { folderId: { in: remainingSubtreeFolderIds } }
           : { folderId: { in: remainingSubtreeFolderIds }, ownerId },
         select: { id: true }
@@ -1855,7 +1858,7 @@ export const updateFoldersPrivacy = async (
       });
 
       let accessDeleted = 0;
-      if (item.newPrivacy !== 'SPECIFIC_USER' && item.newPrivacy !== 'PUBLIC') {
+      if (item.newPrivacy !== 'SPECIFIC_USER' && !keepMixedOwnerContentInPlace) {
         const deleted = await tx.folderAccess.deleteMany({
           where: { folderId: { in: remainingSubtreeFolderIds } }
         });

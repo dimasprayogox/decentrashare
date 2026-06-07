@@ -478,6 +478,34 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.documentAccess.deleteMany).not.toHaveBeenCalled();
   });
 
+  test('given a specific-user folder containing a foreign-owned subfolder, when privacy changes to link-only, then the foreign subfolder stays in place and is cascaded to link-only', async () => {
+    const { updateFoldersPrivacy } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findFirst.mockResolvedValue(folderFactory({ id: 'root', name: 'Root', ownerId: 'owner-1', privacy: 'SPECIFIC_USER' }));
+    prisma.folder.findMany
+      // First getAllDescendantFolderIds (before relocation check): BFS children
+      .mockResolvedValueOnce([{ id: 'foreign-child' }])
+      .mockResolvedValueOnce([])
+      // Second getAllDescendantFolderIds (remainingSubtreeFolderIds): BFS children
+      .mockResolvedValueOnce([{ id: 'foreign-child' }])
+      .mockResolvedValueOnce([]);
+    prisma.folder.updateMany.mockResolvedValue({ count: 2 });
+    prisma.document.findMany.mockResolvedValue([{ id: 'owner-doc' }, { id: 'foreign-doc' }]);
+
+    const result = await updateFoldersPrivacy('owner-1', [{ folderId: 'root', newPrivacy: 'LINK_ONLY' as any }]);
+
+    expect(result).toEqual([{ folderId: 'root', status: 'updated', newPrivacy: 'LINK_ONLY', accessRevoked: 0, cascadedFolders: 2, movedFolderCount: 0, movedDocumentCount: 0 }]);
+    // Nothing is relocated: foreign content keeps its place.
+    expect(prisma.folder.update).not.toHaveBeenCalled();
+    expect(prisma.document.update).not.toHaveBeenCalled();
+    // Whole subtree (including foreign-owned folder/doc) becomes link-only.
+    expect(prisma.folder.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['root', 'foreign-child'] } }, data: { privacy: 'LINK_ONLY' } });
+    expect(prisma.document.findMany).toHaveBeenCalledWith({ where: { folderId: { in: ['root', 'foreign-child'] } }, select: { id: true } });
+    expect(prisma.document.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['owner-doc', 'foreign-doc'] } }, data: { privacy: 'LINK_ONLY' } });
+    // Shared access rows are preserved (link-only stays accessible).
+    expect(prisma.folderAccess.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.documentAccess.deleteMany).not.toHaveBeenCalled();
+  });
+
   // --- downloadFolderArchive ---
 
   test('given a folder, when downloadFolderArchive is called, then it delegates to prepareFolderArchive', async () => {
