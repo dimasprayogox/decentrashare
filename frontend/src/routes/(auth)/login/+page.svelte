@@ -20,6 +20,8 @@
   let showErrorBanner = $state(false);
   let connectedAddress = $state<string | null>(null);
   let isHovered = $state(false);
+  let redirectTo = $state('/storage');
+  let registerUrl = $state('/register');
 
   // Helper: Format wallet address
   function formatAddress(address: string): string {
@@ -66,6 +68,13 @@
   }
 
   onMount(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectParam = urlParams.get('redirectTo');
+    if (redirectParam) {
+      redirectTo = redirectParam;
+      registerUrl = `/register?redirectTo=${encodeURIComponent(redirectParam)}`;
+    }
+
     const ethereum = getEthereum();
     ethereum?.on?.('accountsChanged', handleAccountsChanged);
 
@@ -138,7 +147,7 @@
         if (token) localStorage.setItem('session_token', token);
 
         statusMessage = "Login successful! Redirecting...";
-        setTimeout(() => { window.location.href = '/storage'; }, 1200);
+        setTimeout(() => { window.location.href = redirectTo; }, 1200);
       } else {
         throw new Error(loginData?.message || "Signature verification failed!");
       }
@@ -287,7 +296,7 @@
 
       <!-- register Link -->
       <div class="mt-4 text-center">
-        <a href="/register" rel="external" class="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+        <a href={registerUrl} rel="external" class="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors">
           Don't have an account? <span class="font-medium">Sign up</span>
         </a>
       </div>

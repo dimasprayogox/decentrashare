@@ -2,6 +2,7 @@
   import { fade, fly, slide } from 'svelte/transition';
   import { authService } from '$lib/services';
   import { goto, invalidateAll } from '$app/navigation';
+  import { onMount } from 'svelte';
   import logo from '$lib/assets/logo.png';
 
 
@@ -11,6 +12,17 @@
   let showErrorBanner = $state(false);
   let connectedAddress = $state<string | null>(null);
   let isHovered = $state(false);
+  let redirectTo = $state('/storage');
+  let loginUrl = $state('/login');
+  
+  onMount(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectParam = urlParams.get('redirectTo');
+    if (redirectParam) {
+      redirectTo = redirectParam;
+      loginUrl = `/login?redirectTo=${encodeURIComponent(redirectParam)}`;
+    }
+  });
   
   // Multi-step state
   let step = $state<'connect' | 'form' | 'signing'>('connect');
@@ -146,13 +158,14 @@
 
         if (!isProfileComplete) {
           statusMessage = "Account created! Please complete your profile.";
+          const destUrl = redirectTo !== '/storage' ? `/settings/profile?redirectTo=${encodeURIComponent(redirectTo)}` : '/settings/profile';
           setTimeout(() => {
-            window.location.href = '/settings/profile';
+            window.location.href = destUrl;
           }, 1500);
         } else {
           statusMessage = "Account created successfully! Redirecting...";
           setTimeout(() => {
-            window.location.href = '/storage';
+            window.location.href = redirectTo;
           }, 1200);
         }
       } else {
@@ -415,7 +428,7 @@
 
       <!-- Login Link -->
       <div class="mt-4 text-center">
-        <a href="/login" rel="external" class="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+        <a href={loginUrl} rel="external" class="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors">
           Already have an account? <span class="font-medium">Sign in</span>
         </a>
       </div>

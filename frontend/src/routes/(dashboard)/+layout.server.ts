@@ -25,7 +25,8 @@ export const load: LayoutServerLoad = async ({ cookies, url, fetch }) => {
 
     // Jika tidak ada session, langsung lempar ke login
     if (!session) {
-        throw redirect(303, '/login');
+        const fromUrl = url.pathname + url.search;
+        throw redirect(303, `/login?redirectTo=${encodeURIComponent(fromUrl)}`);
     }
 
     const role = decodeJwtRole(session);

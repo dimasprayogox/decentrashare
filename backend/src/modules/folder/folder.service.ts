@@ -712,7 +712,7 @@ const getUniqueRootDocumentTitle = async (tx: any, ownerId: string, desiredTitle
   return candidate;
 };
 
-const relocateOwnedContentFromSharedSubtree = async (
+export const relocateOwnedContentFromSharedSubtree = async (
   tx: any,
   params: { subtreeFolderIds: string[]; rootOwnerId: string; onlyOwnerId?: string }
 ) => {

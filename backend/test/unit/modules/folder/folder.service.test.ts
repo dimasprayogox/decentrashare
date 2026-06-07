@@ -402,6 +402,45 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.folder.update).not.toHaveBeenCalled();
   });
 
+  test('given a subfolder containing a foreign document is moved, when the move runs, then the foreign document is rescued to the nearest parent folder', async () => {
+    const { moveFolder } = await import('../../../../src/modules/folder/folder.service');
+    
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({ id: 'subfolder-1', ownerId: 'user-a', name: 'Subfolder', parentId: 'parent-folder' }))
+      .mockResolvedValueOnce(folderFactory({ id: 'target-folder', ownerId: 'user-a', name: 'Target', privacy: 'PRIVATE', sharedWith: [] }))
+      .mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-b', name: 'Parent', privacy: 'SPECIFIC_USER', sharedWith: [] }));
+
+    prisma.folder.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: 'subfolder-1', parentId: 'parent-folder', ownerId: 'user-a' }
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    prisma.document.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { id: 'doc-1', title: 'Doc', ownerId: 'user-b', folderId: 'subfolder-1' }
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    prisma.folder.update.mockResolvedValue(folderFactory({ id: 'subfolder-1', parentId: 'target-folder', privacy: 'PRIVATE' }));
+
+    const result = await moveFolder('subfolder-1', 'user-a', 'target-folder');
+
+    expect(prisma.document.update).toHaveBeenCalledWith({
+      where: { id: 'doc-1' },
+      data: {
+        folderId: 'parent-folder',
+        title: 'Doc',
+        privacy: 'SPECIFIC_USER'
+      }
+    });
+  });
+
   test('given a folder is moved to an editable target, when move runs, then subtree privacy and document privacy follow the target', async () => {
     const { moveFolder } = await import('../../../../src/modules/folder/folder.service');
     prisma.folder.findUnique

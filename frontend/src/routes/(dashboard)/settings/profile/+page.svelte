@@ -158,10 +158,16 @@
     }
     if (editingField) await saveField(editingField);
     await invalidateAll();
-    setTimeout(() => goto('/storage'), 1000);
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get('redirectTo') || '/storage';
+    setTimeout(() => goto(redirectTo), 1000);
   }
 
-  function skipForNow() { goto('/storage'); }
+  function skipForNow() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get('redirectTo') || '/storage';
+    goto(redirectTo);
+  }
   function getInitials(): string { const name = profile.username || profile.bio?.trim() || 'U'; return name.charAt(0).toUpperCase(); }
   function formatUsernameDisplay(): string { return profile.username ? `@${profile.username}` : 'Set username'; }
   function formatValue(value: string | null | undefined, field: string): string {

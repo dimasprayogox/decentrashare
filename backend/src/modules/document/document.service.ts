@@ -1,5 +1,5 @@
 import { prisma } from '../../config/db';
-import { getAllDescendantFolderIds } from '../folder/folder.service';
+import { getAllDescendantFolderIds, relocateOwnedContentFromSharedSubtree } from '../folder/folder.service';
 import { pinata } from '../../config/pinata';
 import { logger } from '../../utils/logger';
 import { Prisma, PrivacyLevel } from '@prisma/client';
@@ -2431,6 +2431,12 @@ export const bulkMoveItems = async (
 
         // Relocate folder
         let subtreeFolderIds = await getAllDescendantFolderIds(tx, [target.id]);
+
+        const relocation = await relocateOwnedContentFromSharedSubtree(tx, { subtreeFolderIds, rootOwnerId: folder.ownerId });
+        if (relocation.movedFolderCount > 0 || relocation.movedDocumentCount > 0) {
+          subtreeFolderIds = await getAllDescendantFolderIds(tx, [target.id]);
+        }
+
         const subtreeDocuments = await tx.document.findMany({
           where: { folderId: { in: subtreeFolderIds } },
           select: { id: true }

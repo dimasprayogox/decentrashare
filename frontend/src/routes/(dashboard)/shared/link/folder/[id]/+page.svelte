@@ -2,7 +2,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
+  import { fade, scale } from 'svelte/transition';
   import { storageService } from '$lib/services/storage/storage';
   import type { Document, Folder } from '$lib/types/storage';
   import FileGrid from '$lib/components/storage/FileGrid.svelte';
@@ -18,6 +18,8 @@
   let isLoading = $state(true);
   let isDownloading = $state(false);
   let errorMessage = $state('');
+  
+  const isProcessing = $derived(isDownloading);
   
   let currentUser = $state<{
     id: string;
@@ -68,6 +70,8 @@
     try {
       isDownloading = true;
       await storageService.downloadFolder(folderId, folderDetail.name);
+    } catch (error) {
+      console.error('Download folder failed:', error);
     } finally {
       isDownloading = false;
     }
@@ -75,6 +79,7 @@
 
   async function downloadItem(id: string, type: 'folder' | 'document') {
     try {
+      isDownloading = true;
       if (type === 'document') {
         const doc = items.find(d => d.id === id);
         if (doc) {
@@ -87,7 +92,9 @@
         }
       }
     } catch (error) {
-      console.error('Download failed:', error);
+      console.error('Download item failed:', error);
+    } finally {
+      isDownloading = false;
     }
   }
 
@@ -108,6 +115,16 @@
     }
   }
 
+  async function handleRefresh() {
+    await loadFolder();
+  }
+
+  $effect(() => {
+    if (folderId) {
+      void loadFolder();
+    }
+  });
+
   onMount(() => {
     storageService.getCurrentUser()
       .then(response => {
@@ -122,8 +139,6 @@
       .catch(() => {
         currentUser = null;
       });
-
-    void loadFolder();
   });
 </script>
 
@@ -247,6 +262,16 @@
           />
         {/if}
       {/if}
+    </div>
+  {/if}
+
+  {#if isProcessing}
+    <div class="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+      <div class="bg-[#121214] p-8 rounded-[40px] border border-white/10 shadow-2xl flex flex-col items-center" in:scale>
+        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h3 class="text-white font-bold text-lg">DecentraShare Sync</h3>
+        <p class="text-gray-500 text-sm italic">Wait a minute...</p>
+      </div>
     </div>
   {/if}
 </main>

@@ -213,8 +213,9 @@ describe('Feature: document privacy, access, and download behavior', () => {
       .mockResolvedValueOnce(folderFactory({ id: 'folder-sub', parentId: null, ownerId: 'user-1' })); // folder to move check
     prisma.document.findFirst
       .mockResolvedValueOnce(documentFactory({ id: 'doc-1', folderId: null, ownerId: 'user-1', title: 'Doc 1' })); // doc check
-    prisma.document.findMany.mockResolvedValueOnce([]); // descendant documents check
-    prisma.folder.findMany.mockResolvedValueOnce([]); // descendant folders check (getAllDescendantFolderIds)
+    
+    prisma.document.findMany.mockResolvedValue([]);
+    prisma.folder.findMany.mockResolvedValue([]);
     
     prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
 
@@ -234,6 +235,54 @@ describe('Feature: document privacy, access, and download behavior', () => {
       where: { id: 'folder-sub' },
       data: { parentId: 'folder-2', privacy: 'PUBLIC' }
     }));
+  });
+
+  test('given a subfolder containing a foreign document is bulk moved, when the move runs, then the foreign document is rescued to the nearest parent folder', async () => {
+    const { bulkMoveItems } = await import('../../../../src/modules/document/document.service');
+    
+    // Mocks for targetFolder
+    prisma.folder.findFirst
+      .mockResolvedValueOnce(folderFactory({ id: 'target-folder', ownerId: 'user-a', name: 'Target', privacy: 'PRIVATE', sharedWith: [] })) // targetFolder check
+      .mockResolvedValueOnce(folderFactory({ id: 'subfolder-1', ownerId: 'user-a', name: 'Subfolder', parentId: 'parent-folder' })); // folder to move check
+      
+    // Mocks inside relocateOwnedContentFromSharedSubtree & getAllDescendantFolderIds
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-b', name: 'Parent', privacy: 'SPECIFIC_USER', sharedWith: [] }));
+
+    prisma.folder.findMany.mockResolvedValue([]);
+    prisma.document.findMany.mockResolvedValue([]);
+
+    prisma.folder.findMany
+      .mockResolvedValueOnce([]) // initial descendant check inside bulkMoveItems
+      .mockResolvedValueOnce([]) // foldersToMoveResult
+      .mockResolvedValueOnce([{ id: 'subfolder-1', parentId: 'parent-folder', ownerId: 'user-a' }]) // allSubtreeFoldersResult
+      .mockResolvedValueOnce([]) // rootOwnerFoldersToRescueResult
+      .mockResolvedValueOnce([]); // recalculated descendant check children
+
+    prisma.document.findMany
+      .mockResolvedValueOnce([]) // rootOwnerDocumentsToRescueResult
+      .mockResolvedValueOnce([
+        { id: 'doc-1', title: 'Doc', ownerId: 'user-b', folderId: 'subfolder-1' } // documentsToMove check
+      ])
+      .mockResolvedValueOnce([]); // subtreeDocuments inside bulkMoveItems after recalculation
+
+    prisma.folder.update.mockResolvedValue(folderFactory({ id: 'subfolder-1', parentId: 'target-folder', privacy: 'PRIVATE' }));
+    
+    prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
+
+    const result = await bulkMoveItems('user-a', [
+      { id: 'subfolder-1', type: 'folder' }
+    ], 'target-folder');
+
+    expect(result.success).toBe(true);
+    expect(prisma.document.update).toHaveBeenCalledWith({
+      where: { id: 'doc-1' },
+      data: {
+        folderId: 'parent-folder',
+        title: 'Doc',
+        privacy: 'SPECIFIC_USER'
+      }
+    });
   });
 
   test('given only one document item, when bulkMoveItems runs, then it is logged as a single MOVE action with details', async () => {

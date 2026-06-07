@@ -99,13 +99,15 @@ export const handle: Handle = async ({ event, resolve }) => {
     // 3. Logika Proteksi
     if (isDashboardRoute) {
         if (!session) {
-            throw redirect(303, '/login');
+            const fromUrl = event.url.pathname + event.url.search;
+            throw redirect(303, `/login?redirectTo=${encodeURIComponent(fromUrl)}`);
         }
     }
 
     // 4. Cegah user yang sudah login untuk masuk ke halaman login atau register lagi
     if ((event.url.pathname === '/login' || event.url.pathname === '/register') && session) {
-        throw redirect(303, '/dashboard');
+        const redirectTo = event.url.searchParams.get('redirectTo') || '/dashboard';
+        throw redirect(303, redirectTo);
     }
 
     // Lanjutkan request

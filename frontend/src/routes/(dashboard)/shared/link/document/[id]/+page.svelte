@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { onDestroy, onMount } from 'svelte';
+  import { fade, scale } from 'svelte/transition';
   import mammoth from 'mammoth/mammoth.browser';
   import * as XLSX from 'xlsx';
   import ProfilePreviewModal from '$lib/components/storage/ProfilePreviewModal.svelte';
@@ -31,6 +32,7 @@
   let showProfileModal = $state(false);
 
   const documentId = $derived(page.params.id);
+  const isProcessing = $derived(isDownloading);
 
   function formatFileSize(bytes?: number): string {
     if (!bytes || bytes === 0) return '0 B';
@@ -373,6 +375,16 @@
     </div>
   {/if}
 </main>
+
+{#if isProcessing}
+  <div class="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
+    <div class="bg-[#121214] p-8 rounded-[40px] border border-white/10 shadow-2xl flex flex-col items-center" in:scale>
+      <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <h3 class="text-white font-bold text-lg">DecentraShare Sync</h3>
+      <p class="text-gray-500 text-sm italic">Wait a minute...</p>
+    </div>
+  </div>
+{/if}
 
 <ProfilePreviewModal
   isOpen={showProfileModal}

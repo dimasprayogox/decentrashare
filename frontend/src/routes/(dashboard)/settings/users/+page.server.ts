@@ -14,9 +14,12 @@ function decodeJwtPayload(token: string): { role?: string } | null {
   }
 }
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
   const session = cookies.get('session_token');
-  if (!session) throw redirect(303, '/login');
+  if (!session) {
+    const fromUrl = url.pathname + url.search;
+    throw redirect(303, `/login?redirectTo=${encodeURIComponent(fromUrl)}`);
+  }
 
   const payload = decodeJwtPayload(session);
   if (!payload || payload.role !== 'ADMIN') {
