@@ -18,6 +18,7 @@ const DEFAULT_CONFIG: CleanupConfig = {
 
 export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONFIG) => {
   const now = new Date();
+  const cutoff = new Date(now.getTime() - config.ttlHours * 60 * 60 * 1000);
 
   logger.info(`🔍 Searching for orphaned pins (TTL: ${config.ttlHours}h, dryRun: ${config.dryRun})`);
 
@@ -26,7 +27,7 @@ export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONF
     where: {
       isOnChain: false,
       isArchived: false,
-      pendingOnChainUntil: { lt: now },
+      createdAt: { lt: cutoff },
       cleanupStatus: 'PENDING'
     },
     select: {

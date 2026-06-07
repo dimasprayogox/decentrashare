@@ -102,7 +102,6 @@ model Document {
   blockchainTx String?
   isOnChain    Boolean  @default(false)
   
-  pendingOnChainUntil DateTime?  
   cleanupStatus       CleanupStatus @default(PENDING) 
   
   privacy      PrivacyLevel @default(PRIVATE)

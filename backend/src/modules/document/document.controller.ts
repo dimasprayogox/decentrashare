@@ -4,6 +4,7 @@ import { PrivacyLevel } from '@prisma/client';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import * as documentService from './document.service';
 import blockchainService from '../blockchain/blockchain.service';
+import { PinataCleanupService } from '../pinata/pinata.service';
 import { logger } from '../../utils/logger';
 import { Readable } from 'node:stream'; 
 
@@ -536,7 +537,7 @@ export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
           id: { in: documentIds },
           ownerId: userId
         },
-        select: { id: true, isOnChain: true, pendingOnChainUntil: true }
+        select: { id: true, isOnChain: true, createdAt: true }
       });
       
       logger.debug('📋 Documents before update', { docsBefore });
@@ -549,8 +550,7 @@ export const confirmBatchComplete = async (req: AuthRequest, res: Response) => {
         },
         data: {
           isOnChain: true,
-          blockchainTx: txHash,
-          pendingOnChainUntil: null  // ✅ Clear pending flag
+          blockchainTx: txHash
         }
       });
 
@@ -641,7 +641,24 @@ export const triggerBlockchainConfirmation = async (req: AuthRequest, res: Respo
     if (doc.isOnChain) return res.status(400).json({ success: false, message: "Already on-chain" });
     
     // 2. Cek TTL: Apakah masih dalam window 24 jam?
-    if (doc.pendingOnChainUntil && new Date() > doc.pendingOnChainUntil) {
+    const cutoff = new Date(doc.createdAt.getTime() + 24 * 60 * 60 * 1000);
+    if (new Date() > cutoff) {
+      try {
+        logger.info(`🗑️ Expired unconfirmed document accessed. Deleting immediately: ${doc.id}`);
+        await PinataCleanupService.unpin(doc.ipfsHash);
+        
+        await prisma.$transaction(async (tx) => {
+          await tx.documentAccess.deleteMany({
+            where: { documentId: doc.id }
+          });
+          await tx.document.delete({
+            where: { id: doc.id }
+          });
+        });
+      } catch (err: any) {
+        logger.error(`❌ Failed to immediately delete expired document: ${doc.id}`, { error: err.message });
+      }
+
       return res.status(410).json({ 
         success: false, 
         message: "Confirmation window expired. File has been removed from storage." 
@@ -709,7 +726,7 @@ export const triggerBatchBlockchainConfirmation = async (req: AuthRequest, res: 
 
     // 2. Siapkan items untuk filtering (hanya yang belum on-chain di DB)
     const items = docs
-      .filter(doc => !doc.isOnChain && (!doc.pendingOnChainUntil || new Date() <= doc.pendingOnChainUntil))
+      .filter(doc => !doc.isOnChain && (new Date().getTime() - doc.createdAt.getTime() <= 24 * 60 * 60 * 1000))
       .map(doc => ({
         docId: doc.id,
         cid: doc.ipfsHash,

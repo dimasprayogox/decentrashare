@@ -4696,3 +4696,11 @@
 {"level":"info","message":"Unpinning 1 expired files from Pinata...","timestamp":"2026-06-07 21:05:28"}
 {"level":"info","message":"🗑️ Successfully unpinned: QmTestDummyHashForAutoDeleteVerification","timestamp":"2026-06-07 21:05:30"}
 {"deletedDocuments":1,"deletedFolders":1,"level":"info","message":"Expired trash cleanup completed","timestamp":"2026-06-07 21:05:30"}
+{"level":"info","message":"🗑️ Expired unconfirmed document accessed. Deleting immediately: 06d31149-68aa-412e-9fc7-9eb5b65a0110","timestamp":"2026-06-07 21:27:47"}
+{"level":"info","message":"🗑️ Successfully unpinned: QmTestDummyHashExpiredUnconfirmed","timestamp":"2026-06-07 21:27:48"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-06-07 21:27:48"}
+{"level":"info","message":"📦 Found 1 orphaned pins to process","timestamp":"2026-06-07 21:27:48"}
+{"level":"debug","message":"📦 Archived metadata: 482d3b14-c54b-40e6-bda8-a801ffcd5c41","timestamp":"2026-06-07 21:27:48"}
+{"level":"info","message":"🗑️ Successfully unpinned: QmTestDummyHashExpiredJob","timestamp":"2026-06-07 21:27:49"}
+{"level":"info","message":"✅ Deleted expired unconfirmed document: QmTestDummyHashExpiredJob | expired-job.txt","timestamp":"2026-06-07 21:27:49"}
+{"level":"info","message":"📊 Cleanup summary: 1 cleaned, 0 failed, 0 skipped","timestamp":"2026-06-07 21:27:49"}

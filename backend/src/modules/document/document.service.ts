@@ -36,7 +36,9 @@ export const sanitizeDocument = (doc: any, currentUserId?: string) => {
 
     blockchainTx: (currentUserId || !isPrivate) ? doc.blockchainTx : undefined,
     isOnChain: doc.isOnChain,
-    pendingOnChainUntil: isOwner ? doc.pendingOnChainUntil : undefined,
+    pendingOnChainUntil: isOwner
+      ? (doc.isOnChain ? null : new Date(doc.createdAt.getTime() + 24 * 60 * 60 * 1000))
+      : undefined,
     cleanupStatus: isOwner ? doc.cleanupStatus : undefined,
 
     owner: doc.owner ? {
@@ -818,7 +820,6 @@ if (existingFile) {
             fileHash,
             blockchainTx: null,
             isOnChain: false,
-            pendingOnChainUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
             cleanupStatus: 'PENDING',
             owner: { connect: { id: userId } }, 
             folder: folderId ? { connect: { id: folderId } } : undefined,
