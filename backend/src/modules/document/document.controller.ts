@@ -487,8 +487,6 @@ export const confirmDocumentOnChain = async (req: AuthRequest, res: Response) =>
         entityType: 'DOCUMENT',
         entityId: id,
         entityName: updated.title,
-        fileHash: updated.fileHash,
-        ipfsHash: updated.ipfsHash,
         blockchainTx: txHash,
         details: `Document confirmed on blockchain`
       }

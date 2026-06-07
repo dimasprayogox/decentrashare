@@ -11,7 +11,6 @@ export interface AuthUser {
   bio?: string | null;
   website?: string | null;
   role: 'user' | 'admin';
-  isRegistered: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

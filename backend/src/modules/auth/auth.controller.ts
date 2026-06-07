@@ -373,7 +373,6 @@ export const handleGetMe = async (req: AuthRequest, res: Response, next: NextFun
         website: true,
         role: true,
         storageLimit: true,
-        isRegistered: true,
         createdAt: true,
         updatedAt: true,
       },

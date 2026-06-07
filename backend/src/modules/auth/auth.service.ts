@@ -24,7 +24,6 @@ export const getNonce = async (walletAddress: string) => {
       walletAddress: address,
       nonce,
       nonceExpiresAt,
-      isRegistered: false,
     },
   });
 
@@ -56,7 +55,7 @@ export const loginWithWallet = async (walletAddress: string, signature: string) 
   });
 
   if (!user) throw new Error('Wallet not found. Please request nonce first.');
-  if (!user.isRegistered) throw new Error('Wallet not registered. Please register first.');
+  if (!user.username || !user.email) throw new Error('Wallet not registered. Please register first.');
   
   if (user.nonceExpiresAt && user.nonceExpiresAt < new Date()) {
     throw new Error('Authentication nonce expired. Please request a new nonce.');
@@ -132,7 +131,7 @@ export const registerUser = async (
   const user = await prisma.user.findUnique({ where: { walletAddress: address } });
 
   if (!user) throw new Error('Wallet not found. Please request nonce first.');
-  if (user.isRegistered) throw new Error('This wallet is already registered. Please login instead.');
+  if (user.username || user.email) throw new Error('This wallet is already registered. Please login instead.');
   
   if (user.nonceExpiresAt && user.nonceExpiresAt < new Date()) {
     throw new Error('Authentication nonce expired. Please request a new nonce.');
@@ -187,11 +186,8 @@ export const registerUser = async (
       bio: null,
       website: null,
       nonce: crypto.randomBytes(16).toString('hex'),
-      isRegistered: true,
       nonceExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      lastActive: new Date(),
       refreshToken,
-      preferences: { theme: 'system', emailNotifications: true },
     },
   });
 

@@ -82,8 +82,6 @@
       const matchesSearch = !searchLower || 
         (log.entityName && log.entityName.toLowerCase().includes(searchLower)) ||
         (log.details && log.details.toLowerCase().includes(searchLower)) ||
-        (log.fileHash && log.fileHash.toLowerCase().includes(searchLower)) ||
-        (log.ipfsHash && log.ipfsHash.toLowerCase().includes(searchLower)) ||
         (log.blockchainTx && log.blockchainTx.toLowerCase().includes(searchLower));
 
       // 2. Action Filter Match
@@ -673,11 +671,6 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
                         Verified
                       </span>
-                    {:else if log.ipfsHash && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY', 'DOWNLOAD', 'BULK_DOWNLOAD', 'ARCHIVE', 'PERMANENT_DELETE', 'RESTORE', 'BULK_ARCHIVE', 'BULK_RESTORE', 'BULK_PERMANENT_DELETE'].includes(log.action)}
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
-                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                        IPFS Synced
-                      </span>
                     {:else}
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium shadow-[0_0_12px_rgba(16,185,129,0.1)]">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -708,8 +701,6 @@
                         </div>
                         {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
                           <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/20 text-purple-300">Verified On-Chain</span>
-                        {:else if log.ipfsHash && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
-                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/20 text-blue-300">IPFS Synced</span>
                          {/if}
                       </div>
 
@@ -740,19 +731,16 @@
                             </div>
                           </div>
 
-                          <!-- Blockchain & IPFS Links (Hanya muncul jika data ada) -->
-                          {#if log.ipfsHash || log.fileHash || log.blockchainTx}
+                          <!-- Blockchain Link (Hanya muncul jika data ada) -->
+                          {#if log.blockchainTx}
                             <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
                               <span class="text-[12px] uppercase font-bold text-gray-500 tracking-wider block">Blockchain TX</span>
-
-                              {#if log.blockchainTx}
-                                <div>
-                                  <a href={`https://sepolia.etherscan.io/tx/${log.blockchainTx}`} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline font-mono text-[12px] break-all inline-flex items-center gap-1">
-                                    {log.blockchainTx}
-                                    <svg class="w-3 h-3 opacity-65 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                                  </a>
-                                </div>
-                              {/if}
+                              <div>
+                                <a href={`https://sepolia.etherscan.io/tx/${log.blockchainTx}`} target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline font-mono text-[12px] break-all inline-flex items-center gap-1">
+                                  {log.blockchainTx}
+                                  <svg class="w-3 h-3 opacity-65 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                </a>
+                              </div>
                             </div>
                           {/if}
                         </div>

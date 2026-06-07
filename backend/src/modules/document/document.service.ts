@@ -39,7 +39,7 @@ export const sanitizeDocument = (doc: any, currentUserId?: string) => {
     pendingOnChainUntil: isOwner
       ? (doc.isOnChain ? null : new Date(doc.createdAt.getTime() + 24 * 60 * 60 * 1000))
       : undefined,
-    cleanupStatus: isOwner ? doc.cleanupStatus : undefined,
+
 
     owner: doc.owner ? {
       id: doc.owner.id,
@@ -820,7 +820,6 @@ if (existingFile) {
             fileHash,
             blockchainTx: null,
             isOnChain: false,
-            cleanupStatus: 'PENDING',
             owner: { connect: { id: userId } }, 
             folder: folderId ? { connect: { id: folderId } } : undefined,
             privacy: targetPrivacy,
@@ -911,8 +910,6 @@ if (existingFile) {
           entityName: isBulk
             ? `${uploadedDocs.length} files uploaded`
             : firstDoc.title,
-          fileHash: isBulk ? null : firstDoc.fileHash,
-          ipfsHash: isBulk ? null : firstDoc.ipfsHash,
           blockchainTx: isBulk ? null : firstDoc.blockchainTx,
           details: JSON.stringify({
             uploadedCount: uploadedDocs.length,
@@ -1348,8 +1345,6 @@ export const archiveDocuments = async (documentIds: string[], userId: string) =>
             entityType: 'DOCUMENT',
             entityId: doc.id,
             entityName: doc.title,
-            fileHash: doc.fileHash,
-            ipfsHash: doc.ipfsHash,
             blockchainTx: doc.blockchainTx,
             details: `Document archived: ${doc.title}`
           }
@@ -1590,8 +1585,6 @@ export const destroyMultipleDocuments = async (documentIds: string[], userId: st
             entityType: 'DOCUMENT',
             entityId: doc.id,
             entityName: doc.title,
-            fileHash: doc.fileHash,
-            ipfsHash: doc.ipfsHash,
             blockchainTx: doc.blockchainTx,
             details: 'Document and its access records permanently purged.'
           }
@@ -1715,8 +1708,6 @@ export const updateDocumentMetadata = async (
         entityType: 'DOCUMENT',
         entityId: documentId,
         entityName: updatedDoc.title,
-        fileHash: updatedDoc.fileHash,
-        ipfsHash: updatedDoc.ipfsHash,
         blockchainTx: updatedDoc.blockchainTx,
         details: JSON.stringify({
           raw: updates.title && updates.description !== undefined
@@ -1778,7 +1769,7 @@ export const updateDocumentsPrivacy = async (
       if (docUpdate.count > 0) {
         const doc = await tx.document.findUnique({
           where: { id: item.documentId },
-          select: { title: true, fileHash: true, ipfsHash: true, blockchainTx: true }
+          select: { title: true, blockchainTx: true }
         });
         if (doc) {
           await tx.activityLog.create({
@@ -1788,8 +1779,6 @@ export const updateDocumentsPrivacy = async (
               entityType: 'DOCUMENT',
               entityId: item.documentId,
               entityName: doc.title,
-              fileHash: doc.fileHash,
-              ipfsHash: doc.ipfsHash,
               blockchainTx: doc.blockchainTx,
               details: JSON.stringify({
                 raw: `Document privacy changed from ${oldDoc?.privacy || 'UNKNOWN'} to ${item.newPrivacy}`,
@@ -1872,8 +1861,6 @@ export const shareDocumentsToUsers = async (
           entityType: 'DOCUMENT',
           entityId: item.documentId,
           entityName: doc.title,
-          fileHash: doc.fileHash,
-          ipfsHash: doc.ipfsHash,
           blockchainTx: doc.blockchainTx,
           details: JSON.stringify({
             raw: `Document shared with ${targets.map(t => t.username).join(', ')}`,
@@ -1961,8 +1948,6 @@ export const revokeDocumentsAccess = async (
           entityType: 'DOCUMENT',
           entityId: item.documentId,
           entityName: doc.title,
-          fileHash: doc.fileHash,
-          ipfsHash: doc.ipfsHash,
           blockchainTx: doc.blockchainTx,
           details: JSON.stringify({
             raw: `Document access revoked for ${targets.map(t => t.username).join(', ')}`,

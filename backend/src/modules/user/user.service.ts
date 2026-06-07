@@ -30,7 +30,7 @@ export const userService = {
       where: { id: userId },
       select: {
         id: true, walletAddress: true, username: true, email: true,
-        avatarUrl: true, bio: true, website: true, role: true, storageLimit: true, isRegistered: true,
+        avatarUrl: true, bio: true, website: true, role: true, storageLimit: true,
         createdAt: true, updatedAt: true,
       },
     });
@@ -423,7 +423,6 @@ async updateAvatar(userId: string, file: Express.Multer.File) {
         bio: true,
         website: true,
         role: true,
-        isRegistered: true,
         createdAt: true,
         updatedAt: true,
       },

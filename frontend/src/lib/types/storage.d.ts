@@ -164,7 +164,6 @@ export interface Document {
   blockchainTx?: string | null;
   isOnChain?: boolean;
   pendingOnChainUntil?: string | null;
-  cleanupStatus?: 'PENDING' | 'ARCHIVED' | 'DELETED' | 'FAILED';
   folderId: string | null;
   ownerId: string;
   privacy: PrivacyLevel;
@@ -197,8 +196,6 @@ export interface ActivityLog {
   entityType: 'FOLDER' | 'DOCUMENT';
   entityId: string;
   entityName: string;
-  fileHash?: string;
-  ipfsHash?: string;
   blockchainTx?: string;
   details?: string;
   createdAt: string;

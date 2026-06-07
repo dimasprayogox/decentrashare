@@ -19,7 +19,6 @@ export function userFactory(overrides: Record<string, any> = {}) {
     storageLimit: 5368709120,
     nonce: 'nonce-1',
     nonceExpiresAt: new Date(Date.now() + 60_000),
-    isRegistered: true,
     refreshToken: 'refresh-token',
     pinataGroupId: null,
     avatarUrl: null,

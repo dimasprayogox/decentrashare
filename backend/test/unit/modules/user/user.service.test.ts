@@ -7,7 +7,14 @@ const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
 
 mock.module('../../../../src/config/db', () => ({ prisma }));
 mock.module('../../../../src/utils/logger', () => ({ logger }));
-mock.module('../../../../src/config/pinata', () => ({ pinata: {} }));
+const pinata = {
+  unpin: mock(),
+  pin: { delete: mock() },
+  groups: { list: mock(), create: mock() },
+  upload: { file: mock() },
+  pins: { list: mock() },
+};
+mock.module('../../../../src/config/pinata', () => ({ pinata }));
 
 // Mock fs module for updateAvatar file cleanup
 const mockExistsSync = mock(() => true);

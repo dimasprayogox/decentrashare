@@ -1163,7 +1163,6 @@ export const getArchivedFolderContents = async (userId: string, folderId: string
         fileHash: true,
         blockchainTx: true,
         isOnChain: true,
-        cleanupStatus: true,
         folderId: true,
         ownerId: true,
         privacy: true,

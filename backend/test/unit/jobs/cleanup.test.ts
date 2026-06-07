@@ -1,24 +1,33 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { createPrismaMock, resetPrismaMock } from '../../helpers/prisma';
+import { PinataCleanupService } from '../../../src/modules/pinata/pinata.service';
 
 const prisma = createPrismaMock();
-const PinataCleanupService = {
-  unpin: mock(),
-  archiveMetadata: mock(),
-};
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
 
+const originalUnpin = PinataCleanupService.unpin;
+const originalArchiveMetadata = PinataCleanupService.archiveMetadata;
+
+// Mock the static methods of PinataCleanupService directly
+PinataCleanupService.unpin = mock() as any;
+PinataCleanupService.archiveMetadata = mock() as any;
+
 mock.module('../../../src/config/db.js', () => ({ prisma }));
-mock.module('../../../src/modules/pinata/pinata.service', () => ({ PinataCleanupService }));
+mock.module('../../../src/config/pinata', () => ({ pinata: {} }));
 mock.module('../../../src/utils/logger', () => ({ logger }));
 mock.module('../../../src/utils/logger.js', () => ({ logger }));
 
 describe('Jobs: Cleanup Tasks', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
-    PinataCleanupService.unpin.mockReset();
-    PinataCleanupService.archiveMetadata.mockReset();
+    (PinataCleanupService.unpin as any).mockReset();
+    (PinataCleanupService.archiveMetadata as any).mockReset();
     Object.values(logger).forEach(fn => fn.mockReset());
+  });
+
+  afterAll(() => {
+    PinataCleanupService.unpin = originalUnpin;
+    PinataCleanupService.archiveMetadata = originalArchiveMetadata;
   });
 
   describe('runOrphanedPinCleanup', () => {

@@ -5,7 +5,13 @@ import { given } from '../../../helpers/given';
 
 const prisma = createPrismaMock();
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
-const pinata = { upload: { file: mock() }, groups: { list: mock(), create: mock() }, pin: { delete: mock() } };
+const pinata = {
+  unpin: mock(),
+  pin: { delete: mock() },
+  groups: { list: mock(), create: mock() },
+  upload: { file: mock() },
+  pins: { list: mock() },
+};
 const blockchainService = { prepareTransactionData: mock() };
 
 mock.module('../../../../src/config/db', () => ({ prisma }));
@@ -39,20 +45,24 @@ describe('Feature: document privacy, access, and download behavior', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
     Object.values(logger).forEach(fn => fn.mockReset());
+    pinata.unpin.mockReset();
+    pinata.pin.delete.mockReset();
+    pinata.groups.list.mockReset();
+    pinata.groups.create.mockReset();
     pinata.upload.file.mockReset();
+    pinata.pins.list.mockReset();
     blockchainService.prepareTransactionData.mockReset();
     globalThis.fetch = mock() as any;
   });
 
   test('given a private document viewed by a non-owner, when it is serialized, then IPFS and owner-only fields are hidden', async () => {
     const { sanitizeDocument } = await import('../../../../src/modules/document/document.service');
-    const doc = documentFactory({ privacy: 'PRIVATE', pendingOnChainUntil: new Date(), cleanupStatus: 'PENDING' });
+    const doc = documentFactory({ privacy: 'PRIVATE', pendingOnChainUntil: new Date() });
 
     const result = sanitizeDocument(doc, 'user-2');
 
     expect(result.ipfsHash).toBeUndefined();
     expect(result.pendingOnChainUntil).toBeUndefined();
-    expect(result.cleanupStatus).toBeUndefined();
   });
 
   test('given a public document viewed anonymously, when it is serialized, then the blockchain transaction remains visible and IPFS is hidden', async () => {

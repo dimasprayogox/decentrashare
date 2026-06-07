@@ -18,8 +18,6 @@ export interface AdminUser {
   avatarUrl: string | null;
   role: UserRole;
   storageLimit: number | null;
-  isRegistered: boolean;
-  lastActive: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: { documents: number; folders: number };

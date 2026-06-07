@@ -27,13 +27,6 @@ enum AccessRoleFolder {
   EDITOR
 }
 
-enum CleanupStatus {
-  PENDING    
-  ARCHIVED   
-  DELETED   
-  FAILED    
-}
-
 model User {
   id              String    @id @default(uuid())
   walletAddress   String    @unique
@@ -44,12 +37,9 @@ model User {
   website         String? 
   role            Role      @default(USER)
   storageLimit    BigInt?   @default(5368709120) // Batas penyimpanan dalam bytes (default 5GB). NULL = unlimited (mis. ADMIN)
-  isRegistered    Boolean   @default(false)
   nonce           String?
   nonceExpiresAt  DateTime?
   refreshToken    String?
-  lastActive      DateTime? @default(now())
-  preferences     Json?     @default("{}") 
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -101,8 +91,6 @@ model Document {
   fileHash     String   @unique
   blockchainTx String?
   isOnChain    Boolean  @default(false)
-  
-  cleanupStatus       CleanupStatus @default(PENDING) 
   
   privacy      PrivacyLevel @default(PRIVATE)
   
@@ -162,8 +150,6 @@ model ActivityLog {
   entityName    String   // Nama file/folder (Penting buat history kalau aslinya sudah dihapus)
   
   // Data Blockchain (Diisi jika aksi berkaitan dengan file, misal UPLOAD/DELETE)
-  fileHash      String?
-  ipfsHash      String?
   blockchainTx  String?
   
   details       String?  // Info tambahan, misal: "Moved to folder Research"

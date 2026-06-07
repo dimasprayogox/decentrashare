@@ -3,6 +3,7 @@ import { createPrismaMock, resetPrismaMock } from '../../../helpers/prisma';
 
 const prisma = createPrismaMock();
 const pinata = {
+  unpin: mock(),
   pin: { delete: mock() },
   groups: { list: mock(), create: mock() },
   upload: { file: mock() },
@@ -37,6 +38,7 @@ mock.module('fs/promises', () => mockFs);
 describe('Feature: Pinata file cleanup and user group provisioning', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
+    pinata.unpin.mockReset();
     pinata.pin.delete.mockReset();
     pinata.groups.list.mockReset();
     pinata.groups.create.mockReset();
@@ -51,17 +53,17 @@ describe('Feature: Pinata file cleanup and user group provisioning', () => {
 
   test('given a pinned IPFS hash, when Pinata deletion succeeds, then cleanup is reported as successful', async () => {
     const { PinataCleanupService } = await import('../../../../src/modules/pinata/pinata.service');
-    pinata.pin.delete.mockResolvedValue(undefined);
+    pinata.unpin.mockResolvedValue(undefined);
 
     const result = await PinataCleanupService.unpin('QmHash');
 
-    expect(pinata.pin.delete).toHaveBeenCalledWith('QmHash');
+    expect(pinata.unpin).toHaveBeenCalledWith(['QmHash']);
     expect(result).toEqual({ success: true, ipfsHash: 'QmHash', message: 'Unpinned successfully' });
   });
 
   test('given an IPFS hash already removed from Pinata, when cleanup receives a 404, then cleanup is still treated as successful', async () => {
     const { PinataCleanupService } = await import('../../../../src/modules/pinata/pinata.service');
-    pinata.pin.delete.mockRejectedValue({ status: 404, message: 'not found' });
+    pinata.unpin.mockRejectedValue({ status: 404, message: 'not found' });
 
     const result = await PinataCleanupService.unpin('QmGone');
 
@@ -70,7 +72,7 @@ describe('Feature: Pinata file cleanup and user group provisioning', () => {
 
   test('given Pinata deletion fails unexpectedly, when cleanup runs, then a non-blocking failure result is returned', async () => {
     const { PinataCleanupService } = await import('../../../../src/modules/pinata/pinata.service');
-    pinata.pin.delete.mockRejectedValue(new Error('pinata down'));
+    pinata.unpin.mockRejectedValue(new Error('pinata down'));
 
     const result = await PinataCleanupService.unpin('QmHash');
 

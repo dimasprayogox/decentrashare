@@ -5,7 +5,13 @@ import { given } from '../../../helpers/given';
 
 const prisma = createPrismaMock();
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
-const pinata = { upload: { file: mock() }, groups: { list: mock(), create: mock() }, pin: { delete: mock() } };
+const pinata = {
+  unpin: mock(),
+  pin: { delete: mock() },
+  groups: { list: mock(), create: mock() },
+  upload: { file: mock() },
+  pins: { list: mock() },
+};
 const blockchainService = { prepareTransactionData: mock() };
 
 mock.module('../../../../src/config/db', () => ({ prisma }));
@@ -19,7 +25,12 @@ describe('Feature: folder management behavior', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
     Object.values(logger).forEach(fn => fn.mockReset());
+    pinata.unpin.mockReset();
+    pinata.pin.delete.mockReset();
+    pinata.groups.list.mockReset();
+    pinata.groups.create.mockReset();
     pinata.upload.file.mockReset();
+    pinata.pins.list.mockReset();
     blockchainService.prepareTransactionData.mockReset();
   });
 

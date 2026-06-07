@@ -2,7 +2,6 @@
 import { prisma } from '../config/db.js';
 import { PinataCleanupService } from '../modules/pinata/pinata.service';
 import { logger } from '../utils/logger';
-import { CleanupStatus } from '@prisma/client';
 
 interface CleanupConfig {
   ttlHours: number;
@@ -27,8 +26,7 @@ export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONF
     where: {
       isOnChain: false,
       isArchived: false,
-      createdAt: { lt: cutoff },
-      cleanupStatus: 'PENDING'
+      createdAt: { lt: cutoff }
     },
     select: {
       id: true,
@@ -89,11 +87,6 @@ export const runOrphanedPinCleanup = async (config: CleanupConfig = DEFAULT_CONF
       logger.error(`💥 Unexpected error for ${doc.id}`, {
         error: error.message,
         stack: error.stack
-      });
-
-      await prisma.document.update({
-        where: { id: doc.id },
-        data: { cleanupStatus: 'FAILED' }
       });
     }
   }
