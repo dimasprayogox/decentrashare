@@ -1516,6 +1516,10 @@ export const shareFoldersFlexible = async (
             entityName: folder.name,
             details: JSON.stringify({
               raw: `Folder shared with ${targets.map(t => t.username).join(', ')}`,
+              privacy: {
+                from: folder.privacy,
+                to: 'SPECIFIC_USER'
+              },
               share: {
                 users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
               }
@@ -1642,6 +1646,10 @@ export const revokeFoldersAccess = async (
             entityName: folder.name,
             details: JSON.stringify({
               raw: `Access revoked for ${targets.map(t => t.username).join(', ')}`,
+              privacy: {
+                from: folder.privacy,
+                to: privateFolderIds.includes(item.folderId) ? 'PRIVATE' : 'SPECIFIC_USER'
+              },
               revoke: {
                 users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
               }

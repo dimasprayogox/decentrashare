@@ -518,8 +518,18 @@ async function handleUpdateUserRoles(): Promise<boolean> {
   }
   async function handleShare() {
     let success = true;
-    if (privacyLevel !== currentPrivacy) { success = await handleUpdatePrivacy(); if (!success) return; }
-    if (privacyLevel === 'SPECIFIC_USER' && selectedUsers.length > 0) { success = await handleShareToUsers(); if (!success) return; }
+    const isAddingNewUsersToSpecific = privacyLevel === 'SPECIFIC_USER' && selectedUsers.length > 0;
+
+    if (privacyLevel !== currentPrivacy) {
+      if (!isAddingNewUsersToSpecific) {
+        success = await handleUpdatePrivacy();
+        if (!success) return;
+      }
+    }
+    if (isAddingNewUsersToSpecific) {
+      success = await handleShareToUsers();
+      if (!success) return;
+    }
     if (itemType === 'folder' && Object.keys(pendingUserRoles).length > 0) {
       success = await handleUpdateUserRoles();
       if (!success) return;

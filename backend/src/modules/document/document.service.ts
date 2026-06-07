@@ -1791,6 +1791,10 @@ export const shareDocumentsToUsers = async (
           blockchainTx: doc.blockchainTx,
           details: JSON.stringify({
             raw: `Document shared with ${targets.map(t => t.username).join(', ')}`,
+            privacy: {
+              from: doc.privacy,
+              to: 'SPECIFIC_USER'
+            },
             share: {
               users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
             }
@@ -1876,6 +1880,10 @@ export const revokeDocumentsAccess = async (
           blockchainTx: doc.blockchainTx,
           details: JSON.stringify({
             raw: `Document access revoked for ${targets.map(t => t.username).join(', ')}`,
+            privacy: {
+              from: doc.privacy,
+              to: updatedPrivacy
+            },
             revoke: {
               users: targets.map(t => ({ id: t.id, username: t.username, wallet: t.walletAddress }))
             }

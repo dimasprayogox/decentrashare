@@ -950,15 +950,17 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
       isBulkShareProcessing = true;
       bulkShareError = '';
 
-      if (documentTargets.length > 0) {
-        await storageService.updateDocumentsPrivacy(documentTargets.map(target => ({
+      const nonSpecificDocumentTargets = documentTargets.filter(target => getBulkShareTargetPrivacy(target.id) !== 'SPECIFIC_USER');
+      if (nonSpecificDocumentTargets.length > 0) {
+        await storageService.updateDocumentsPrivacy(nonSpecificDocumentTargets.map(target => ({
           documentId: target.id,
           newPrivacy: getBulkShareTargetPrivacy(target.id)
         })));
       }
 
-      if (folderTargets.length > 0) {
-        await Promise.all(folderTargets.map(target =>
+      const nonSpecificFolderTargets = folderTargets.filter(target => getBulkShareTargetPrivacy(target.id) !== 'SPECIFIC_USER');
+      if (nonSpecificFolderTargets.length > 0) {
+        await Promise.all(nonSpecificFolderTargets.map(target =>
           storageService.updateFolderPrivacy(target.id, { newPrivacy: getBulkShareTargetPrivacy(target.id) })
         ));
       }
@@ -1068,9 +1070,9 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     }
   }
 
-  function openMoveModal(targets: Array<{ id: string; type: 'folder' | 'document'; name: string; parentId?: string | null }>) {
+  async function openMoveModal(targets: Array<{ id: string; type: 'folder' | 'document'; name: string; parentId?: string | null }>) {
     moveTargets = targets;
-    moveTargetFolderId = null;
+    moveTargetFolderId = currentFolder?.id ?? null;
     moveError = "";
     moveSuccess = "";
     moveNotice = "";
@@ -1078,7 +1080,21 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     moveExpandedFolders = [];
     moveLoadingFolders = [];
     showMoveModal = true;
-    void loadMoveFolderChildren(null, true);
+    
+    await loadMoveFolderChildren(null, true);
+
+    if (currentFolder) {
+      for (const crumb of breadcrumbs) {
+        if (!moveExpandedFolders.includes(crumb.id)) {
+          moveExpandedFolders = [...moveExpandedFolders, crumb.id];
+        }
+        await loadMoveFolderChildren(crumb.id, true);
+      }
+      if (!moveExpandedFolders.includes(currentFolder.id)) {
+        moveExpandedFolders = [...moveExpandedFolders, currentFolder.id];
+      }
+      await loadMoveFolderChildren(currentFolder.id, true);
+    }
   }
 
   function handleSingleMove(id: string, type: 'folder' | 'document') {

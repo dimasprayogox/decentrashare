@@ -387,17 +387,29 @@
     return null;
   }
 
-  function parseShareRevoke(details: string | null | undefined): { type: 'share' | 'revoke'; users: Array<{ id: string; username: string; wallet: string }> } | null {
+  function parseShareRevoke(details: string | null | undefined): { 
+    type: 'share' | 'revoke'; 
+    users: Array<{ id: string; username: string; wallet: string }>;
+    privacy?: { from: string; to: string } | null;
+  } | null {
     if (!details) return null;
     let text = details.trim();
     if (text.startsWith('{') || text.startsWith('[')) {
       try {
         const parsed = JSON.parse(text);
         if (parsed.share) {
-          return { type: 'share', users: parsed.share.users || [] };
+          return { 
+            type: 'share', 
+            users: parsed.share.users || [], 
+            privacy: parsed.privacy || null 
+          };
         }
         if (parsed.revoke) {
-          return { type: 'revoke', users: parsed.revoke.users || [] };
+          return { 
+            type: 'revoke', 
+            users: parsed.revoke.users || [], 
+            privacy: parsed.privacy || null 
+          };
         }
       } catch {
         // Fallback
@@ -826,37 +838,62 @@
 
                           <!-- Operasi SHARE atau REVOKE -->
                           {#if shareRevokeInfo}
-                            <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3">
-                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
-                                {shareRevokeInfo.type === 'share' ? 'Shared With' : 'Access Revoked From'}
-                              </span>
-                              <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
-                                {#each shareRevokeInfo.users as user}
-                                  <div class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
-                                    <div class="flex items-center gap-2.5 min-w-0">
-                                      <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-[10px] font-bold text-white uppercase flex-shrink-0">
-                                        {user.username.charAt(0)}
+                            <div class="p-3.5 rounded-xl border border-white/5 bg-white/[0.01] space-y-3.5">
+                              <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Share Details</span>
+                              
+                              <div class="grid grid-cols-2 gap-4">
+                                <!-- Users List -->
+                                <div class="space-y-2 border-r border-white/5 pr-4">
+                                  <span class="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">
+                                    {shareRevokeInfo.type === 'share' ? 'Shared With' : 'Access Revoked From'}
+                                  </span>
+                                  <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                    {#each shareRevokeInfo.users as user}
+                                      <div class="flex items-center justify-between p-1.5 rounded-lg bg-white/5 border border-white/10">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-[9px] font-bold text-white uppercase flex-shrink-0">
+                                            {user.username.charAt(0)}
+                                          </div>
+                                          <div class="min-w-0">
+                                            <span class="text-[11px] text-white font-semibold block truncate leading-none">{user.username}</span>
+                                          </div>
+                                        </div>
+                                        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase {shareRevokeInfo.type === 'share' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                                          {shareRevokeInfo.type === 'share' ? 'Added' : 'Removed'}
+                                        </span>
                                       </div>
-                                      <div class="min-w-0">
-                                        <span class="text-xs text-white font-semibold block truncate">{user.username}</span>
-                                        {#if user.wallet}
-                                          <span class="text-[9px] text-gray-500 font-mono block truncate">
-                                            {user.wallet.slice(0, 6)}...{user.wallet.slice(-4)}
-                                          </span>
-                                        {/if}
+                                    {/each}
+                                  </div>
+                                </div>
+
+                                <!-- Privacy Change -->
+                                <div class="space-y-2 pl-2">
+                                  <span class="text-[9px] uppercase font-bold text-gray-500 tracking-wider block">Privacy Level</span>
+                                  {#if shareRevokeInfo.privacy}
+                                    <div class="space-y-1.5">
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase font-mono">Before</span>
+                                        <span class="text-xs text-rose-300 font-semibold line-through break-all">
+                                          {(shareRevokeInfo.privacy.from || 'PRIVATE').replace(/_/g, ' ')}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span class="text-[9px] text-gray-500 block uppercase font-mono">After</span>
+                                        <span class="text-xs text-emerald-300 font-semibold break-all">
+                                          {(shareRevokeInfo.privacy.to || 'PRIVATE').replace(/_/g, ' ')}
+                                        </span>
                                       </div>
                                     </div>
-                                    <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase {shareRevokeInfo.type === 'share' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
-                                      {shareRevokeInfo.type === 'share' ? 'Added' : 'Removed'}
-                                    </span>
-                                  </div>
-                                {/each}
+                                  {:else}
+                                    <div class="text-xs text-gray-400 italic mt-3">Unchanged</div>
+                                  {/if}
+                                </div>
                               </div>
                             </div>
                           {/if}
 
                           <!-- Operasi BULK SHARE -->
-                          {#if bulkInfo}
+                          {#if log.action === 'BULK_SHARE' && bulkInfo}
                             <div class="space-y-3">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Bulk Share Items ({bulkInfo.length})</span>
                               <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1">
@@ -911,7 +948,7 @@
                           {/if}
 
                           <!-- Operasi BULK MOVE -->
-                          {#if bulkMoveInfo}
+                          {#if log.action === 'BULK_MOVE' && bulkMoveInfo}
                             <div class="space-y-3">
                               <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">Bulk Move Items ({bulkMoveInfo.length})</span>
                               <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1">
@@ -929,11 +966,11 @@
                                         <span class="text-[8px] uppercase font-bold text-gray-500 tracking-wider block font-mono">Location</span>
                                         <div>
                                           <span class="text-[8px] text-gray-500 block uppercase font-mono">Before</span>
-                                          <span class="text-[10px] text-rose-300 font-semibold line-through break-all">{item.from}</span>
+                                          <span class="text-[10px] text-rose-300 font-semibold line-through break-all">Folder {item.from}</span>
                                         </div>
                                         <div>
                                           <span class="text-[8px] text-gray-500 block uppercase font-mono">After</span>
-                                          <span class="text-[10px] text-emerald-300 font-semibold break-all">{item.to}</span>
+                                          <span class="text-[10px] text-emerald-300 font-semibold break-all">Folder {item.to}</span>
                                         </div>
                                       </div>
 
