@@ -752,10 +752,29 @@ const relocateOwnedContentFromSharedSubtree = async (
 
   const findNearestAccessibleParent = async (folderId: string | null, ownerId: string): Promise<RelocationTargetFolder | null> => {
     let currentFolderId = folderId;
+    const isRootOwner = ownerId === rootOwnerId;
 
     while (currentFolderId) {
       if (operationSubtreeIds.has(currentFolderId)) {
-        currentFolderId = folderById.get(currentFolderId)?.parentId ?? null;
+        const inSubtree = folderById.get(currentFolderId);
+        // The root owner keeps ownership of their own folders even though those
+        // folders stay inside the (now-unshared) subtree. So an owner-owned
+        // folder that remains in place is the correct nearest parent for the
+        // owner's content that was nested inside another user's subfolder.
+        // Foreign owners, on the other hand, lose access to the whole subtree,
+        // so every in-subtree folder is skipped for them.
+        if (isRootOwner && inSubtree && inSubtree.ownerId === rootOwnerId) {
+          const folder = await tx.folder.findUnique({
+            where: { id: currentFolderId },
+            include: { sharedWith: true }
+          });
+
+          if (folder && !folder.isArchived && !folder.deletedAt) {
+            return folder;
+          }
+        }
+
+        currentFolderId = inSubtree?.parentId ?? null;
         continue;
       }
 

@@ -533,6 +533,63 @@ describe('Feature: folder management behavior', () => {
     expect(prisma.folderAccess.deleteMany).toHaveBeenCalledWith({ where: { folderId: { in: ['root'] } } });
   });
 
+  test('given an owner document nested inside a foreign-owned subfolder, when privacy changes to link-only, then the document is relocated to the owner nearest folder and not lost to root', async () => {
+    const { updateFoldersPrivacy } = await import('../../../../src/modules/folder/folder.service');
+    // root (owner-1, SPECIFIC_USER) → foreign-folder (user-2) → owner-doc (owner-1)
+    prisma.folder.findFirst
+      .mockResolvedValueOnce(folderFactory({ id: 'root', name: 'Root', ownerId: 'owner-1', privacy: 'SPECIFIC_USER' }))
+      // getUniqueRootFolderName for foreign-folder (no duplicate)
+      .mockResolvedValueOnce(null);
+    prisma.folder.findMany
+      // getAllDescendantFolderIds(['root']) BFS level 1 + terminator
+      .mockResolvedValueOnce([{ id: 'foreign-folder' }])
+      .mockResolvedValueOnce([])
+      // relocate: foldersToMove (ownerId !== owner-1)
+      .mockResolvedValueOnce([{ id: 'foreign-folder', name: 'Foreign', ownerId: 'user-2', parentId: 'root' }])
+      // relocate: allSubtreeFolders
+      .mockResolvedValueOnce([
+        { id: 'root', parentId: null, ownerId: 'owner-1' },
+        { id: 'foreign-folder', parentId: 'root', ownerId: 'user-2' },
+      ])
+      // relocate: rootOwnerFoldersToRescue (root has no in-subtree parent → skipped in loop)
+      .mockResolvedValueOnce([{ id: 'root', name: 'Root', parentId: null }])
+      // topLevel loop: getAllDescendantFolderIds(['foreign-folder'])
+      .mockResolvedValueOnce([])
+      // syncRescuedFolderSubtreeAccess: getAllDescendantFolderIds(['foreign-folder'])
+      .mockResolvedValueOnce([])
+      // remainingSubtreeFolderIds: getAllDescendantFolderIds(['root']) (foreign-folder moved out)
+      .mockResolvedValueOnce([]);
+    // findNearestAccessibleParent walks up to 'root' which is owner-owned and in-subtree → returned.
+    prisma.folder.findUnique.mockResolvedValue(folderFactory({ id: 'root', ownerId: 'owner-1', privacy: 'SPECIFIC_USER', sharedWith: [] }));
+    prisma.document.findMany
+      // relocate: rootOwnerDocumentsToRescue (owner doc inside foreign-folder)
+      .mockResolvedValueOnce([{ id: 'owner-doc', title: 'Owner Doc', folderId: 'foreign-folder' }])
+      // syncRescuedFolderSubtreeAccess: rescued documents inside foreign-folder
+      .mockResolvedValueOnce([])
+      // relocate: documentsToMove
+      .mockResolvedValueOnce([])
+      // relocate: documentsInsideMovedFolders
+      .mockResolvedValueOnce([])
+      // updatedDocuments after cascade
+      .mockResolvedValueOnce([{ id: 'owner-doc' }]);
+    prisma.folder.updateMany.mockResolvedValue({ count: 1 });
+    prisma.folderAccess.deleteMany.mockResolvedValue({ count: 1 });
+    prisma.documentAccess.deleteMany.mockResolvedValue({ count: 0 });
+
+    await updateFoldersPrivacy('owner-1', [{ folderId: 'root', newPrivacy: 'LINK_ONLY' as any }]);
+
+    // The owner doc is reparented to the owner's nearest folder (root), NOT detached to null/root limbo.
+    expect(prisma.document.update).toHaveBeenCalledWith({
+      where: { id: 'owner-doc' },
+      data: { folderId: 'root', title: 'Owner Doc' },
+    });
+    // Foreign-owned subfolder still gets evicted to its owner's root.
+    expect(prisma.folder.update).toHaveBeenCalledWith({
+      where: { id: 'foreign-folder' },
+      data: { parentId: null, name: 'Foreign', privacy: 'PRIVATE', shareToken: null },
+    });
+  });
+
   // --- downloadFolderArchive ---
 
   test('given a folder, when downloadFolderArchive is called, then it delegates to prepareFolderArchive', async () => {
