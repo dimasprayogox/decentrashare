@@ -275,7 +275,7 @@ const validateFolderAccess = async (folderId: string, userId: string, requiredRo
           'FOLDER_WRITE_FORBIDDEN'
         );
       }
-    } else if (access || folder.privacy === 'PUBLIC') {
+    } else if (access || folder.privacy === 'PUBLIC' || folder.privacy === 'LINK_ONLY') {
       return requestedFolder;
     }
 

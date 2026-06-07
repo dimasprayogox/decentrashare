@@ -1391,7 +1391,7 @@ const getPublicContributorFolderIds = async (userId: string) => {
 export const getUserFolders = async (userId: string, parentId: string | null = null) => {
   const publicContributorFolderIds = parentId ? [] : await getPublicContributorFolderIds(userId);
   const publicFolderAccessConditions = parentId
-    ? [{ privacy: 'PUBLIC' }]
+    ? [{ privacy: 'PUBLIC' as const }, { privacy: 'LINK_ONLY' as const }]
     : publicContributorFolderIds.length > 0
       ? [{ id: { in: publicContributorFolderIds } }]
       : [];
