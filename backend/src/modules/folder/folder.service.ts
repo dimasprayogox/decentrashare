@@ -821,7 +821,7 @@ export const relocateOwnedContentFromSharedSubtree = async (
         // owner's content that was nested inside another user's subfolder.
         // Foreign owners, on the other hand, lose access to the whole subtree,
         // so every in-subtree folder is skipped for them.
-        if (isRootOwner && inSubtree && inSubtree.ownerId === rootOwnerId) {
+        if (inSubtree && inSubtree.ownerId === ownerId) {
           const folder = await tx.folder.findUnique({
             where: { id: currentFolderId },
             include: { sharedWith: true }

@@ -292,6 +292,60 @@ describe('Feature: folder management behavior', () => {
     });
   });
 
+  test('given deeply nested folders of mixed owners, when the subtree is archived, then the foreign nested folders are rescued to the nearest parent of the same owner within the subtree', async () => {
+    const { archiveFolders } = await import('../../../../src/modules/folder/folder.service');
+    prisma.folder.findMany
+      .mockResolvedValueOnce([{ id: 'b-sub' }]) // archiveFolders: validate ownership
+      .mockResolvedValueOnce([{ id: 'a-child-folder' }]) // BFS level 1
+      .mockResolvedValueOnce([{ id: 'b-child' }]) // BFS level 2
+      .mockResolvedValueOnce([{ id: 'a-nested-folder' }]) // BFS level 3
+      .mockResolvedValueOnce([]) // BFS level 4
+      .mockResolvedValueOnce([
+        { id: 'a-child-folder', name: 'A Child', ownerId: 'user-a', parentId: 'b-sub' },
+        { id: 'a-nested-folder', name: 'A Nested', ownerId: 'user-a', parentId: 'b-child' }
+      ]) // relocate: foldersToMove
+      .mockResolvedValueOnce([
+        { id: 'b-sub', ownerId: 'user-b', parentId: 'a-root' },
+        { id: 'a-child-folder', ownerId: 'user-a', parentId: 'b-sub' },
+        { id: 'b-child', ownerId: 'user-b', parentId: 'a-child-folder' },
+        { id: 'a-nested-folder', ownerId: 'user-a', parentId: 'b-child' },
+      ]) // relocate: allSubtreeFolders
+      .mockResolvedValueOnce([]) // relocate: rootOwnerFoldersToRescue
+      .mockResolvedValueOnce([]) // relocate: documentsToMove
+      .mockResolvedValueOnce([]) // relocate: documentsInsideMovedFolders
+      .mockResolvedValueOnce([{ id: 'b-child' }]) // BFS recalculation level 1
+      .mockResolvedValueOnce([]); // BFS recalculation level 2
+
+    prisma.folder.findUnique.mockImplementation(async ({ where }: any) => {
+      if (where.id === 'b-sub') return folderFactory({ id: 'b-sub', ownerId: 'user-b', parentId: 'a-root', sharedWith: [] });
+      if (where.id === 'b-child') return folderFactory({ id: 'b-child', ownerId: 'user-b', parentId: 'a-child-folder', sharedWith: [] });
+      if (where.id === 'a-root') return folderFactory({ id: 'a-root', ownerId: 'user-a', privacy: 'PRIVATE', sharedWith: [] });
+      if (where.id === 'a-child-folder') return folderFactory({ id: 'a-child-folder', ownerId: 'user-a', parentId: 'b-sub', sharedWith: [] });
+      return null;
+    });
+
+    prisma.document.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const result = await archiveFolders(['b-sub'], 'user-b');
+
+    expect(result).toEqual({ count: 1 });
+    
+    // a-child-folder should be rescued to a-root (outside subtree)
+    expect(prisma.folder.update).toHaveBeenCalledWith({
+      where: { id: 'a-child-folder' },
+      data: { parentId: 'a-root', name: 'A Child', privacy: 'PRIVATE', shareToken: null },
+    });
+
+    // a-nested-folder should be rescued to a-child-folder (inside subtree, owned by same owner user-a)
+    expect(prisma.folder.update).toHaveBeenCalledWith({
+      where: { id: 'a-nested-folder' },
+      data: { parentId: 'a-child-folder', name: 'A Nested', privacy: 'PRIVATE', shareToken: null },
+    });
+  });
+
   test('given an owned archived folder with descendants, when it is restored, then folders and documents in the subtree are restored together', async () => {
     const { restoreFolders } = await import('../../../../src/modules/folder/folder.service');
     prisma.folder.findMany
