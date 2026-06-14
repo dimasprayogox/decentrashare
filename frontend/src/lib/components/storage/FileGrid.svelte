@@ -666,7 +666,7 @@ $effect(() => {
             <div class="absolute inset-0 rounded-[28px] blur-xl bg-gradient-to-br from-blue-500/40 to-cyan-400/40 animate-pulse"></div>
           {/if}
 
-          <div class="relative w-20 h-20 rounded-[28px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.1)_inset] group-hover:scale-105 group-hover:border-amber-400/40 transition-all duration-300 overflow-visible" onclick={(e) => e.stopPropagation()} title="Buka folder">
+          <div class="relative w-20 h-20 rounded-[28px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.1)_inset] group-hover:scale-105 group-hover:border-amber-400/40 transition-all duration-300 overflow-visible" title="Buka folder">
 
             <svg class="w-12 h-12 drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -693,8 +693,6 @@ $effect(() => {
                 <circle cx="78" cy="35" r="2" fill="white" fill-opacity="0.6" /><circle cx="82" cy="38" r="1" fill="white" fill-opacity="0.4" />
               </g>
             </svg>
-
-            <div class="absolute inset-0 rounded-[28px] opacity-0 group-hover:opacity-100 bg-gradient-to-tr from-transparent via-white/10 to-transparent animate-shine pointer-events-none" style="background-size: 200% 100%; animation: shine 1.5s ease-in-out infinite;"></div>
           </div>
         </div>
       </div>

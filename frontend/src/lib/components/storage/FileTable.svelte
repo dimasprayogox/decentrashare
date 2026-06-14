@@ -642,8 +642,9 @@ async function handleConfirmBlockchain(item: Document) {
 </script>
 
 <!-- ✅ TEMPLATE (sama seperti sebelumnya, hanya pastikan ItemMenu pass onEdit) -->
-<div>
-  <table class="w-full text-left border-collapse">
+<div class="w-full">
+  <!-- Desktop Table View -->
+  <table class="hidden sm:table w-full text-left border-collapse">
     
     <!-- THEAD -->
     <thead class="bg-white/5 text-[10px] text-gray-400 uppercase tracking-widest border-b border-white/10">
@@ -703,7 +704,7 @@ async function handleConfirmBlockchain(item: Document) {
             </div>
           {/if}
         </th>
-        <th class="pl-4 pr-2 py-4 text-left font-semibold w-[450px] max-w-[450px]">Name</th>
+        <th class="pl-4 pr-2 py-4 text-left font-semibold min-w-[200px] sm:w-[450px] sm:max-w-[450px]">Name</th>
         <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">Owner</th>
         <th class="hidden md:table-cell px-4 py-4 text-center font-semibold">Size</th>
         <th class="hidden xl:table-cell px-4 py-4 text-center font-semibold">{trashMode ? 'Deleted at' : 'Modified'}</th>
@@ -776,7 +777,7 @@ async function handleConfirmBlockchain(item: Document) {
             
             <!-- Name -->
             <!-- Name Column - Updated with Complex Folder Icon -->
-<td class="pl-4 pr-2 py-4 w-[360px] max-w-[360px]">
+<td class="pl-4 pr-2 py-4 min-w-[200px] sm:w-[360px] sm:max-w-[360px]">
   <div class="flex items-center gap-3 min-w-0">
     
     <!-- 📁 Complex Folder Icon Container (Scaled for Table) -->
@@ -1027,7 +1028,7 @@ async function handleConfirmBlockchain(item: Document) {
           </td>
           
           <!-- Name -->
-        <td class="pl-4 pr-2 py-4 w-[360px] max-w-[360px]">
+        <td class="pl-4 pr-2 py-4 min-w-[200px] sm:w-[360px] sm:max-w-[360px]">
           {#if true}
             {@const fileInfo = getFileTypeInfo(item.mimeType, item.fileName)}
             
@@ -1310,4 +1311,210 @@ async function handleConfirmBlockchain(item: Document) {
       await submitEdit();
     }}
   />
+
+  <!-- Mobile List View -->
+  <div class="block sm:hidden space-y-3 px-1 py-2">
+    <!-- Folders (Only in View Mode 2) -->
+    {#if viewMode === 2}
+      {#each folders as folder}
+        <div 
+          class="relative p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 flex items-center justify-between gap-3 active:scale-[0.99] transition-all select-none
+                 {selectionMode && selectedItems.includes(folder.id) ? 'bg-blue-500/10 border-blue-500/30' : ''}"
+          onclick={(e) => {
+            if (selectionMode) {
+              onToggleSelect?.(folder.id);
+              return;
+            }
+            if ((e.target as HTMLElement).closest('[data-checkbox]') || (e.target as HTMLElement).closest('[data-item-menu]')) {
+              return;
+            }
+            openFolder(folder);
+          }}
+        >
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <!-- Checkbox -->
+            {#if selectionMode}
+              <div class="relative w-5 h-5 flex-shrink-0" data-checkbox>
+                <input 
+                  type="checkbox"
+                  checked={selectedItems.includes(folder.id)}
+                  onchange={(e) => { e.stopPropagation(); onToggleSelect?.(folder.id); }}
+                  class="w-5 h-5 rounded-full border-2 border-gray-500/50 bg-white/10 checked:bg-blue-600 checked:border-blue-600 cursor-pointer appearance-none opacity-0"
+                />
+                <span class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none w-5 h-5 {selectedItems.includes(folder.id) ? 'bg-blue-600 border-blue-600' : 'bg-white/10 border-gray-500/50'}">
+                  {#if selectedItems.includes(folder.id)}
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  {/if}
+                </span>
+              </div>
+            {/if}
+
+            <!-- 📁 Folder Icon wrapper -->
+            <div class="relative w-10 h-10 flex-shrink-0">
+              <div class="relative w-10 h-10 rounded-[14px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] border border-white/20 flex items-center justify-center shadow-lg">
+                <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Info -->
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="block text-sm font-semibold text-white/90 truncate">{folder.name}</span>
+                {#if folder.accessRole}
+                  <span class="shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+                    {folder.accessRole === 'EDITOR' ? 'Editor' : folder.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
+                  </span>
+                {/if}
+              </div>
+              <span class="text-[10px] text-gray-500 font-medium mt-0.5 block truncate">
+                Folder • {formatDate((trashMode ? folder.deletedAt : folder.updatedAt) || folder.createdAt)}
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          {#if !selectionMode}
+            <div class="flex-shrink-0" data-item-menu onclick={(e) => e.stopPropagation()}>
+              <ItemMenu
+                itemId={folder.id}
+                itemType="folder"
+                itemName={folder.name}
+                isOwner={!publicExploreMode && currentUserId === folder.ownerId}
+                onRename={publicExploreMode ? undefined : onRename}
+                onShare={publicExploreMode || sharedMode ? undefined : onShare}
+                onMove={publicExploreMode ? undefined : onMove}
+                onRestore={publicExploreMode ? undefined : onRestore}
+                trashMode={trashMode}
+                sharedMode={sharedMode}
+                onDelete={publicExploreMode || sharedMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
+                onDownload={onDownload}
+              />
+            </div>
+          {/if}
+        </div>
+      {/each}
+    {/if}
+
+    <!-- Documents -->
+    {#each items as item}
+      {@const fileInfo = getFileTypeInfo(item.mimeType, item.fileName)}
+      <div 
+        class="relative p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 flex flex-col gap-3 active:scale-[0.99] transition-all select-none
+               {selectionMode && selectedItems.includes(item.id) ? 'bg-blue-500/10 border-blue-500/30' : ''}"
+        onclick={(e) => {
+          if (selectionMode) {
+            onToggleSelect?.(item.id);
+            return;
+          }
+          if ((e.target as HTMLElement).closest('[data-checkbox]') || (e.target as HTMLElement).closest('[data-item-menu]') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('button')) {
+            return;
+          }
+          openFilePreview(item);
+        }}
+      >
+        <div class="flex items-center justify-between gap-3 w-full">
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <!-- Checkbox -->
+            {#if selectionMode}
+              <div class="relative w-5 h-5 flex-shrink-0" data-checkbox>
+                <input 
+                  type="checkbox"
+                  checked={selectedItems.includes(item.id)}
+                  onchange={(e) => { e.stopPropagation(); onToggleSelect?.(item.id); }}
+                  class="w-5 h-5 rounded-full border-2 border-gray-500/50 bg-white/10 checked:bg-blue-600 checked:border-blue-600 cursor-pointer appearance-none opacity-0"
+                />
+                <span class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none w-5 h-5 {selectedItems.includes(item.id) ? 'bg-blue-600 border-blue-600' : 'bg-white/10 border-gray-500/50'}">
+                  {#if selectedItems.includes(item.id)}
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  {/if}
+                </span>
+              </div>
+            {/if}
+
+            <!-- File Icon -->
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br {fileInfo.gradient} border border-white/10 {fileInfo.color} flex-shrink-0">
+              {@html fileInfo.icon}
+            </div>
+
+            <!-- Title & Details -->
+            <div class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-white/90 truncate">{item.title}</span>
+              <span class="text-[10px] text-gray-500 uppercase font-medium mt-0.5 block truncate">
+                {item.fileName?.split('.').pop() || 'FILE'} • {formatFileSize(item.fileSize)} • {formatDate((trashMode ? item.deletedAt : item.updatedAt) || item.createdAt)}
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          {#if !selectionMode}
+            <div class="flex-shrink-0" data-item-menu onclick={(e) => e.stopPropagation()}>
+              <ItemMenu
+                itemId={item.id}
+                itemType="document"
+                itemName={item.title}
+                itemDescription={item.description}
+                isOwner={!publicExploreMode && currentUserId === item.ownerId}
+                onRename={publicExploreMode ? undefined : onRename}
+                onEdit={publicExploreMode ? undefined : (id, title, description) => openEditModal({ id, title, description })}
+                onShare={publicExploreMode || sharedMode ? undefined : onShare}
+                onMove={publicExploreMode ? undefined : onMove}
+                onRestore={publicExploreMode ? undefined : onRestore}
+                trashMode={trashMode}
+                sharedMode={sharedMode}
+                onDelete={publicExploreMode || sharedMode ? undefined : (id, type, name) => onDeleteConfirm?.(id, type, name)}
+                onDownload={onDownload}
+              />
+            </div>
+          {/if}
+        </div>
+
+        <!-- Blockchain Status Area on Mobile Card -->
+        {#if getBlockchainTx(item) || isPendingOnChain(item) || isPendingExpired(item)}
+          <div class="mt-1 pt-2 border-t border-white/5 flex items-center justify-between text-[11px]" onclick={(e) => e.stopPropagation()}>
+            <span class="text-gray-500">Blockchain status:</span>
+            
+            {#if getBlockchainTx(item)}
+              {@const blockchainTx = getBlockchainTx(item)!}
+              <a
+                href={`https://sepolia.etherscan.io/tx/${blockchainTx}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/10"
+              >
+                <span>{blockchainTx.slice(0, 6)}...{blockchainTx.slice(-4)}</span>
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+              </a>
+            {:else if isPendingOnChain(item)}
+              <div class="flex items-center gap-1.5">
+                <button
+                  class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded transition-all"
+                  disabled={confirmingTx?.has(item.id)}
+                  onclick={async () => await handleConfirmBlockchain(item)}
+                >
+                  {#if confirmingTx?.has(item.id)}
+                    Confirming...
+                  {:else}
+                    Confirm
+                  {/if}
+                </button>
+                {#if txStatus.has(item.id)}
+                  <span class="text-[9px] text-yellow-400 truncate max-w-[80px]">{txStatus.get(item.id)?.message}</span>
+                {/if}
+              </div>
+            {:else if isPendingExpired(item)}
+              <span class="text-red-400 text-[10px] font-medium">Expired</span>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/each}
+  </div>
 </div>
