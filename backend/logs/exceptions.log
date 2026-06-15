@@ -4793,3 +4793,100 @@ ReferenceError: authenticate is not defined
     }
   ]
 }
+2026-06-15 17:33:51 [[31merror[39m]: [31muncaughtException: env is not defined[39m
+[31mReferenceError: env is not defined[39m
+[31m    at /home/dimas/project/decentrashare/backend/src/app.ts:41:34[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at moduleEvaluation (native:1:11)[39m
+[31m    at loadAndEvaluateModule (native:2)[39m
+[31m    at processTicksAndRejections (native:7:39)[39m
+ReferenceError: env is not defined
+    at /home/dimas/project/decentrashare/backend/src/app.ts:41:34
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at moduleEvaluation (native:1:11)
+    at loadAndEvaluateModule (native:2)
+    at processTicksAndRejections (native:7:39)
+{
+  "error": {},
+  "exception": true,
+  "date": "Mon Jun 15 2026 17:33:51 GMT+0700 (Western Indonesia Time)",
+  "process": {
+    "pid": 15450,
+    "uid": 1000,
+    "gid": 1000,
+    "cwd": "/home/dimas/project/decentrashare/backend",
+    "execPath": "/home/dimas/.bun/bin/bun",
+    "version": "v24.3.0",
+    "argv": [
+      "/home/dimas/.bun/bin/bun",
+      "/home/dimas/project/decentrashare/backend/src/server.ts"
+    ],
+    "memoryUsage": {
+      "rss": 112943104,
+      "heapTotal": 11705344,
+      "heapUsed": 8249517,
+      "external": 2982257,
+      "arrayBuffers": 20712
+    }
+  },
+  "os": {
+    "loadavg": [
+      2.02,
+      1.86,
+      1.75
+    ],
+    "uptime": 9273
+  },
+  "trace": [
+    {
+      "column": 34,
+      "file": "/home/dimas/project/decentrashare/backend/src/app.ts",
+      "function": null,
+      "line": 41,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 11,
+      "file": "native",
+      "function": "moduleEvaluation",
+      "line": 1,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": null,
+      "file": "native",
+      "function": "loadAndEvaluateModule",
+      "line": 2,
+      "method": null,
+      "native": false
+    },
+    {
+      "column": 39,
+      "file": "native",
+      "function": "processTicksAndRejections",
+      "line": 7,
+      "method": null,
+      "native": false
+    }
+  ]
+}

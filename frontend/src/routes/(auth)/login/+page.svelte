@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fade, fly, scale } from 'svelte/transition';
+  import { fade, fly, scale, slide } from 'svelte/transition';
   import { authService } from '$lib/services';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';

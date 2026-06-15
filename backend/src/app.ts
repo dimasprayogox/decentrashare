@@ -15,7 +15,7 @@ import { runExpiredTrashCleanup } from './jobs/cleanup-expired-trash';
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
-import { config } from './config/env'
+import { config, env } from './config/env'
 import { logger, requestLogger } from './utils/logger'
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware'
 import routes from './routes'
