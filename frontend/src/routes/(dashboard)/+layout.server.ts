@@ -17,7 +17,7 @@ function decodeJwtRole(token: string): 'USER' | 'ADMIN' {
     }
 }
 
-export const load: LayoutServerLoad = async ({ cookies, url, fetch }) => {
+export const load: LayoutServerLoad = async ({ cookies, url }) => {
     const { active, subActive } = getActiveNav(url.pathname, url.searchParams);
     const fallbackStorageUsage = { usedBytes: 0, quotaBytes: 5 * 1024 * 1024 * 1024, usagePercent: 0, unlimited: false };
 

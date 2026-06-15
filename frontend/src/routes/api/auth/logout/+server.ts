@@ -2,7 +2,7 @@
 import { json } from '@sveltejs/kit';
 import { PUBLIC_API_BASE_URL } from '$env/static/public';
 
-export const POST = async ({ cookies, fetch }) => {
+export const POST = async ({ cookies }) => {
   try {
     const session = cookies.get('session_token');
     // 1. Call Express backend logout endpoint (untuk hapus refreshToken di DB)
