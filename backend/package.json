@@ -12,6 +12,7 @@
     "db:studio": "bunx prisma studio",
     "test": "bun test",
     "test:unit": "bun test test/unit",
+    "test:whitebox": "bun test test/whitebox",
     "test:watch": "bun test --watch test/unit",
     "test:coverage": "bun test --coverage test/unit",
     "lint": "eslint src/**/*.ts",

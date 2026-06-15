@@ -2,7 +2,7 @@
 // Prisma mengembalikan kolom BigInt (mis. User.storageLimit) sebagai BigInt,
 // yang tidak bisa di-serialize oleh JSON.stringify (dipakai res.json()).
 // Konversi ke Number aman karena nilai jauh di bawah Number.MAX_SAFE_INTEGER.
-;(BigInt.prototype as any).toJSON = function () {
+; (BigInt.prototype as any).toJSON = function () {
   return Number(this)
 }
 
@@ -38,6 +38,9 @@ app.use(helmet({
   },
 }))
 
+logger.info(`[RAW CORS_ORIGIN] ${env.CORS_ORIGIN}`)
+logger.info(`[CONFIG CORS ORIGIN] ${JSON.stringify(config.cors.origin)}`)
+
 // CORS configuration
 app.use(cors({
   origin: function (origin, callback) {
@@ -71,7 +74,7 @@ const limiter = rateLimit({
 app.use(limiter)
 
 // Body parsing middleware
-app.use(express.json({ 
+app.use(express.json({
   limit: '10mb',
   // Raw body for webhook signature verification
   verify: (req: any, res, buf) => {

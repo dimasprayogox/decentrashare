@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test, spyOn } from 'bun:test';
 import { createPrismaMock, resetPrismaMock } from '../../../helpers/prisma';
 import { documentFactory, folderFactory } from '../../../helpers/factories';
 import { given } from '../../../helpers/given';
+import blockchainService from '../../../../src/modules/blockchain/blockchain.service';
 
 const prisma = createPrismaMock();
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
@@ -12,13 +13,13 @@ const pinata = {
   upload: { file: mock() },
   pins: { list: mock() },
 };
-const blockchainService = { prepareTransactionData: mock() };
+
+spyOn(blockchainService, 'prepareTransactionData');
 
 mock.module('../../../../src/config/db', () => ({ prisma }));
 mock.module('../../../../src/utils/logger', () => ({ logger }));
 mock.module('../../../../src/utils/logger.js', () => ({ logger }));
 mock.module('../../../../src/config/pinata', () => ({ pinata }));
-mock.module('../../../../src/modules/blockchain/blockchain.service', () => ({ default: blockchainService }));
 mock.module('../../../../src/utils/hash', () => ({ generateFileHash: mock(async () => 'hash-1') }));
 
 describe('Feature: folder management behavior', () => {

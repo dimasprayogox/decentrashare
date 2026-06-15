@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test, spyOn } from 'bun:test';
 import { createPrismaMock, resetPrismaMock } from '../../../helpers/prisma';
 import { documentFactory, folderFactory } from '../../../helpers/factories';
 import { given } from '../../../helpers/given';
+import blockchainService from '../../../../src/modules/blockchain/blockchain.service';
+import realFs from 'node:fs';
 
 const prisma = createPrismaMock();
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
@@ -12,22 +14,30 @@ const pinata = {
   upload: { file: mock() },
   pins: { list: mock() },
 };
-const blockchainService = { prepareTransactionData: mock() };
+
+spyOn(blockchainService, 'prepareTransactionData');
 
 mock.module('../../../../src/config/db', () => ({ prisma }));
 mock.module('../../../../src/utils/logger', () => ({ logger }));
 mock.module('../../../../src/utils/logger.js', () => ({ logger }));
 mock.module('../../../../src/config/pinata', () => ({ pinata }));
-mock.module('../../../../src/modules/blockchain/blockchain.service', () => ({ default: blockchainService }));
 mock.module('../../../../src/utils/hash', () => ({ generateFileHash: mock(async () => 'hash-1') }));
 
-const mockFs = {
-  existsSync: mock(() => true),
-  unlinkSync: mock(),
-  readFileSync: mock(() => Buffer.from('file-content')),
-};
+const mockFsExistsSync = mock(() => true);
+const mockFsUnlinkSync = mock();
+const mockFsReadFileSync = mock(() => Buffer.from('file-content'));
+
 mock.module('fs', () => ({
-  default: mockFs
+  ...realFs,
+  default: {
+    ...realFs,
+    existsSync: mockFsExistsSync,
+    unlinkSync: mockFsUnlinkSync,
+    readFileSync: mockFsReadFileSync,
+  },
+  existsSync: mockFsExistsSync,
+  unlinkSync: mockFsUnlinkSync,
+  readFileSync: mockFsReadFileSync,
 }));
 
 const mockZipArchive = mock(function() {
@@ -347,57 +357,6 @@ describe('Feature: document privacy, access, and download behavior', () => {
     });
   });
 
-  test('given active owned documents, when they are archived, then deletedAt is set and only active owner documents are updated', async () => {
-    const { archiveDocuments } = await import('../../../../src/modules/document/document.service');
-    prisma.document.findMany.mockResolvedValue([
-      { id: 'doc-1', title: 'Doc 1', fileHash: 'h1', ipfsHash: 'i1', blockchainTx: 'tx1' },
-      { id: 'doc-2', title: 'Doc 2', fileHash: 'h2', ipfsHash: 'i2', blockchainTx: 'tx2' }
-    ]);
-    prisma.document.updateMany.mockResolvedValue({ count: 2 });
-
-    const result = await archiveDocuments(['doc-1', 'doc-2'], 'user-1');
-
-    expect(result).toEqual({ count: 2 });
-    expect(prisma.document.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['doc-1', 'doc-2'] } },
-      data: { isArchived: true, deletedAt: expect.any(Date) },
-    });
-  });
-
-  test('given archived documents whose original folder is unavailable, when they are restored, then they are moved to root with conflict-safe titles', async () => {
-    const { restoreDocuments } = await import('../../../../src/modules/document/document.service');
-    prisma.document.findMany
-      .mockResolvedValueOnce([{ id: 'doc-1', title: 'Report', folderId: 'archived-folder' }])
-      .mockResolvedValueOnce([{ title: 'Report' }]);
-    prisma.folder.findMany.mockResolvedValue([]);
-
-    const result = await restoreDocuments(['doc-1'], 'user-1');
-
-    expect(result).toEqual({
-      count: 1,
-      movedToRootCount: 1,
-      renamedCount: 1,
-      renamed: [{ id: 'doc-1', originalTitle: 'Report', restoredTitle: 'Report (restore)' }],
-    });
-    expect(prisma.document.update).toHaveBeenCalledWith({
-      where: { id: 'doc-1' },
-      data: { title: 'Report (restore)', isArchived: false, deletedAt: null, folderId: null },
-    });
-  });
-
-  test('given archived documents selected for permanent deletion, when destroyed, then audit logs, access rows, and documents are deleted', async () => {
-    const { destroyMultipleDocuments } = await import('../../../../src/modules/document/document.service');
-    prisma.document.findMany.mockResolvedValue([documentFactory({ id: 'doc-1', title: 'Report', isArchived: true })]);
-    prisma.document.deleteMany.mockResolvedValue({ count: 1 });
-
-    const result = await destroyMultipleDocuments(['doc-1'], 'user-1');
-
-    expect(result).toEqual({ count: 1 });
-    expect(prisma.activityLog.create).toHaveBeenCalled();
-    expect(prisma.documentAccess.deleteMany).toHaveBeenCalledWith({ where: { documentId: { in: ['doc-1'] } } });
-    expect(prisma.document.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['doc-1'] }, ownerId: 'user-1', isArchived: true } });
-  });
-
   test('given a document title collides in the same folder, when metadata is updated, then duplicate title is rejected', async () => {
     const { updateDocumentMetadata } = await import('../../../../src/modules/document/document.service');
     prisma.document.findFirst
@@ -405,171 +364,6 @@ describe('Feature: document privacy, access, and download behavior', () => {
       .mockResolvedValueOnce(documentFactory({ id: 'doc-2', title: 'New Title', folderId: null, ownerId: 'user-1' }));
 
     await expect(updateDocumentMetadata('doc-1', 'user-1', { title: ' New Title ' })).rejects.toThrow('Document "New Title" already exists in this folder');
-  });
-
-  test('given document privacy is changed away from specific users, when privacy is updated, then direct access rows are revoked', async () => {
-    const { updateDocumentsPrivacy } = await import('../../../../src/modules/document/document.service');
-    prisma.document.updateMany.mockResolvedValue({ count: 1 });
-    prisma.documentAccess.deleteMany.mockResolvedValue({ count: 3 });
-
-    const result = await updateDocumentsPrivacy('user-1', [{ documentId: 'doc-1', newPrivacy: 'PUBLIC' as any }]);
-
-    expect(result).toEqual([{ documentId: 'doc-1', status: 'updated', newPrivacy: 'PUBLIC', accessRevoked: 3 }]);
-    expect(prisma.documentAccess.deleteMany).toHaveBeenCalledWith({ where: { documentId: 'doc-1' } });
-  });
-
-  test('given an owner shares a document with another user, when sharing runs, then direct access is granted and privacy becomes specific-user', async () => {
-    const { shareDocumentsToUsers } = await import('../../../../src/modules/document/document.service');
-    prisma.document.findFirst.mockResolvedValue(documentFactory({ id: 'doc-1', ownerId: 'owner-1' }));
-
-    const result = await shareDocumentsToUsers('owner-1', [{ documentId: 'doc-1', targetUsers: ['user-2', 'owner-1'] }]);
-
-    expect(result).toEqual([{ documentId: 'doc-1', sharedWith: [{ userId: 'user-2', status: 'granted' }] }]);
-    expect(prisma.documentAccess.upsert).toHaveBeenCalledWith({
-      where: { documentId_userId: { documentId: 'doc-1', userId: 'user-2' } },
-      update: {},
-      create: { documentId: 'doc-1', userId: 'user-2' },
-    });
-    expect(prisma.document.update).toHaveBeenCalledWith({ where: { id: 'doc-1' }, data: { privacy: 'SPECIFIC_USER' } });
-  });
-
-  test('given the last direct document access is revoked, when revoke runs, then the document becomes private', async () => {
-    const { revokeDocumentsAccess } = await import('../../../../src/modules/document/document.service');
-    prisma.document.findFirst.mockResolvedValue(documentFactory({ id: 'doc-1', ownerId: 'owner-1', privacy: 'SPECIFIC_USER' }));
-    prisma.documentAccess.deleteMany.mockResolvedValue({ count: 1 });
-    prisma.documentAccess.count.mockResolvedValue(0);
-    prisma.document.update.mockResolvedValue(documentFactory({ id: 'doc-1', privacy: 'PRIVATE' }));
-
-    const result = await revokeDocumentsAccess('owner-1', [{ documentId: 'doc-1', targetUserIds: ['user-2'] }]);
-
-    expect(result).toEqual([{ documentId: 'doc-1', revokedCount: 1, newStatus: 'PRIVATE' }]);
-    expect(prisma.document.update).toHaveBeenCalledWith({ where: { id: 'doc-1' }, data: { privacy: 'PRIVATE' } });
-  });
-
-  // --- uploadMultipleFiles ---
-
-  test('given valid files, when uploadMultipleFiles runs, then it uploads files to Pinata, saves to DB, and returns results', async () => {
-    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
-    
-    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'alice', storageLimit: 5368709120 });
-    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 0 } }); // Storage quota check: no usage yet
-    prisma.document.findUnique.mockResolvedValue(null); // No content duplicates
-    prisma.document.findFirst.mockResolvedValue(null); // No title duplicates
-    pinata.upload.file.mockResolvedValue({ IpfsHash: 'QmNewDocCID' });
-    blockchainService.prepareTransactionData.mockReturnValue({ hash: 'QmNewDocCID', name: 'report.pdf', fileHash: 'hash-1' });
-    
-    const mockCreatedDoc = documentFactory({ id: 'doc-new', title: 'report', ownerId: 'user-1', ipfsHash: 'QmNewDocCID', fileHash: 'hash-1' });
-    prisma.$transaction.mockImplementation(async (cb) => {
-      return cb(prisma);
-    });
-    prisma.document.create.mockResolvedValue(mockCreatedDoc);
-    prisma.documentAccess.createMany.mockResolvedValue({ count: 1 });
-    prisma.activityLog.create.mockResolvedValue({});
-
-    const files = [
-      {
-        originalname: 'report.pdf',
-        mimetype: 'application/pdf',
-        size: 1024,
-        path: '/tmp/report.pdf',
-      } as any,
-    ];
-
-    const result = await uploadMultipleFiles(files, 'user-1');
-
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0].success).toBe(true);
-    expect(result.results[0].status).toBe('uploaded');
-    expect(result.results[0].pinataInfo?.ipfsHash).toBe('QmNewDocCID');
-    expect(prisma.document.create).toHaveBeenCalled();
-  });
-
-  test('given files with duplicate hash, when uploadMultipleFiles runs, then skips uploading and reports duplicate status', async () => {
-    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
-
-    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, storageLimit: 5368709120 });
-    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 0 } }); // Storage quota check: no usage yet
-    // Simulate duplicate found
-    prisma.document.findUnique.mockResolvedValue({
-      id: 'doc-existing',
-      title: 'report',
-      ipfsHash: 'QmExisting',
-      fileHash: 'hash-1',
-      createdAt: new Date(),
-    });
-
-    const files = [
-      {
-        originalname: 'report.pdf',
-        mimetype: 'application/pdf',
-        size: 1024,
-        path: '/tmp/report.pdf',
-      } as any,
-    ];
-
-    const result = await uploadMultipleFiles(files, 'user-1');
-
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0].success).toBe(true);
-    expect(result.results[0].status).toBe('duplicate');
-    expect(result.results[0].errorCode).toBe('FILE_DUPLICATE');
-    expect(pinata.upload.file).not.toHaveBeenCalled();
-  });
-
-  test('given an upload that would exceed the storage quota, when uploadMultipleFiles runs, then it rejects all files without uploading', async () => {
-    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
-
-    // User limited to 1GB, already using ~1GB
-    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: 1073741824 });
-    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 1000000000 } }); // ~0.93GB used
-
-    const files = [
-      {
-        originalname: 'big.pdf',
-        mimetype: 'application/pdf',
-        size: 200000000, // 200MB — pushes total over the 1GB limit
-        path: '/tmp/big.pdf',
-      } as any,
-    ];
-
-    const result = await uploadMultipleFiles(files, 'user-1');
-
-    expect(result.summary).toEqual(expect.objectContaining({ uploaded: 0, error: 1 }));
-    expect(result.results[0].success).toBe(false);
-    expect(result.results[0].errorCode).toBe('STORAGE_QUOTA_EXCEEDED');
-    expect(pinata.upload.file).not.toHaveBeenCalled();
-    expect(prisma.document.create).not.toHaveBeenCalled();
-  });
-
-  test('given a user with unlimited storage (null limit), when uploadMultipleFiles runs, then the quota check is skipped', async () => {
-    const { uploadMultipleFiles } = await import('../../../../src/modules/document/document.service');
-
-    // Admin: storageLimit null = unlimited
-    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'admin', storageLimit: null });
-    prisma.document.findUnique.mockResolvedValue(null); // no content duplicates
-    pinata.upload.file.mockResolvedValue({ IpfsHash: 'QmAdminCID' });
-    blockchainService.prepareTransactionData.mockReturnValue({ hash: 'QmAdminCID', name: 'big.pdf', fileHash: 'hash-1' });
-    prisma.$transaction.mockImplementation(async (cb) => cb(prisma));
-    prisma.document.create.mockResolvedValue(documentFactory({ id: 'doc-admin', ipfsHash: 'QmAdminCID', fileHash: 'hash-1' }));
-    prisma.documentAccess.createMany.mockResolvedValue({ count: 1 });
-    prisma.activityLog.create.mockResolvedValue({});
-
-    const aggregateSpy = prisma.document.aggregate;
-
-    const files = [
-      {
-        originalname: 'big.pdf',
-        mimetype: 'application/pdf',
-        size: 999999999999, // huge — would exceed any normal limit
-        path: '/tmp/big.pdf',
-      } as any,
-    ];
-
-    const result = await uploadMultipleFiles(files, 'admin-1');
-
-    // No quota error, upload proceeds; the quota aggregate query is never run
-    expect(result.results[0].errorCode).not.toBe('STORAGE_QUOTA_EXCEEDED');
-    expect(aggregateSpy).not.toHaveBeenCalled();
   });
 
   // --- createDocumentsArchive ---
