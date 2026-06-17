@@ -99,11 +99,25 @@ class BlockchainService {
    * ✅ Verifikasi TX hash sudah confirmed di blockchain
    */
   async verifyTransaction(txHash: string): Promise<{ confirmed: boolean; blockNumber?: number }> {
+    // [Node 1] Mulai function verifyTransaction()
     try {
+      // [Node 2] Memanggil getTransactionReceipt(txHash)
       const receipt = await this.provider.getTransactionReceipt(txHash);
-      if (!receipt) return { confirmed: false };
-      return { confirmed: receipt.status === 1, blockNumber: receipt.blockNumber };
+      // [Node 3] Mengecek apakah receipt tidak ditemukan (!receipt)
+      if (!receipt) {
+        // [Node 3a] Mengembalikan { confirmed: false }
+        return { confirmed: false };
+      }
+      // [Node 4] Mengecek apakah status transaksi sukses (receipt.status === 1)
+      if (receipt.status === 1) {
+        // [Node 4a] Mengembalikan { confirmed: true, blockNumber: receipt.blockNumber }
+        return { confirmed: true, blockNumber: receipt.blockNumber };
+      } else {
+        // [Node 4b] Mengembalikan { confirmed: false, blockNumber: receipt.blockNumber }
+        return { confirmed: false, blockNumber: receipt.blockNumber };
+      }
     } catch {
+      // [Node 5] Catch block: terjadi error pada RPC, return { confirmed: false }
       return { confirmed: false };
     }
   }
@@ -151,17 +165,25 @@ class BlockchainService {
   }
 
   async checkFileExistsOnChain(fileHash: string): Promise<boolean> {
+    // [Node 1] Mulai function checkFileExistsOnChain()
     const contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
+    // [Node 2] Menormalisasi hash berkas
     const normalizedHash = fileHash.trim().toLowerCase();
-
     try {
+      // [Node 3] Memulai blok try untuk memanggil checkFileExists()
+      // [Node 3a] Mengembalikan hasil boolean jika checkFileExists() sukses
       return Boolean(await contract.checkFileExists(normalizedHash));
     } catch (error) {
-      logger.warn('[Blockchain] checkFileExists failed, falling back to isFileExists getter', {
-        fileHash: normalizedHash,
-        error: error instanceof Error ? error.message : 'unknown'
-      });
-      return Boolean(await contract.isFileExists(normalizedHash));
+      // [Node 4] Catch block: mencatat log warning
+      logger.warn('[Blockchain] checkFileExists failed, falling back to isFileExists', { fileHash: normalizedHash });
+      try {
+        // [Node 5] Memanggil fallback function isFileExists()
+        // [Node 5a] Mengembalikan hasil jika isFileExists() sukses
+        return Boolean(await contract.isFileExists(normalizedHash));
+      } catch (fallbackError) {
+        // [Node 5b] Revert/Error: melempar error kembali jika fallback gagal
+        throw fallbackError;
+      }
     }
   }
 

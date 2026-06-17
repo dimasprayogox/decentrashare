@@ -11,17 +11,17 @@ describe("DecentraShare - Deployment Unit Testing", function () {
     decentrashare = await ethers.deployContract("DecentraShare");
   });
 
-  it("Jalur Sukses: Pastikan smart contract berhasil di-deploy dan address valid", async function () {
+  it("Path Sukses: Pastikan smart contract berhasil di-deploy dan address valid", async function () {
     expect(decentrashare.target).to.not.equal(ethers.ZeroAddress);
     expect(decentrashare.target).to.properAddress;
   });
 
-  it("Jalur Basis: Pastikan state awal isFileExists bernilai false untuk hash dummy", async function () {
+  it("Path Basis: Pastikan state awal isFileExists bernilai false untuk hash dummy", async function () {
     const exists = await decentrashare.checkFileExists(HASH);
     expect(exists).to.be.false;
   });
 
-  it("Jalur Basis: Pastikan owner bernilai ZeroAddress untuk CID yang belum terdaftar", async function () {
+  it("Path Basis: Pastikan owner bernilai ZeroAddress untuk CID yang belum terdaftar", async function () {
     const fileOwner = await decentrashare.verifyOwner(CID);
     expect(fileOwner).to.equal(ethers.ZeroAddress);
   });

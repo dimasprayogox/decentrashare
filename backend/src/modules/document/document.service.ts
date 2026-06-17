@@ -593,34 +593,24 @@ type UploadResultItem = {
   };
 };
 
+
 export const uploadMultipleFiles = async (
   files: Express.Multer.File[],
   userId: string,
   folderId?: string,
-  metadataMap?: Map<string, { title?: string; description?: string }>  // ← ✅ Parameter baru
+  metadataMap?: Map<string, { title?: string; description?: string }>
 ) => {
+  // [Node 1] Mulai function uploadMultipleFiles()
   const results: UploadResultItem[] = [];
 
-  // ── 0. PRE-FETCH: Get user's Pinata group ID ─────────
+  // [Node 2] Mengambil data user dari DB
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { pinataGroupId: true, username: true, storageLimit: true }
   });
-  
   const userGroupId = user?.pinataGroupId || null;
-  
-  if (userGroupId) {
-    logger.debug(`[Pinata] Using user's personal group for document uploads`, {
-      userId,
-      groupId: userGroupId
-    });
-  } else {
-    logger.debug(`[Pinata] No personal group found for user, uploads will be ungrouped`, { userId });
-  }
 
-  // ── 0.5. STORAGE QUOTA CHECK ─────────────────────────
-  // Pastikan total upload tidak melebihi batas penyimpanan yang ditetapkan admin.
-  // storageLimit null = unlimited (mis. ADMIN) → lewati pengecekan.
+  // [Node 3] Mengecek apakah user memiliki batas kuota storage
   if (user && user.storageLimit !== null) {
     const quotaBytes = user.storageLimit ? Number(user.storageLimit) : 5 * 1024 * 1024 * 1024;
     const usage = await prisma.document.aggregate({
@@ -630,55 +620,37 @@ export const uploadMultipleFiles = async (
     const usedBytes = usage._sum.fileSize ?? 0;
     const incomingBytes = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
 
+    // [Node 4] Mengecek apakah total ukuran storage melebihi kuota
     if (usedBytes + incomingBytes > quotaBytes) {
-      logger.warn('[Upload] Storage quota exceeded', {
-        userId,
-        usedBytes,
-        incomingBytes,
-        quotaBytes
-      });
-
       files.forEach(file => {
+        // [Node 4a] Revert/Error: STORAGE_QUOTA_EXCEEDED
         results.push({
           success: false,
           fileName: file.originalname,
           status: 'error',
-          error: `Storage quota exceeded. Used ${usedBytes} bytes of ${quotaBytes} bytes, cannot add ${incomingBytes} more bytes.`,
+          error: `Storage quota exceeded.`,
           errorCode: 'STORAGE_QUOTA_EXCEEDED'
         });
         if (fs.existsSync(file.path)) {
-          try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+          try { fs.unlinkSync(file.path); } catch (e) {}
         }
       });
-
-      return {
-        results,
-        summary: {
-          total: results.length,
-          uploaded: 0,
-          duplicate: 0,
-          error: results.length
-        },
-        blockchainPayload: [],
-        folderId
-      };
+      return { results, summary: { total: results.length, uploaded: 0, duplicate: 0, error: results.length }, blockchainPayload: [], folderId };
     }
   }
 
-  // ── 1. SECURITY CHECK: Verify folder ownership or editor/admin access ──────────────────────
+  // [Node 5] Memeriksa hak akses folder jika folderId dikirim
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
   let folderAccessToInherit: { userId: string }[] = [];
   try {
     if (folderId) {
       const folder = await validateFolderAccess(folderId, userId, 'EDITOR');
       targetPrivacy = folder.privacy;
-      folderAccessToInherit = await prisma.folderAccess.findMany({
-        where: { folderId },
-        select: { userId: true }
-      });
+      folderAccessToInherit = await prisma.folderAccess.findMany({ where: { folderId }, select: { userId: true } });
       if (folder.ownerId !== userId) folderAccessToInherit.push({ userId: folder.ownerId });
     }
   } catch (error: any) {
+    // [Node 5a] Revert/Error: FOLDER_WRITE_FORBIDDEN
     files.forEach(file => {
       results.push({
         success: false,
@@ -688,126 +660,64 @@ export const uploadMultipleFiles = async (
         errorCode: error.errorCode || 'FOLDER_WRITE_FORBIDDEN'
       });
       if (fs.existsSync(file.path)) {
-        try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+        try { fs.unlinkSync(file.path); } catch (e) {}
       }
     });
-
-    return {
-      results,
-      summary: {
-        total: results.length,
-        uploaded: 0,
-        duplicate: 0,
-        error: results.length
-      },
-      blockchainPayload: [],
-      folderId
-    };
+    return { results, summary: { total: results.length, uploaded: 0, duplicate: 0, error: results.length }, blockchainPayload: [], folderId };
   }
 
-  // ── Main upload loop ───────────────────────────────────────────────
+  // [Node 6] Iterasi setiap file dalam batch
   for (const file of files) {
     try {
       const fileHash = await generateFileHash(file.path);
 
-      // ── 2. DUPLICATE CHECK ─────────────
-      // ── 2. DUPLICATE CHECK BY CONTENT HASH ─────────────
-const existingFile = await prisma.document.findUnique({
-  where: { fileHash }
-});
-
-// ✅ JANGAN THROW ERROR - Return sebagai "duplicate"
-if (existingFile) {
-  logger.debug(`[Duplicate] File already exists, skipping upload`, {
-    fileName: file.originalname,
-    fileHash,
-    existingDocId: existingFile.id
-  });
-  
-  results.push({ 
-    success: true,  // ← Tetap true karena bukan error sistem
-    fileName: file.originalname, 
-    status: 'duplicate',  // ← ✅ Status spesifik
-    error: 'File content already exists in system',
-    errorCode: 'FILE_DUPLICATE',
-    existingDocument: {  // ← ✅ Kirim info existing doc ke frontend
-      id: existingFile.id,
-      title: existingFile.title,
-      ipfsHash: existingFile.ipfsHash,
-      fileHash: existingFile.fileHash,
-      createdAt: existingFile.createdAt
-    }
-  });
-  
-  // ✅ Cleanup temp file dan lanjut ke file berikutnya
-  if (fs.existsSync(file.path)) {
-    try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
-  }
-  continue;
-}
-      // ── 3. IPFS UPLOAD (Pinata) ───────
-      const fileBuffer = fs.readFileSync(file.path);
-      
-      const pinataMetadata = {
-        name: file.originalname,
-        keyvalues: {
-          userId,
-          contentType: 'document',
-          folderPath: folderId ? `folders/${folderId}` : 'root',
-          originalName: file.originalname,
-          fileSize: file.size,
-          mimeType: file.mimetype,
-          uploadedAt: new Date().toISOString(),
+      // [Node 7] Mengecek duplikasi berkas berdasarkan hash konten (existingFile)
+      const existingFile = await prisma.document.findUnique({ where: { fileHash } });
+      if (existingFile) {
+        // [Node 7a] Lewati upload, set status duplicate, return file duplikat
+        results.push({ 
+          success: true,
+          fileName: file.originalname, 
+          status: 'duplicate',
+          error: 'File content already exists in system',
+          errorCode: 'FILE_DUPLICATE',
+          existingDocument: existingFile
+        });
+        if (fs.existsSync(file.path)) {
+          try { fs.unlinkSync(file.path); } catch (e) {}
         }
-      };
-      
-      const uploadOptions: any = {
-        metadata: pinataMetadata,
-        cidVersion: 1,
-        wrapWithDirectory: false
-      };
-      
-      if (userGroupId) {
-        uploadOptions.groupId = userGroupId;
+        continue;
       }
       
+      // [Node 8] Unggah file ke IPFS Pinata
+      const fileBuffer = fs.readFileSync(file.path);
       const upload = await pinata.upload.file(
         new File([new Blob([fileBuffer])], file.originalname, { type: file.mimetype }),
-        uploadOptions
+        { metadata: { name: file.originalname }, cidVersion: 1, groupId: userGroupId || undefined }
       );
+      const blockchainData = blockchainService.prepareTransactionData(upload.IpfsHash, file.originalname, fileHash);
 
-      const blockchainData = blockchainService.prepareTransactionData(
-        upload.IpfsHash,
-        file.originalname,
-        fileHash
-      );
-
-      // ── 5. METADATA PREPARATION ───────────────────────────────────
       const userMeta = metadataMap?.get(file.originalname) || {};
       const finalTitle = userMeta.title?.trim() || formatTitle(file.originalname);
       const finalDescription = userMeta.description?.trim() || null;
 
-      // ✅ ✅ ✅ INLINE DUPLICATE TITLE CHECK (Pattern sama seperti createFolder)
+      // [Node 9] Mengecek duplikasi judul dokumen di folder tujuan (duplicateTitle)
       const duplicateTitle = await prisma.document.findFirst({
         where: {
-          title: {
-            equals: finalTitle,
-            mode: 'insensitive'  // ✅ Case-insensitive, sama seperti folder
-          },
+          title: { equals: finalTitle, mode: 'insensitive' },
           ownerId: userId,
-          folderId: folderId || null,  // ✅ Null-safe: root = null
-          isArchived: false,  // ✅ Hanya cek document aktif
+          folderId: folderId || null,
+          isArchived: false,
         }
       });
-
       if (duplicateTitle) {
-        const error: any = new Error(`Document "${finalTitle}" already exists in this folder`);
+        // [Node 9a] Revert/Error: DOCUMENT_TITLE_EXISTS
+        const error: any = new Error(`Document "${finalTitle}" already exists`);
         error.errorCode = 'DOCUMENT_TITLE_EXISTS';
-        error.status = 409;
         throw error;
       }
       
-      // ── 6. DATABASE TRANSACTION ───────────────────────────────────
+      // [Node 10] Membuka transaksi DB untuk membuat record Document dan mewarisi DocumentAccess
       const newDocument = await prisma.$transaction(async (tx) => {
         const doc = await tx.document.create({
           data: {
@@ -826,20 +736,13 @@ if (existingFile) {
           },
         });
 
-        const inheritedDocumentAccess = Array.from(
-          new Set([...folderAccessToInherit.map(access => access.userId), userId])
-        );
-
+        const inheritedDocumentAccess = Array.from(new Set([...folderAccessToInherit.map(access => access.userId), userId]));
         if (inheritedDocumentAccess.length > 0) {
           await tx.documentAccess.createMany({
-            data: inheritedDocumentAccess.map(accessUserId => ({
-              documentId: doc.id,
-              userId: accessUserId
-            })),
+            data: inheritedDocumentAccess.map(accessUserId => ({ documentId: doc.id, userId: accessUserId })),
             skipDuplicates: true
           });
         }
-
         return doc;
       });
 
@@ -847,26 +750,10 @@ if (existingFile) {
         success: true, 
         fileName: file.originalname, 
         status: 'uploaded', 
-        data: {
-          ...newDocument,
-          blockchainData: blockchainData
-        },
-        pinataInfo: {
-          groupId: userGroupId,
-          ipfsHash: upload.IpfsHash,
-        }
+        data: { ...newDocument, blockchainData },
+        pinataInfo: { groupId: userGroupId, ipfsHash: upload.IpfsHash }
       });
-      
     } catch (error: any) {
-      logger.error('❌ Upload failed for file:', { 
-        fileName: file.originalname, 
-        userId,
-        folderId,
-        error: error.message,
-        stack: error.stack,
-        errorCode: error.errorCode
-      });
-      
       results.push({
         success: false,
         fileName: file.originalname,
@@ -875,27 +762,13 @@ if (existingFile) {
         errorCode: error.errorCode
       });
     } finally {
-      // ── 7. CLEANUP ───────────────────────
       if (fs.existsSync(file.path)) {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (cleanupError: any) {
-          logger.warn('⚠️ Failed to cleanup temp file:', { path: file.path, error: cleanupError.message });
-        }
+        try { fs.unlinkSync(file.path); } catch (e) {}
       }
     }
   }
   
-  // ── Log summary ───────────────────────────────────────────────────
-  const successCount = results.filter(r => r.success).length;
-  const failCount = results.length - successCount;
-  logger.info(`Document upload batch complete: ${successCount} succeeded, ${failCount} failed`, { 
-    userId, 
-    folderId,
-    pinataGroupId: userGroupId 
-  });
-
-  // ── Catat 1 aktivitas upload saja (gabungan untuk single/bulk) ────
+  // [Node 11] Mencatat aktivitas log upload (UPLOAD_IPFS)
   const uploadedDocs = results.filter(r => r.status === 'uploaded' && r.data);
   if (uploadedDocs.length > 0) {
     try {
@@ -907,48 +780,32 @@ if (existingFile) {
           action: 'UPLOAD_IPFS',
           entityType: 'DOCUMENT',
           entityId: firstDoc.id,
-          entityName: isBulk
-            ? `${uploadedDocs.length} files uploaded`
-            : firstDoc.title,
-          blockchainTx: isBulk ? null : firstDoc.blockchainTx,
-          details: JSON.stringify({
-            uploadedCount: uploadedDocs.length,
-            path: folderId ? `folders/${folderId}` : 'root',
-            files: uploadedDocs.map(r => ({ id: r.data.id, name: r.data.title })),
-          }),
+          entityName: isBulk ? `${uploadedDocs.length} files uploaded` : firstDoc.title,
+          details: JSON.stringify({ uploadedCount: uploadedDocs.length, path: folderId ? `folders/${folderId}` : 'root' }),
         }
       });
-    } catch (logErr: any) {
-      logger.error('Failed to log upload activity', { userId, error: logErr.message });
-    }
+    } catch (logErr) {}
   }
 
   const summary = {
-  total: results.length,
-  uploaded: results.filter(r => r.status === 'uploaded').length,
-  duplicate: results.filter(r => r.status === 'duplicate').length,
-  error: results.filter(r => r.status === 'error').length,
-};
+    total: results.length,
+    uploaded: results.filter(r => r.status === 'uploaded').length,
+    duplicate: results.filter(r => r.status === 'duplicate').length,
+    error: results.filter(r => r.status === 'error').length,
+  };
 
   const blockchainPayload = results
-  .filter(r => r.status === 'uploaded' && r.data?.blockchainData)
-  .map(r => ({
-    fileName: r.fileName,
-    ipfsHash: r.data.ipfsHash,
-    fileHash: r.data.fileHash,
-    fileSize: r.data.fileSize.toString(),  // ← String, bukan BigInt
-    timestamp: Math.floor(r.data.createdAt.getTime() / 1000).toString(), // ← String
-    
-    documentId: r.data.id
-  }));
-
-logger.info(`Document upload batch complete`, { 
-  userId, 
-  folderId,
-  pinataGroupId: userGroupId,
-  summary
-});
+    .filter(r => r.status === 'uploaded' && r.data?.blockchainData)
+    .map(r => ({
+      fileName: r.fileName,
+      ipfsHash: r.data.ipfsHash,
+      fileHash: r.data.fileHash,
+      fileSize: r.data.fileSize.toString(),
+      timestamp: Math.floor(r.data.createdAt.getTime() / 1000).toString(),
+      documentId: r.data.id
+    }));
   
+  // [Node 12] Mengembalikan hasil upload batch (results, summary, blockchainPayload) dan Exit
   return { results, summary, blockchainPayload, folderId };
 };
 

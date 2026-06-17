@@ -16,7 +16,7 @@ mock.module('jsonwebtoken', () => ({
 mock.module('../../src/utils/logger.js', () => ({ logger }));
 mock.module('../../src/utils/logger', () => ({ logger }));
 
-describe('auth.service.ts - loginWithWallet() Whitebox Testing', () => {
+describe('loginWithWallet()', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
     verifyMetamaskSignature.mockReset();
@@ -25,21 +25,21 @@ describe('auth.service.ts - loginWithWallet() Whitebox Testing', () => {
     jwtSign.mockImplementation((payload: any) => `${payload.type}-token`);
   });
 
-  test('Jalur Gagal: wallet tanpa nonce', async () => {
+  test('Path 1 (Tidak Valid): wallet tanpa nonce', async () => {
     const { loginWithWallet } = await import('../../src/modules/auth/auth.service?cache-bust=01');
     prisma.user.findUnique.mockResolvedValue(null);
 
     await expect(loginWithWallet('0xabc', 'sig')).rejects.toThrow('Wallet not found. Please request nonce first.');
   });
 
-  test('Jalur Gagal: wallet belum terdaftar', async () => {
+  test('Path 2 (Tidak Valid): wallet belum terdaftar', async () => {
     const { loginWithWallet } = await import('../../src/modules/auth/auth.service?cache-bust=01');
     prisma.user.findUnique.mockResolvedValue(userFactory({ username: null, email: null }));
 
     await expect(loginWithWallet('0xabc', 'sig')).rejects.toThrow('Wallet not registered. Please register first.');
   });
 
-  test('Jalur Gagal: signature tidak valid', async () => {
+  test('Path 3 (Tidak Valid): signature tidak valid', async () => {
     const { loginWithWallet } = await import('../../src/modules/auth/auth.service?cache-bust=01');
     prisma.user.findUnique.mockResolvedValue(userFactory());
     verifyMetamaskSignature.mockReturnValue(false);
@@ -48,7 +48,7 @@ describe('auth.service.ts - loginWithWallet() Whitebox Testing', () => {
     expect(logger.warn).toHaveBeenCalled();
   });
 
-  test('Jalur Sukses: wallet terdaftar dan signature valid', async () => {
+  test('Path 4 (Valid): wallet terdaftar dan signature valid', async () => {
     const { loginWithWallet } = await import('../../src/modules/auth/auth.service?cache-bust=01');
     const user = userFactory({ walletAddress: '0xabc', nonce: 'nonce-1', nonceExpiresAt: new Date(Date.now() + 50000) });
     prisma.user.findUnique.mockResolvedValue(user);
@@ -71,7 +71,7 @@ describe('auth.service.ts - loginWithWallet() Whitebox Testing', () => {
     expect(result.refreshToken).toBe('refresh-token');
   });
 
-  test('Jalur Gagal: nonce expired', async () => {
+  test('Path 5 (Tidak Valid): nonce expired', async () => {
     const { loginWithWallet } = await import('../../src/modules/auth/auth.service?cache-bust=01');
     const user = userFactory({ walletAddress: '0xabc', nonceExpiresAt: new Date(Date.now() - 5000) });
     prisma.user.findUnique.mockResolvedValue(user);

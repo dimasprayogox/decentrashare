@@ -15,21 +15,21 @@ describe("DecentraShare - recordFile() Unit Testing", function () {
     decentrashare = await ethers.deployContract("DecentraShare");
   });
 
-  it("Jalur Gagal: Gagal jika fileHash sudah terdaftar (DuplicateContent)", async function () {
+  it("Path Gagal: gagal jika fileHash sudah terdaftar (DuplicateContent)", async function () {
     await decentrashare.connect(user1).recordFile(CID, "file1.pdf", HASH);
     await expect(
       decentrashare.connect(user1).recordFile("QmDifferentCID", "file2.pdf", HASH)
     ).to.be.revertedWith("DuplicateContent");
   });
 
-  it("Jalur Gagal: Gagal jika ipfsHash sudah terdaftar (DuplicateCID)", async function () {
+  it("Path Gagal: gagal jika ipfsHash sudah terdaftar (DuplicateCID)", async function () {
     await decentrashare.connect(user1).recordFile(CID, "file1.pdf", HASH);
     await expect(
       decentrashare.connect(user1).recordFile(CID, "file2.pdf", WRONG_HASH)
     ).to.be.revertedWith("DuplicateCID");
   });
 
-  it("Jalur Sukses: Berhasil menyimpan berkas ke blockchain jika input valid", async function () {
+  it("Path Sukses: berhasil menyimpan berkas ke blockchain jika input valid", async function () {
     const tx = await decentrashare.connect(user1).recordFile(CID, "file-asli.pdf", HASH);
 
     await expect(tx).to.emit(decentrashare, "FileRecorded");

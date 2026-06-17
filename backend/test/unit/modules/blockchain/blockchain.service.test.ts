@@ -99,7 +99,7 @@ describe('Feature: blockchain.service.ts Whitebox Testing', () => {
   // ==========================================
   // 4. getFileRecord()
   // ==========================================
-  test('getFileRecord: Jalur 1 (Sukses mengambil data)', async () => {
+  test('getFileRecord: Path 1 (Sukses mengambil data)', async () => {
     const mockRecord = { owner: '0xOwner', timestamp: 123456n };
     mockFilesByIPFS.mockResolvedValue(mockRecord);
 
@@ -107,7 +107,7 @@ describe('Feature: blockchain.service.ts Whitebox Testing', () => {
     expect(result).toEqual(mockRecord);
   });
 
-  test('getFileRecord: Jalur 2 (Gagal / Catch Block)', async () => {
+  test('getFileRecord: Path 2 (Gagal / Catch Block)', async () => {
     mockFilesByIPFS.mockRejectedValue(new Error('Failed mapping call'));
 
     const result = await blockchainService.getFileRecord('0xHash');
@@ -117,14 +117,14 @@ describe('Feature: blockchain.service.ts Whitebox Testing', () => {
   // ==========================================
   // 5. estimateGas()
   // ==========================================
-  test('estimateGas: Jalur 1 (Sukses estimasi gas)', async () => {
+  test('estimateGas: Path 1 (Sukses estimasi gas)', async () => {
     mockEstimateGasRecordFile.mockResolvedValue(120000n);
 
     const result = await blockchainService.estimateGas('QmCID', 'test.pdf', '0xHash');
     expect(result).toBe(120000n);
   });
 
-  test('estimateGas: Jalur 2 (Gagal / Catch Block / Fallback)', async () => {
+  test('estimateGas: Path 2 (Gagal / Catch Block / Fallback)', async () => {
     mockEstimateGasRecordFile.mockRejectedValue(new Error('Gas execution reverted'));
 
     const result = await blockchainService.estimateGas('QmCID', 'test.pdf', '0xHash');
@@ -134,7 +134,7 @@ describe('Feature: blockchain.service.ts Whitebox Testing', () => {
   // ==========================================
   // 6. estimateBatchGas()
   // ==========================================
-  test('estimateBatchGas: Jalur 1 (Sukses estimasi gas batch)', async () => {
+  test('estimateBatchGas: Path 1 (Sukses estimasi gas batch)', async () => {
     mockEstimateGasRecordFilesBatch.mockResolvedValue(450000n);
 
     const result = await blockchainService.estimateBatchGas([
@@ -143,7 +143,7 @@ describe('Feature: blockchain.service.ts Whitebox Testing', () => {
     expect(result).toBe(450000n);
   });
 
-  test('estimateBatchGas: Jalur 2 (Gagal / Catch Block / Fallback Kalkulasi)', async () => {
+  test('estimateBatchGas: Path 2 (Gagal / Catch Block / Fallback Kalkulasi)', async () => {
     mockEstimateGasRecordFilesBatch.mockRejectedValue(new Error('Batch gas execution reverted'));
 
     const items = [
@@ -170,7 +170,7 @@ describe('Feature: blockchain.service.ts Whitebox Testing', () => {
   // ==========================================
   // 9. filterNewFilesForBatch()
   // ==========================================
-  test('filterNewFilesForBatch: Jalur filter lengkap', async () => {
+  test('filterNewFilesForBatch: Path filter lengkap', async () => {
     // Item 1: Sudah ada on-chain (skip)
     mockCheckFileExists.mockResolvedValueOnce(true);
 

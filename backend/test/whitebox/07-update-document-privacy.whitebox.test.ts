@@ -9,13 +9,13 @@ mock.module('../../src/config/db', () => ({ prisma }));
 mock.module('../../src/utils/logger', () => ({ logger }));
 mock.module('../../src/utils/logger.js', () => ({ logger }));
 
-describe('document.service.ts - 07. updateDocumentsPrivacy() Whitebox Testing', () => {
+describe('updateDocumentsPrivacy()', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
     Object.values(logger).forEach(fn => fn.mockReset());
   });
 
-  test('Jalur Sukses: update privacy ke PUBLIC (memicu cleanup akses)', async () => {
+  test('Path 1 (Valid): mengubah privasi ke PUBLIC dan memicu cleanup akses khusus', async () => {
     const { updateDocumentsPrivacy } = await import('../../src/modules/document/document.service?cache-bust=07');
 
     prisma.document.findUnique
@@ -40,7 +40,7 @@ describe('document.service.ts - 07. updateDocumentsPrivacy() Whitebox Testing', 
     });
   });
 
-  test('Jalur Sukses: update privacy ke SPECIFIC_USER (tanpa cleanup akses)', async () => {
+  test('Path 2 (Valid): mengubah privasi ke SPECIFIC_USER tanpa cleanup akses', async () => {
     const { updateDocumentsPrivacy } = await import('../../src/modules/document/document.service?cache-bust=07');
 
     prisma.document.findUnique
@@ -56,7 +56,7 @@ describe('document.service.ts - 07. updateDocumentsPrivacy() Whitebox Testing', 
     expect(prisma.activityLog.create).toHaveBeenCalled();
   });
 
-  test('Jalur Gagal: update privacy gagal karena bukan owner / dokumen tidak ditemukan / terarsip', async () => {
+  test('Path 3 (Tidak Valid): gagal karena bukan owner / dokumen tidak ditemukan / terarsip', async () => {
     const { updateDocumentsPrivacy } = await import('../../src/modules/document/document.service?cache-bust=07');
 
     prisma.document.findUnique.mockResolvedValueOnce({ privacy: 'PRIVATE' }); // oldDoc

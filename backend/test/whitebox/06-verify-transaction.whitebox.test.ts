@@ -30,7 +30,7 @@ mock.module('../../src/abis/DecentraShare.json', () => ({
   },
 }));
 
-describe('blockchain.service.ts - verifyTransaction() Whitebox Testing', () => {
+describe('verifyTransaction()', () => {
   let blockchainService: any;
 
   beforeAll(async () => {
@@ -43,28 +43,28 @@ describe('blockchain.service.ts - verifyTransaction() Whitebox Testing', () => {
     Object.values(logger).forEach((fn) => fn.mockReset());
   });
 
-  test('verifyTransaction: Jalur 1 (Sukses & Terkonfirmasi)', async () => {
+  test('Path 1 (Valid): transaksi terkonfirmasi dengan status sukses', async () => {
     mockGetTransactionReceipt.mockResolvedValue({ status: 1, blockNumber: 99 });
 
     const result = await blockchainService.verifyTransaction('0xTxHash');
     expect(result).toEqual({ confirmed: true, blockNumber: 99 });
   });
 
-  test('verifyTransaction: Jalur 2 (Sukses & Tidak Terkonfirmasi)', async () => {
+  test('Path 2 (Valid): transaksi terkonfirmasi dengan status gagal', async () => {
     mockGetTransactionReceipt.mockResolvedValue({ status: 0, blockNumber: 99 });
 
     const result = await blockchainService.verifyTransaction('0xTxHash');
     expect(result).toEqual({ confirmed: false, blockNumber: 99 });
   });
 
-  test('verifyTransaction: Jalur 3 (Transaksi Tidak Ditemukan)', async () => {
+  test('Path 3 (Tidak Valid): resi transaksi tidak ditemukan di blockchain', async () => {
     mockGetTransactionReceipt.mockResolvedValue(null);
 
     const result = await blockchainService.verifyTransaction('0xTxHash');
     expect(result).toEqual({ confirmed: false });
   });
 
-  test('verifyTransaction: Jalur 4 (RPC Error / Catch Block)', async () => {
+  test('Path 4 (Tidak Valid): terjadi error pada koneksi RPC/catch block', async () => {
     mockGetTransactionReceipt.mockRejectedValue(new Error('RPC Connection Lost'));
 
     const result = await blockchainService.verifyTransaction('0xTxHash');

@@ -39,7 +39,7 @@ mock.module('fs', () => ({
   readFileSync: mockFsReadFileSync,
 }));
 
-describe('document.service.ts - uploadMultipleFiles() Whitebox Testing', () => {
+describe('uploadMultipleFiles()', () => {
   beforeEach(() => {
     resetPrismaMock(prisma);
     Object.values(logger).forEach(fn => fn.mockReset());
@@ -47,7 +47,7 @@ describe('document.service.ts - uploadMultipleFiles() Whitebox Testing', () => {
     blockchainService.prepareTransactionData.mockReset();
   });
 
-  test('Jalur Sukses: file valid berhasil upload ke Pinata, tersimpan di database, dan mengembalikan hasil', async () => {
+  test('Path 1 (Valid): file valid berhasil diupload ke Pinata dan disimpan ke database', async () => {
     const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
     
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'alice', storageLimit: 5368709120 });
@@ -83,7 +83,7 @@ describe('document.service.ts - uploadMultipleFiles() Whitebox Testing', () => {
     expect(prisma.document.create).toHaveBeenCalled();
   });
 
-  test('Jalur Gagal: file duplicate hash dilewati dan dilaporkan duplicate', async () => {
+  test('Path 2 (Tidak Valid): file dengan hash duplikat dilewati dan dilaporkan', async () => {
     const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
 
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, storageLimit: 5368709120 });
@@ -114,7 +114,7 @@ describe('document.service.ts - uploadMultipleFiles() Whitebox Testing', () => {
     expect(pinata.upload.file).not.toHaveBeenCalled();
   });
 
-  test('Jalur Gagal: upload ditolak jika melebihi storage quota', async () => {
+  test('Path 3 (Tidak Valid): upload ditolak karena melebihi kuota penyimpanan user', async () => {
     const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
 
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: 1073741824 });
@@ -138,7 +138,7 @@ describe('document.service.ts - uploadMultipleFiles() Whitebox Testing', () => {
     expect(prisma.document.create).not.toHaveBeenCalled();
   });
 
-  test('Jalur Sukses: quota check dilewati jika user unlimited storage', async () => {
+  test('Path 4 (Valid): quota check dilewati karena user memiliki kuota unlimited', async () => {
     const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
 
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'admin', storageLimit: null });

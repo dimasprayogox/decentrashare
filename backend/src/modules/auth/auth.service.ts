@@ -110,8 +110,7 @@ export const registerUser = async (
 }> => {
   const address = walletAddress.toLowerCase();
 
-  // ── Validation ──────────────────────────────────────────────
-  if (!data.username?.trim()) {
+   if (!data.username?.trim()) {
     throw new Error('Username is required');
   }
   const username = data.username.trim();
@@ -127,7 +126,6 @@ export const registerUser = async (
     throw new Error('Please enter a valid email address');
   }
 
-  // ── Wallet Lookup & Nonce Check ────────────────────────────
   const user = await prisma.user.findUnique({ where: { walletAddress: address } });
 
   if (!user) throw new Error('Wallet not found. Please request nonce first.');
@@ -137,7 +135,6 @@ export const registerUser = async (
     throw new Error('Authentication nonce expired. Please request a new nonce.');
   }
 
-  // ── Signature Verification ─────────────────────────────────
   const message = `Sign this message to register.\nNonce: ${user.nonce}`;
   const isValid = verifyMetamaskSignature(address, signature, message);
   
@@ -146,7 +143,6 @@ export const registerUser = async (
     throw new Error('Invalid signature. Please try signing again.'); 
   }
 
-  // ── Username/Email Uniqueness Check ────────────────────────
   const existingUsername = await prisma.user.findFirst({
     where: { 
       username: { equals: username, mode: 'insensitive' },
@@ -163,7 +159,6 @@ export const registerUser = async (
   });
   if (existingEmail) throw new Error('Email is already registered. Please use another email.');
 
-  // ── Generate JWT Tokens ────────────────────────────────────
   const accessToken = jwt.sign(
     { userId: user.id, walletAddress: user.walletAddress, role: user.role, type: 'access' },
     JWT_SECRET,
@@ -176,7 +171,6 @@ export const registerUser = async (
     { expiresIn: JWT_REFRESH_EXPIRES_IN }
   );
 
-  // ── Update User in Database ────────────────────────────────
   const updatedUser = await prisma.user.update({
     where: { walletAddress: address },
     data: {
@@ -192,31 +186,22 @@ export const registerUser = async (
   });
 
   logger.info(`[AUTH] New user registered: ${address}`);
-
-  // ── Create Pinata Group (AWAITED) ──────────────────────────
-  // Create the user's personal Pinata group at registration time so every
-  // file they upload later is neatly organized in the Pinata dashboard.
-  // We await it (instead of fire-and-forget) so the group is reliably ready
-  // before we respond. createUserPinGroup is idempotent and never throws —
-  // it returns null on failure, which keeps registration resilient.
+  
   let pinataGroupId: string | null = null;
   try {
     pinataGroupId = await createUserPinGroup(updatedUser.id, updatedUser.username);
     if (pinataGroupId) {
-      logger.info(`✅ Pinata group ready for user ${updatedUser.id}: ${pinataGroupId}`);
+      logger.info(`Pinata group ready for user ${updatedUser.id}: ${pinataGroupId}`);
     } else {
-      logger.warn(`⚠️ Pinata group not created for user ${updatedUser.id} (will retry on first upload)`);
+      logger.warn(`Pinata group not created for user ${updatedUser.id} (will retry on first upload)`);
     }
   } catch (err: any) {
-    // Defensive: createUserPinGroup already swallows errors, but guard anyway
-    // so a Pinata outage can never block a successful registration.
-    logger.error(`❌ Pinata group creation failed for user ${updatedUser.id}`, {
+     logger.error(`Pinata group creation failed for user ${updatedUser.id}`, {
       error: err?.message,
       username: updatedUser.username
     });
   }
 
-  // ── Return Response ────────────────────────────────────────
   return { 
     user: serializeUserForResponse(updatedUser), 
     token: accessToken, 

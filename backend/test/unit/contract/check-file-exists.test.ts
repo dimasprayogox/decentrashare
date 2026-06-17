@@ -14,13 +14,13 @@ describe("DecentraShare - checkFileExists() Unit Testing", function () {
     decentrashare = await ethers.deployContract("DecentraShare");
   });
 
-  it("Jalur Basis: Kembalikan true jika hash berkas terdaftar di blockchain", async function () {
+  it("Path Basis: Kembalikan true jika hash berkas terdaftar di blockchain", async function () {
     await decentrashare.connect(user1).recordFile(CID, "file1.pdf", HASH);
     const exists = await decentrashare.checkFileExists(HASH);
     expect(exists).to.be.true;
   });
 
-  it("Jalur Basis: Kembalikan false jika hash berkas tidak terdaftar di blockchain", async function () {
+  it("Path Basis: Kembalikan false jika hash berkas tidak terdaftar di blockchain", async function () {
     const exists = await decentrashare.checkFileExists(HASH);
     expect(exists).to.be.false;
   });

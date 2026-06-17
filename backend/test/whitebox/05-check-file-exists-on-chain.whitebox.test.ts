@@ -32,7 +32,7 @@ mock.module('../../src/abis/DecentraShare.json', () => ({
   },
 }));
 
-describe('blockchain.service.ts - checkFileExistsOnChain() Whitebox Testing', () => {
+describe('checkFileExistsOnChain()', () => {
   let blockchainService: any;
 
   beforeAll(async () => {
@@ -46,14 +46,14 @@ describe('blockchain.service.ts - checkFileExistsOnChain() Whitebox Testing', ()
     Object.values(logger).forEach((fn) => fn.mockReset());
   });
 
-  test('checkFileExistsOnChain: Jalur 1 (Sukses checkFileExists)', async () => {
+  test('Path 1 (Valid): checkFileExists berhasil mengonfirmasi berkas', async () => {
     mockCheckFileExists.mockResolvedValue(true);
 
     const result = await blockchainService.checkFileExistsOnChain('0xHash');
     expect(result).toBeTrue();
   });
 
-  test('checkFileExistsOnChain: Jalur 2 (Gagal checkFileExists, Fallback ke isFileExists)', async () => {
+  test('Path 2 (Valid): checkFileExists gagal dan fallback menggunakan isFileExists', async () => {
     mockCheckFileExists.mockRejectedValue(new Error('Method checkFileExists not found'));
     mockIsFileExists.mockResolvedValue(true);
 
@@ -62,7 +62,7 @@ describe('blockchain.service.ts - checkFileExistsOnChain() Whitebox Testing', ()
     expect(logger.warn).toHaveBeenCalled();
   });
 
-  test('checkFileExistsOnChain: Jalur 3 (Semua Gagal / Catch Block)', async () => {
+  test('Path 3 (Tidak Valid): seluruh pemanggilan RPC contract gagal/catch block', async () => {
     mockCheckFileExists.mockRejectedValue(new Error('Method checkFileExists failed'));
     mockIsFileExists.mockRejectedValue(new Error('Method isFileExists failed'));
 

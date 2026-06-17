@@ -2,7 +2,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 const { ethers } = hre;
 
-describe("DecentraShare - 4. recordFilesBatch() Whitebox Testing", function () {
+describe("recordFilesBatch()", function () {
   let decentrashare: any;
   let owner: any, user1: any;
 
@@ -19,20 +19,20 @@ describe("DecentraShare - 4. recordFilesBatch() Whitebox Testing", function () {
     decentrashare = await ethers.deployContract("DecentraShare");
   });
 
-  it("Jalur Gagal: Gagal jika panjang array parameter tidak sama (ArrayLengthMismatch)", async function () {
+  it("Path 1 (Tidak Valid): panjang array parameter cids, names, dan hashes tidak sama", async function () {
     const invalidCids = ["QmCID1", "QmCID2"];
     await expect(
       decentrashare.connect(user1).recordFilesBatch(invalidCids, NAMES_BATCH, HASHES_BATCH)
     ).to.be.revertedWith("ArrayLengthMismatch");
   });
 
-  it("Jalur Gagal: Gagal jika batch kosong (EmptyBatch)", async function () {
+  it("Path 2 (Tidak Valid): mengirimkan batch kosong", async function () {
     await expect(
       decentrashare.connect(user1).recordFilesBatch([], [], [])
     ).to.be.revertedWith("EmptyBatch");
   });
 
-  it("Jalur Gagal: Gagal jika ukuran batch melebihi batas maximum 10 (BatchTooLarge)", async function () {
+  it("Path 3 (Tidak Valid): ukuran batch melebihi batas maksimum 10 berkas", async function () {
     const largeCids = Array(11).fill("QmCID");
     const largeNames = Array(11).fill("doc.pdf");
     const largeHashes = Array(11).fill(HASHES_BATCH[0]);
@@ -41,21 +41,21 @@ describe("DecentraShare - 4. recordFilesBatch() Whitebox Testing", function () {
     ).to.be.revertedWith("BatchTooLarge");
   });
 
-  it("Jalur Gagal: Gagal jika terdapat duplicate fileHash di dalam batch", async function () {
+  it("Path 4 (Tidak Valid): terdapat duplikasi fileHash di dalam batch", async function () {
     const duplicateHashes = [HASHES_BATCH[0], HASHES_BATCH[0], HASHES_BATCH[2]];
     await expect(
       decentrashare.connect(user1).recordFilesBatch(CIDS_BATCH, NAMES_BATCH, duplicateHashes)
     ).to.be.revertedWith("DuplicateContent");
   });
 
-  it("Jalur Gagal: Gagal jika terdapat duplicate ipfsHash di dalam batch", async function () {
+  it("Path 5 (Tidak Valid): terdapat duplikasi ipfsHash di dalam batch", async function () {
     const duplicateCids = [CIDS_BATCH[0], CIDS_BATCH[0], CIDS_BATCH[2]];
     await expect(
       decentrashare.connect(user1).recordFilesBatch(duplicateCids, NAMES_BATCH, HASHES_BATCH)
     ).to.be.revertedWith("DuplicateCID");
   });
 
-  it("Jalur Sukses: Berhasil merekam beberapa berkas secara sekaligus", async function () {
+  it("Path 6 (Valid): berhasil merekam seluruh berkas batch ke blockchain", async function () {
     const tx = await decentrashare.connect(user1).recordFilesBatch(CIDS_BATCH, NAMES_BATCH, HASHES_BATCH);
 
     await expect(tx)
