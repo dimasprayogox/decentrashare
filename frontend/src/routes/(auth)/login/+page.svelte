@@ -153,15 +153,32 @@
       }
 
     } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error('An unknown error occurred');
+      let userMessage = 'An unknown error occurred';
       const errorData = err as { status?: number; data?: unknown };
-      const userMessage = error.message || 'An unknown error occurred';
-      const statusCode = errorData.status ? ` (Status: ${errorData.status})` : '';
+      
+      if (err) {
+        if (typeof err === 'string') {
+          userMessage = err;
+        } else if (typeof err === 'object') {
+          const e = err as any;
+          if (
+            e.code === 4001 || 
+            e.code === 'ACTION_REJECTED' || 
+            e.message?.toLowerCase().includes('rejected') || 
+            e.message?.toLowerCase().includes('cancel')
+          ) {
+            userMessage = 'Request cancelled.';
+          } else {
+            userMessage = e.message || e.error?.message || 'An unknown error occurred';
+          }
+        }
+      }
+
       statusMessage = `Error: ${userMessage}`;
       showErrorBanner = true;
 
       console.error('🔴 [Login Error]', {
-        message: error.message, status: errorData.status, data: errorData.data
+        message: userMessage, status: errorData?.status, data: errorData?.data
       });
     } finally {
       isLoading = false;

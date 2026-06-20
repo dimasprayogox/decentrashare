@@ -60,13 +60,13 @@ class BlockchainService {
    * ✅ Siapkan batch data untuk frontend sign TX (parallel arrays)
    */
   prepareBatchTransactionData(
-    items: Array<{ 
-      cid: string; 
-      fileName: string; 
-      fileHash: string; 
-      fileSize?: number | string; 
-      timestamp?: number | string; 
-      documentId?: string 
+    items: Array<{
+      cid: string;
+      fileName: string;
+      fileHash: string;
+      fileSize?: number | string;
+      timestamp?: number | string;
+      documentId?: string
     }>
   ): BatchBlockchainPayload {
     const cids = items.map(item => item.cid);
@@ -103,23 +103,26 @@ class BlockchainService {
     try {
       // [Node 2] Memanggil getTransactionReceipt(txHash)
       const receipt = await this.provider.getTransactionReceipt(txHash);
-      // [Node 3] Mengecek apakah receipt tidak ditemukan (!receipt)
+
+      // [Node 3] Mengecek apakah receipt tidak ditemukan
       if (!receipt) {
-        // [Node 3a] Mengembalikan { confirmed: false }
+        // [Node 3a] Return transaksi belum terkonfirmasi
         return { confirmed: false };
       }
-      // [Node 4] Mengecek apakah status transaksi sukses (receipt.status === 1)
+
+      // [Node 4] Mengecek apakah status transaksi sukses
       if (receipt.status === 1) {
-        // [Node 4a] Mengembalikan { confirmed: true, blockNumber: receipt.blockNumber }
+        // [Node 4a] Return transaksi berhasil dikonfirmasi
         return { confirmed: true, blockNumber: receipt.blockNumber };
       } else {
-        // [Node 4b] Mengembalikan { confirmed: false, blockNumber: receipt.blockNumber }
+        // [Node 4b] Return transaksi ditemukan tetapi status gagal
         return { confirmed: false, blockNumber: receipt.blockNumber };
       }
     } catch {
-      // [Node 5] Catch block: terjadi error pada RPC, return { confirmed: false }
+      // [Node 5] Error RPC / provider, return transaksi belum terkonfirmasi
       return { confirmed: false };
     }
+    // [Node 6] Selesai / Exit
   }
 
   /**
@@ -155,7 +158,7 @@ class BlockchainService {
     const cids = items.map(i => i.cid);
     const fileNames = items.map(i => i.fileName);
     const fileHashes = items.map(i => i.fileHash);
-    
+
     try {
       return await contract.recordFilesBatch.estimateGas(cids, fileNames, fileHashes);
     } catch {
@@ -170,21 +173,22 @@ class BlockchainService {
     // [Node 2] Menormalisasi hash berkas
     const normalizedHash = fileHash.trim().toLowerCase();
     try {
-      // [Node 3] Memulai blok try untuk memanggil checkFileExists()
-      // [Node 3a] Mengembalikan hasil boolean jika checkFileExists() sukses
+      // [Node 3] Memanggil function checkFileExists() pada smart contract
+      // [Node 3a] Mengembalikan hasil boolean dari checkFileExists()
       return Boolean(await contract.checkFileExists(normalizedHash));
     } catch (error) {
-      // [Node 4] Catch block: mencatat log warning
+      // [Node 4] Menangani error dari checkFileExists() dan mencatat log warning
       logger.warn('[Blockchain] checkFileExists failed, falling back to isFileExists', { fileHash: normalizedHash });
       try {
         // [Node 5] Memanggil fallback function isFileExists()
-        // [Node 5a] Mengembalikan hasil jika isFileExists() sukses
+        // [Node 5a] Mengembalikan hasil boolean dari isFileExists()
         return Boolean(await contract.isFileExists(normalizedHash));
       } catch (fallbackError) {
-        // [Node 5b] Revert/Error: melempar error kembali jika fallback gagal
+        // [Node 5b] Error/Throw: melempar ulang error jika fallback gagal
         throw fallbackError;
       }
     }
+    // [Node 6] Selesai / Exit
   }
 
   async checkFilesExistOnChain(fileHashes: string[]) {
@@ -214,7 +218,7 @@ class BlockchainService {
     const rpcUrl = process.env.RPC_URL ?? config.blockchain.ganacheUrl;
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const abi = DecentraShareABI.abi;
-    
+
     const contract = new ethers.Contract(
       contractAddress || this.contractAddress,
       abi,
@@ -222,12 +226,12 @@ class BlockchainService {
     );
 
     const newItems = [];
-    
+
     for (const item of items) {
       try {
         // ✅ Check if fileHash already exists on-chain
         const exists = await contract.checkFileExists(item.fileHash);
-        
+
         if (!exists) {
           // ✅ Also check if CID already has an owner
           const record = await contract.filesByIPFS(item.cid);
@@ -236,7 +240,7 @@ class BlockchainService {
           }
         }
         // If exists, skip this item (already on-chain)
-        
+
       } catch (err) {
         // If check fails, include item anyway (fail-safe)
         logger.warn('[Blockchain] Failed to check on-chain status, including item', {

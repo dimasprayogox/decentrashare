@@ -201,8 +201,12 @@
 
       documentDetail = response.data;
       await loadPreview(response.data);
-    } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Failed to load document';
+    } catch (error: any) {
+      if (error.status === 403 || error.message?.includes('Access denied')) {
+        errorMessage = 'You do not have access to this folder / items';
+      } else {
+        errorMessage = error instanceof Error ? error.message : 'Failed to load document';
+      }
       documentDetail = null;
     } finally {
       isLoading = false;

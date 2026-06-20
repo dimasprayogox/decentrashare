@@ -66,7 +66,7 @@ contract DecentraShare {
         // [Node 8] Mengecek apakah CID IPFS belum memiliki owner
         require(filesByIPFS[_ipfsHash].owner == address(0), "DuplicateCID"); // [Node 8a] Revert: DuplicateCID
 
-        // [Node 9] Menyimpan record file, mengubah isFileExists, emit FileRecorded, lalu i++
+        // [Node 9] Menyimpan record file, mengubah isFileExists, dan emit FileRecorded
         filesByIPFS[_ipfsHash] = FileRecord({
             ipfsHash: _ipfsHash,
             fileName: _fileName,

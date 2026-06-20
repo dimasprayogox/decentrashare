@@ -70,13 +70,14 @@ export const handleGetMyFolders = async (req: AuthRequest, res: Response, next: 
 };
 
 // folder.controller.ts
-export const handleFolderPath = async (req: Request, res: Response) => {
+export const handleFolderPath = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const path = await folderService.getFolderPath(id);
+    const userId = req.user?.userId;
+    const path = await folderService.getFolderPath(id, userId);
     return res.json({ success: true, data: path });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
@@ -248,12 +249,15 @@ export const handleGetPublicFolderContents = async (req: AuthRequest, res: Respo
   }
 };
 
-export const handleGetFolderDetail = async (req: AuthRequest, res: Response) => {
+export const handleGetFolderDetail = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const folder = await folderService.getFolderDetail(id, req.user!.userId);
     return res.status(200).json({ success: true, data: folder });
   } catch (error: any) {
+    if (error.message?.includes('Access denied')) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
     res.status(404).json({ success: false, message: error.message });
   }
 };

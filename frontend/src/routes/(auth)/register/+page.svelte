@@ -184,13 +184,28 @@
 
   // Unified error handler
   function handleError(err: any) {
-    const userMessage = err.message || 'An unknown error occurred';
-    const statusCode = err.status ? ` (Status: ${err.status})` : '';
+    let userMessage = 'An unknown error occurred';
+    if (err) {
+      if (typeof err === 'string') {
+        userMessage = err;
+      } else if (typeof err === 'object') {
+        if (
+          err.code === 4001 || 
+          err.code === 'ACTION_REJECTED' || 
+          err.message?.toLowerCase().includes('rejected') || 
+          err.message?.toLowerCase().includes('cancel')
+        ) {
+          userMessage = 'Request cancelled.';
+        } else {
+          userMessage = err.message || err.error?.message || 'An unknown error occurred';
+        }
+      }
+    }
     statusMessage = `Error: ${userMessage}`;
     showErrorBanner = true;
     
-    console.error('🔴 [Register Error]', {
-      message: err.message, status: err.status, data: err.data
+    console.error('[Register Error]', {
+      message: err?.message || userMessage, status: err?.status, data: err?.data
     });
   }
 

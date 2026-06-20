@@ -55,7 +55,25 @@ describe("recordFilesBatch()", function () {
     ).to.be.revertedWith("DuplicateCID");
   });
 
-  it("Path 6 (Valid): berhasil merekam seluruh berkas batch ke blockchain", async function () {
+  it("Path 6 (Valid): berhasil merekam satu berkas ke blockchain", async function () {
+    const singleCid = [CIDS_BATCH[0]];
+    const singleName = [NAMES_BATCH[0]];
+    const singleHash = [HASHES_BATCH[0]];
+
+    const tx = await decentrashare.connect(user1).recordFilesBatch(singleCid, singleName, singleHash);
+
+    await expect(tx)
+      .to.emit(decentrashare, "BatchFilesRecorded")
+      .withArgs(1n, user1.address);
+
+    const record = await decentrashare.filesByIPFS(singleCid[0]);
+    expect(record.ipfsHash).to.equal(singleCid[0]);
+    expect(record.fileName).to.equal(singleName[0]);
+    expect(record.fileHash).to.equal(singleHash[0]);
+    expect(record.owner).to.equal(user1.address);
+  });
+
+  it("Path 7 (Valid): berhasil merekam lebih dari satu berkas batch ke blockchain", async function () {
     const tx = await decentrashare.connect(user1).recordFilesBatch(CIDS_BATCH, NAMES_BATCH, HASHES_BATCH);
 
     await expect(tx)

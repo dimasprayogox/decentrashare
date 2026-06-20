@@ -8,12 +8,17 @@ export const notFoundMiddleware = (req: Request, res: Response) => {
   })
 }
 
-export const errorMiddleware = (error: Error, req: Request, res: Response, next: NextFunction) => {
+export const errorMiddleware = (error: any, req: Request, res: Response, next: NextFunction) => {
   logger.error('Unhandled error:', error)
 
-  res.status(500).json({
+  const status = error.status || 500
+  const message = error.status ? error.message : 'Internal server error'
+  const errorCode = error.errorCode
+
+  res.status(status).json({
     success: false,
-    message: 'Internal server error',
+    message,
+    ...(errorCode && { errorCode }),
     ...(process.env.NODE_ENV === 'development' && { error: error.message }),
   })
 }

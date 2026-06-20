@@ -47,7 +47,118 @@ describe('uploadMultipleFiles()', () => {
     blockchainService.prepareTransactionData.mockReset();
   });
 
-  test('Path 1 (Valid): file valid berhasil diupload ke Pinata dan disimpan ke database', async () => {
+  test('Path 1 (Tidak Valid): upload ditolak karena melebihi kuota penyimpanan user', async () => {
+    const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
+
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: 1073741824 });
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 1000000000 } });
+
+    const files = [
+      {
+        originalname: 'big.pdf',
+        mimetype: 'application/pdf',
+        size: 200000000,
+        path: '/tmp/big.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'user-1');
+
+    expect(result.summary).toEqual(expect.objectContaining({ uploaded: 0, error: 1 }));
+    expect(result.results[0].success).toBe(false);
+    expect(result.results[0].errorCode).toBe('STORAGE_QUOTA_EXCEEDED');
+    expect(pinata.upload.file).not.toHaveBeenCalled();
+    expect(prisma.document.create).not.toHaveBeenCalled();
+  });
+
+  test('Path 2 (Tidak Valid): folder access denied atau folder tidak ditemukan', async () => {
+    const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
+
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: null });
+    prisma.folder.findUnique.mockResolvedValue(null);
+
+    const files = [
+      {
+        originalname: 'file.pdf',
+        mimetype: 'application/pdf',
+        size: 100,
+        path: '/tmp/file.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'user-1', 'folder-invalid');
+    expect(result.results[0].success).toBe(false);
+    expect(result.results[0].errorCode).toBe('FOLDER_NOT_FOUND');
+    expect(prisma.document.create).not.toHaveBeenCalled();
+  });
+
+  test('Path 3 (Valid): mengirimkan batch kosong dan mengembalikan hasil kosong', async () => {
+    const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
+
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: null });
+
+    const result = await uploadMultipleFiles([], 'user-1');
+    expect(result.results).toHaveLength(0);
+    expect(result.summary.total).toBe(0);
+    expect(result.summary.uploaded).toBe(0);
+    expect(pinata.upload.file).not.toHaveBeenCalled();
+  });
+
+  test('Path 4 (Tidak Valid): file dengan hash duplikat dilewati dan dilaporkan', async () => {
+    const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
+
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, storageLimit: 5368709120 });
+    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 0 } });
+    prisma.document.findUnique.mockResolvedValue({
+      id: 'doc-existing',
+      title: 'report',
+      ipfsHash: 'QmExisting',
+      fileHash: 'hash-1',
+      createdAt: new Date(),
+    });
+
+    const files = [
+      {
+        originalname: 'report.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+        path: '/tmp/report.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'user-1');
+
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].success).toBe(true);
+    expect(result.results[0].status).toBe('duplicate');
+    expect(result.results[0].errorCode).toBe('FILE_DUPLICATE');
+    expect(pinata.upload.file).not.toHaveBeenCalled();
+  });
+
+  test('Path 5 (Tidak Valid): duplicate title dokumen terdeteksi', async () => {
+    const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
+
+    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: null });
+    prisma.document.findUnique.mockResolvedValue(null);
+    pinata.upload.file.mockResolvedValue({ IpfsHash: 'QmCID' });
+    prisma.document.findFirst.mockResolvedValue({ id: 'existing-title-doc', title: 'report' });
+
+    const files = [
+      {
+        originalname: 'report.pdf',
+        mimetype: 'application/pdf',
+        size: 100,
+        path: '/tmp/report.pdf',
+      } as any,
+    ];
+
+    const result = await uploadMultipleFiles(files, 'user-1');
+    expect(result.results[0].success).toBe(false);
+    expect(result.results[0].errorCode).toBe('DOCUMENT_TITLE_EXISTS');
+    expect(prisma.document.create).not.toHaveBeenCalled();
+  });
+
+  test('Path 6 (Valid): file valid berhasil diupload ke Pinata dan disimpan ke database', async () => {
     const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
     
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'alice', storageLimit: 5368709120 });
@@ -83,62 +194,7 @@ describe('uploadMultipleFiles()', () => {
     expect(prisma.document.create).toHaveBeenCalled();
   });
 
-  test('Path 2 (Tidak Valid): file dengan hash duplikat dilewati dan dilaporkan', async () => {
-    const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
-
-    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, storageLimit: 5368709120 });
-    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 0 } });
-    prisma.document.findUnique.mockResolvedValue({
-      id: 'doc-existing',
-      title: 'report',
-      ipfsHash: 'QmExisting',
-      fileHash: 'hash-1',
-      createdAt: new Date(),
-    });
-
-    const files = [
-      {
-        originalname: 'report.pdf',
-        mimetype: 'application/pdf',
-        size: 1024,
-        path: '/tmp/report.pdf',
-      } as any,
-    ];
-
-    const result = await uploadMultipleFiles(files, 'user-1');
-
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0].success).toBe(true);
-    expect(result.results[0].status).toBe('duplicate');
-    expect(result.results[0].errorCode).toBe('FILE_DUPLICATE');
-    expect(pinata.upload.file).not.toHaveBeenCalled();
-  });
-
-  test('Path 3 (Tidak Valid): upload ditolak karena melebihi kuota penyimpanan user', async () => {
-    const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
-
-    prisma.user.findUnique.mockResolvedValue({ pinataGroupId: null, username: 'alice', storageLimit: 1073741824 });
-    prisma.document.aggregate.mockResolvedValue({ _sum: { fileSize: 1000000000 } });
-
-    const files = [
-      {
-        originalname: 'big.pdf',
-        mimetype: 'application/pdf',
-        size: 200000000,
-        path: '/tmp/big.pdf',
-      } as any,
-    ];
-
-    const result = await uploadMultipleFiles(files, 'user-1');
-
-    expect(result.summary).toEqual(expect.objectContaining({ uploaded: 0, error: 1 }));
-    expect(result.results[0].success).toBe(false);
-    expect(result.results[0].errorCode).toBe('STORAGE_QUOTA_EXCEEDED');
-    expect(pinata.upload.file).not.toHaveBeenCalled();
-    expect(prisma.document.create).not.toHaveBeenCalled();
-  });
-
-  test('Path 4 (Valid): quota check dilewati karena user memiliki kuota unlimited', async () => {
+  test('Path 7 (Valid): quota check dilewati karena user memiliki kuota unlimited', async () => {
     const { uploadMultipleFiles } = await import('../../src/modules/document/document.service?cache-bust=03');
 
     prisma.user.findUnique.mockResolvedValue({ pinataGroupId: 'group-1', username: 'admin', storageLimit: null });

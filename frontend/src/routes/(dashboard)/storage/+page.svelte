@@ -67,6 +67,7 @@
   let breadcrumbs = $state<{ id: string; name: string }[]>([]);
   let currentFolder = $state<{ id: string; name: string } | null>(null);
   let isLoading = $state(true);
+  let errorMessage = $state('');
   let isRefreshingStorage = $state(false);
   let viewMode = $state(1);
   let showUpload = $state(false);
@@ -596,6 +597,7 @@
   async function loadStorageData(showLoading = true) {
     try {
       if (showLoading) isLoading = true;
+      errorMessage = '';
       const folderId = page.url.searchParams.get('folder');
 
       if (folderId) {
@@ -605,10 +607,14 @@
             breadcrumbs = pathRes.data;
             currentFolder = pathRes.data[pathRes.data.length - 1] || null;
           }
-        } catch (e) {
+        } catch (e: any) {
           console.warn('Failed to load folder path:', e);
           breadcrumbs = [];
           currentFolder = null;
+          if (e.status === 403 || e.message?.includes('Access denied')) {
+            errorMessage = 'You do not have access to this folder / items';
+            return;
+          }
         }
       } else {
         breadcrumbs = [];
@@ -620,11 +626,27 @@
         storageService.getDocuments(folderId)
       ]);
       
+      if (folderId) {
+        if (fRes.status === 'rejected' && ((fRes.reason as any).status === 403 || fRes.reason.message?.includes('Access denied'))) {
+          errorMessage = 'You do not have access to this folder / items';
+          return;
+        }
+        if (dRes.status === 'rejected' && ((dRes.reason as any).status === 403 || dRes.reason.message?.includes('Access denied'))) {
+          errorMessage = 'You do not have access to this folder / items';
+          return;
+        }
+      }
+      
       folders = (fRes.status === 'fulfilled' && fRes.value.success) ? fRes.value.data : [];
       items = (dRes.status === 'fulfilled' && dRes.value.success) ? dRes.value.data : [];
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Storage] loadStorageData error:', err);
+      if (err.status === 403 || err.message?.includes('Access denied')) {
+        errorMessage = 'You do not have access to this folder / items';
+      } else {
+        errorMessage = err.message || 'Failed to load storage data';
+      }
     } finally {
       if (showLoading) setTimeout(() => { isLoading = false; }, 200);
     }
@@ -1751,7 +1773,12 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- CONTENT -->
   <!-- ═══════════════════════════════════════════════════ -->
-  {#if isLoading || isRefreshingStorage}
+  {#if errorMessage}
+    <div class="min-h-[420px] flex flex-col items-center justify-center rounded-[32px] border border-red-500/20 bg-red-500/10 text-center px-6">
+      <p class="text-red-400 font-semibold mb-2">{errorMessage}</p>
+      <button onclick={() => goto('?', { noScroll: true })} class="text-sm text-blue-400 hover:underline">Go back to My Storage</button>
+    </div>
+  {:else if isLoading || isRefreshingStorage}
     <div class="py-24 flex flex-col items-center justify-center text-center border border-white/5 rounded-[32px] bg-white/[0.01]">
       <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
       <p class="text-gray-400">Loading storage items...</p>

@@ -920,8 +920,9 @@ describe('Feature: folder management behavior', () => {
     const { getUserFolders } = await import('../../../../src/modules/folder/folder.service');
     
     // We mock checkFolderWriteAccess inside getUserFolders:
-    // First query: checkFolderWriteAccess for parent-folder: parent-folder is owned by user-1, returns true
-    prisma.folder.findUnique.mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-1', parentId: null, sharedWith: [] }));
+    prisma.folder.findUnique
+      .mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-1', parentId: null, sharedWith: [] }))
+      .mockResolvedValueOnce(folderFactory({ id: 'parent-folder', ownerId: 'user-1', parentId: null, sharedWith: [] }));
     
     // getUserFolders:
     prisma.folder.findMany

@@ -18,8 +18,6 @@ mock.module('ethers', () => {
   };
 });
 
-
-
 const logger = { debug: mock(), error: mock(), info: mock(), warn: mock() };
 mock.module('../../src/utils/logger', () => ({ logger }));
 mock.module('../../src/utils/logger.js', () => ({ logger }));
@@ -43,31 +41,31 @@ describe('verifyTransaction()', () => {
     Object.values(logger).forEach((fn) => fn.mockReset());
   });
 
-  test('Path 1 (Valid): transaksi terkonfirmasi dengan status sukses', async () => {
-    mockGetTransactionReceipt.mockResolvedValue({ status: 1, blockNumber: 99 });
+  test('Path 1 (Tidak Valid): terjadi error pada koneksi RPC/catch block', async () => {
+    mockGetTransactionReceipt.mockRejectedValue(new Error('RPC Connection Lost'));
 
     const result = await blockchainService.verifyTransaction('0xTxHash');
-    expect(result).toEqual({ confirmed: true, blockNumber: 99 });
+    expect(result).toEqual({ confirmed: false });
   });
 
-  test('Path 2 (Valid): transaksi terkonfirmasi dengan status gagal', async () => {
-    mockGetTransactionReceipt.mockResolvedValue({ status: 0, blockNumber: 99 });
-
-    const result = await blockchainService.verifyTransaction('0xTxHash');
-    expect(result).toEqual({ confirmed: false, blockNumber: 99 });
-  });
-
-  test('Path 3 (Tidak Valid): resi transaksi tidak ditemukan di blockchain', async () => {
+  test('Path 2 (Tidak Valid): resi transaksi tidak ditemukan di blockchain', async () => {
     mockGetTransactionReceipt.mockResolvedValue(null);
 
     const result = await blockchainService.verifyTransaction('0xTxHash');
     expect(result).toEqual({ confirmed: false });
   });
 
-  test('Path 4 (Tidak Valid): terjadi error pada koneksi RPC/catch block', async () => {
-    mockGetTransactionReceipt.mockRejectedValue(new Error('RPC Connection Lost'));
+  test('Path 3 (Valid): transaksi terkonfirmasi dengan status sukses', async () => {
+    mockGetTransactionReceipt.mockResolvedValue({ status: 1, blockNumber: 99 });
 
     const result = await blockchainService.verifyTransaction('0xTxHash');
-    expect(result).toEqual({ confirmed: false });
+    expect(result).toEqual({ confirmed: true, blockNumber: 99 });
+  });
+
+  test('Path 4 (Valid): transaksi terkonfirmasi dengan status gagal', async () => {
+    mockGetTransactionReceipt.mockResolvedValue({ status: 0, blockNumber: 99 });
+
+    const result = await blockchainService.verifyTransaction('0xTxHash');
+    expect(result).toEqual({ confirmed: false, blockNumber: 99 });
   });
 });

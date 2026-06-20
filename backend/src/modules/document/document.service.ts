@@ -593,7 +593,6 @@ type UploadResultItem = {
   };
 };
 
-
 export const uploadMultipleFiles = async (
   files: Express.Multer.File[],
   userId: string,
@@ -603,7 +602,7 @@ export const uploadMultipleFiles = async (
   // [Node 1] Mulai function uploadMultipleFiles()
   const results: UploadResultItem[] = [];
 
-  // [Node 2] Mengambil data user dari DB
+  // [Node 2] Mengambil data user dari database
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { pinataGroupId: true, username: true, storageLimit: true }
@@ -620,10 +619,10 @@ export const uploadMultipleFiles = async (
     const usedBytes = usage._sum.fileSize ?? 0;
     const incomingBytes = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
 
-    // [Node 4] Mengecek apakah total ukuran storage melebihi kuota
+    // [Node 4] Mengecek apakah total ukuran file melebihi kuota
     if (usedBytes + incomingBytes > quotaBytes) {
+      // [Node 4a] Error: STORAGE_QUOTA_EXCEEDED
       files.forEach(file => {
-        // [Node 4a] Revert/Error: STORAGE_QUOTA_EXCEEDED
         results.push({
           success: false,
           fileName: file.originalname,
@@ -639,7 +638,7 @@ export const uploadMultipleFiles = async (
     }
   }
 
-  // [Node 5] Memeriksa hak akses folder jika folderId dikirim
+  // [Node 5] Memeriksa apakah akses folder valid atau folderId tidak dikirim
   let targetPrivacy: PrivacyLevel = 'PRIVATE';
   let folderAccessToInherit: { userId: string }[] = [];
   try {
@@ -650,7 +649,7 @@ export const uploadMultipleFiles = async (
       if (folder.ownerId !== userId) folderAccessToInherit.push({ userId: folder.ownerId });
     }
   } catch (error: any) {
-    // [Node 5a] Revert/Error: FOLDER_WRITE_FORBIDDEN
+    // [Node 5a] Error: FOLDER_WRITE_FORBIDDEN
     files.forEach(file => {
       results.push({
         success: false,
@@ -666,15 +665,15 @@ export const uploadMultipleFiles = async (
     return { results, summary: { total: results.length, uploaded: 0, duplicate: 0, error: results.length }, blockchainPayload: [], folderId };
   }
 
-  // [Node 6] Iterasi setiap file dalam batch
+  // [Node 6] Loop setiap file dalam batch
   for (const file of files) {
     try {
+      // [Node 7] Generate fileHash dan mengecek duplikasi berkas berdasarkan hash konten
       const fileHash = await generateFileHash(file.path);
-
-      // [Node 7] Mengecek duplikasi berkas berdasarkan hash konten (existingFile)
       const existingFile = await prisma.document.findUnique({ where: { fileHash } });
+
       if (existingFile) {
-        // [Node 7a] Lewati upload, set status duplicate, return file duplikat
+        // [Node 7a] Lewati upload, set status duplicate dan lanjut ke file berikutnya
         results.push({ 
           success: true,
           fileName: file.originalname, 
@@ -710,6 +709,7 @@ export const uploadMultipleFiles = async (
           isArchived: false,
         }
       });
+
       if (duplicateTitle) {
         // [Node 9a] Revert/Error: DOCUMENT_TITLE_EXISTS
         const error: any = new Error(`Document "${finalTitle}" already exists`);
@@ -717,7 +717,7 @@ export const uploadMultipleFiles = async (
         throw error;
       }
       
-      // [Node 10] Membuka transaksi DB untuk membuat record Document dan mewarisi DocumentAccess
+      // [Node 10] Transaksi database untuk membuat record dokumen
       const newDocument = await prisma.$transaction(async (tx) => {
         const doc = await tx.document.create({
           data: {
@@ -743,6 +743,7 @@ export const uploadMultipleFiles = async (
             skipDuplicates: true
           });
         }
+
         return doc;
       });
 
@@ -805,7 +806,7 @@ export const uploadMultipleFiles = async (
       documentId: r.data.id
     }));
   
-  // [Node 12] Mengembalikan hasil upload batch (results, summary, blockchainPayload) dan Exit
+  // [Node 12] Return hasil upload dan selesai
   return { results, summary, blockchainPayload, folderId };
 };
 

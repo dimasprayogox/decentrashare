@@ -636,7 +636,17 @@ export const getFolderDetail = async (folderId: string, userId: string) => {
 };
 
 // folder.service.ts
-export const getFolderPath = async (folderId: string) => {
+export const getFolderPath = async (folderId: string, userId?: string) => {
+  if (userId) {
+    const hasAccess = await checkFolderReadAccess(prisma, folderId, userId);
+    if (!hasAccess) {
+      const error: any = new Error('Access denied.');
+      error.status = 403;
+      error.errorCode = 'FOLDER_ACCESS_DENIED';
+      throw error;
+    }
+  }
+
   const path = [];
   let currentId = folderId;
 
@@ -1473,6 +1483,16 @@ const getPublicContributorFolderIds = async (userId: string) => {
 };
 
 export const getUserFolders = async (userId: string, parentId: string | null = null) => {
+  if (parentId) {
+    const hasAccess = await checkFolderReadAccess(prisma, parentId, userId);
+    if (!hasAccess) {
+      const error: any = new Error('Access denied.');
+      error.status = 403;
+      error.errorCode = 'FOLDER_ACCESS_DENIED';
+      throw error;
+    }
+  }
+
   const publicContributorFolderIds = parentId ? [] : await getPublicContributorFolderIds(userId);
   const publicFolderAccessConditions = parentId
     ? [{ privacy: 'PUBLIC' as const }, { privacy: 'LINK_ONLY' as const }]
