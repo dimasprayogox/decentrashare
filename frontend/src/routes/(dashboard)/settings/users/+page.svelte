@@ -198,7 +198,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
           </svg>
@@ -293,7 +293,7 @@
                              focus:outline-none focus:ring-2 focus:ring-blue-500/50
                              transition-all duration-200 ease-out"
                     >
-                      <div class="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover/owner:border-blue-400/50 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)] flex items-center justify-center shrink-0 transition-all duration-200">
+                      <div class="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-white/10 group-hover/owner:border-blue-400/50 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)] flex items-center justify-center shrink-0 transition-all duration-200">
                         {#if user.avatarUrl}
                           <img src={user.avatarUrl} alt="" class="w-full h-full object-cover" />
                         {:else}
@@ -311,7 +311,7 @@
                   <td class="px-4 py-3 text-center">
                     <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-medium
                       {user.role === 'ADMIN'
-                        ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                        ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
                         : 'bg-white/5 text-gray-300 border border-white/10'}">
                       {user.role}
                     </span>
@@ -336,8 +336,8 @@
                         disabled={savingUserId === user.id}
                         class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap disabled:opacity-50
                           {user.role === 'ADMIN'
-                            ? 'text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20'
-                            : 'text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20'}"
+                            ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20'
+                            : 'text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20'}"
                       >
                         {savingUserId === user.id ? '...' : user.role === 'ADMIN' ? 'Demote to User' : 'Make Admin'}
                       </button>
@@ -438,25 +438,19 @@
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick={() => (roleTarget = null)} aria-hidden="true"></div>
     <div class="relative w-full max-w-md bg-[#0a0a0f] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
          in:fly={{ y: 20, duration: 200 }}>
-      <div class="h-1 bg-gradient-to-r from-purple-500 to-amber-500"></div>
+      <div class="h-1 {pendingRole === 'ADMIN' ? 'bg-gradient-to-r from-blue-500 via-blue-500 to-cyan-500' : 'bg-gradient-to-r from-blue-500 to-rose-500'}"></div>
       <div class="p-6">
         <h2 class="text-lg font-semibold text-white mb-1">Change User Role</h2>
         <p class="text-sm text-gray-400 mb-5">
           Set <span class="font-medium text-white">{roleTarget.username || formatAddress(roleTarget.walletAddress)}</span>
-          to <span class="font-semibold {pendingRole === 'ADMIN' ? 'text-purple-300' : 'text-amber-300'}">{pendingRole}</span>?
-          {#if pendingRole === 'ADMIN'}
-            <span class="block mt-2 text-xs text-amber-400/80">This grants full administrative access including managing other users. Storage will become <span class="text-purple-300 font-medium">unlimited</span>.</span>
-          {:else}
-            <span class="block mt-2 text-xs text-gray-500">Storage limit will be reset to the default <span class="text-gray-300 font-medium">5GB</span>.</span>
-          {/if}
+          to <span class="font-semibold {pendingRole === 'ADMIN' ? 'text-blue-300' : 'text-rose-400'}">{pendingRole}</span>?
         </p>
 
         <div class="flex justify-end gap-2">
           <button type="button" onclick={() => (roleTarget = null)}
             class="px-4 h-10 bg-white/5 border border-white/10 text-gray-400 rounded-lg text-sm hover:bg-white/10 transition-colors">Cancel</button>
           <button type="button" onclick={confirmRoleChange}
-            class="px-4 h-10 text-white rounded-lg text-sm font-medium transition-colors
-              {pendingRole === 'ADMIN' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-amber-600 hover:bg-amber-700'}">Confirm</button>
+            class="px-4 h-10 text-white {pendingRole === 'ADMIN' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-rose-600 hover:bg-rose-700'} rounded-lg text-sm font-medium transition-colors">Confirm</button>
         </div>
       </div>
     </div>

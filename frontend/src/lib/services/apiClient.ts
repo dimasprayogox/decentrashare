@@ -82,6 +82,19 @@ export const apiClient = async <T = any>(
               if (responseType === 'text') return await retryResponse.text() as unknown as T;
               const retryText = await retryResponse.text();
               return retryText ? JSON.parse(retryText) : {} as T;
+            } else {
+              const retryErrorText = await retryResponse.text();
+              let retryErrorData;
+              try {
+                retryErrorData = JSON.parse(retryErrorText);
+              } catch {
+                retryErrorData = { message: retryErrorText || `HTTP ${retryResponse.status} Error` };
+              }
+              const retryError = new Error(retryErrorData.message || 'Server error occurred');
+              (retryError as any).status = retryResponse.status;
+              (retryError as any).data = retryErrorData;
+              (retryError as any).responseText = retryErrorText;
+              throw retryError;
             }
           }
         } catch (refreshErr) {

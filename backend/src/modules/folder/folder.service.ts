@@ -2093,3 +2093,123 @@ export const logFolderDownloadActivity = async (
     logger.error('❌ Failed to log folder download activity', { folderId, error: error.message });
   }
 };
+// ═══════════════════════════════════════════════════════════════════════════════
+// FolderService CLASS — OOP Wrapper
+// Membungkus semua fungsi standalone di atas menjadi instance methods.
+// Logika bisnis tetap tidak berubah; class ini mendelegasikan ke fungsi-fungsi
+// yang sudah ada di atas.
+// ═══════════════════════════════════════════════════════════════════════════════
+export class FolderService {
+  checkFolderWriteAccess(tx: any, folderId: string, userId: string) {
+    return checkFolderWriteAccess(tx, folderId, userId);
+  }
+
+  checkFolderReadAccess(tx: any, folderId: string, userId: string) {
+    return checkFolderReadAccess(tx, folderId, userId);
+  }
+
+  createFolder(name: string, userId: string, parentId: string | null = null) {
+    return createFolder(name, userId, parentId);
+  }
+
+  renameFolder(folderId: string, newName: string, userId: string) {
+    return renameFolder(folderId, newName, userId);
+  }
+
+  moveFolder(folderIds: string[], targetParentId: string | null, userId: string) {
+    return moveFolder(folderIds, targetParentId, userId);
+  }
+
+  downloadFolderArchive(folderId: string, userId: string) {
+    return downloadFolderArchive(folderId, userId);
+  }
+
+  searchPublicFolders(_userId: string, query: string, limit = 12) {
+    return searchPublicFolders(_userId, query, limit);
+  }
+
+  getPublicFolderContents(folderId: string, userId: string) {
+    return getPublicFolderContents(folderId, userId);
+  }
+
+  getFolderDetail(folderId: string, userId: string) {
+    return getFolderDetail(folderId, userId);
+  }
+
+  getFolderPath(folderId: string, userId?: string) {
+    return getFolderPath(folderId, userId);
+  }
+
+  getAllDescendantFolderIds(folderId: string, tx?: any) {
+    return getAllDescendantFolderIds(folderId, tx);
+  }
+
+  relocateOwnedContentFromSharedSubtree(
+    tx: any,
+    sharedFolderIds: string[],
+    userId: string,
+    targetFolderId?: string | null
+  ) {
+    return relocateOwnedContentFromSharedSubtree(tx, sharedFolderIds, userId, targetFolderId);
+  }
+
+  getArchivedFolders(userId: string) {
+    return getArchivedFolders(userId);
+  }
+
+  getArchivedFolderContents(userId: string, folderId: string | null = null) {
+    return getArchivedFolderContents(userId, folderId);
+  }
+
+  archiveFolders(folderIds: string[], userId: string) {
+    return archiveFolders(folderIds, userId);
+  }
+
+  restoreFolders(folderIds: string[], userId: string) {
+    return restoreFolders(folderIds, userId);
+  }
+
+  destroyFolders(folderIds: string[], userId: string) {
+    return destroyFolders(folderIds, userId);
+  }
+
+  getUserFolders(userId: string, parentId: string | null = null) {
+    return getUserFolders(userId, parentId);
+  }
+
+  shareFoldersFlexible(...args: Parameters<typeof shareFoldersFlexible>) {
+    return shareFoldersFlexible(...args);
+  }
+
+  getFoldersSharedUsers(folderIds: string[], ownerId: string) {
+    return getFoldersSharedUsers(folderIds, ownerId);
+  }
+
+  revokeFoldersAccess(...args: Parameters<typeof revokeFoldersAccess>) {
+    return revokeFoldersAccess(...args);
+  }
+
+  getSharedWithMeFolders(userId: string) {
+    return getSharedWithMeFolders(userId);
+  }
+
+  getFolderContents(folderId: string, userId?: string, shareToken?: string) {
+    return getFolderContents(folderId, userId, shareToken);
+  }
+
+  updateFoldersPrivacy(...args: Parameters<typeof updateFoldersPrivacy>) {
+    return updateFoldersPrivacy(...args);
+  }
+
+  getPublicFolderByToken(shareToken: string) {
+    return getPublicFolderByToken(shareToken);
+  }
+
+  logFolderDownloadActivity(...args: Parameters<typeof logFolderDownloadActivity>) {
+    return logFolderDownloadActivity(...args);
+  }
+}
+
+// Singleton instance
+export const folderService = new FolderService();
+export default folderService;

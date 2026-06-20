@@ -10,32 +10,42 @@ export type ListUsersOptions = {
   limit?: number;
 };
 
-const DEFAULT_STORAGE_LIMIT = 5n * 1024n * 1024n * 1024n; // 5GB in bytes
+export class AdminService {
+  private static readonly DEFAULT_STORAGE_LIMIT = 5n * 1024n * 1024n * 1024n; // 5GB in bytes
 
-// Helper: serialize a user record (convert BigInt storageLimit -> number, or null = unlimited)
-const serializeUser = (user: any) => ({
-  ...user,
-  storageLimit:
-    user.storageLimit !== undefined && user.storageLimit !== null
-      ? Number(user.storageLimit)
-      : null, // null = unlimited
-});
+  // ── Private Helpers ────────────────────────────────────────────────────────
 
-// Helper: bangun objek storage usage. quotaBytes null berarti unlimited.
-const buildStorageInfo = (usedBytes: number, storageLimit: bigint | number | null) => {
-  if (storageLimit === null || storageLimit === undefined) {
-    return { usedBytes, quotaBytes: null, usagePercent: 0, unlimited: true };
+  /**
+   * Serialize a user record: convert BigInt storageLimit → number, null = unlimited.
+   */
+  private serializeUser(user: any) {
+    return {
+      ...user,
+      storageLimit:
+        user.storageLimit !== undefined && user.storageLimit !== null
+          ? Number(user.storageLimit)
+          : null, // null = unlimited
+    };
   }
-  const limitBytes = Number(storageLimit);
-  return {
-    usedBytes,
-    quotaBytes: limitBytes,
-    usagePercent: limitBytes > 0 ? Math.min(100, (usedBytes / limitBytes) * 100) : 0,
-    unlimited: false,
-  };
-};
 
-export const adminService = {
+  /**
+   * Build storage usage info object. quotaBytes null means unlimited.
+   */
+  private buildStorageInfo(usedBytes: number, storageLimit: bigint | number | null) {
+    if (storageLimit === null || storageLimit === undefined) {
+      return { usedBytes, quotaBytes: null, usagePercent: 0, unlimited: true };
+    }
+    const limitBytes = Number(storageLimit);
+    return {
+      usedBytes,
+      quotaBytes: limitBytes,
+      usagePercent: limitBytes > 0 ? Math.min(100, (usedBytes / limitBytes) * 100) : 0,
+      unlimited: false,
+    };
+  }
+
+  // ── Public Methods ─────────────────────────────────────────────────────────
+
   /**
    * Daftar semua user dengan pencarian, filter role, dan pagination.
    * Menyertakan ringkasan penggunaan storage per user.
@@ -100,8 +110,8 @@ export const adminService = {
     const data = users.map((user) => {
       const usedBytes = usageMap.get(user.id) ?? 0;
       return {
-        ...serializeUser(user),
-        storage: buildStorageInfo(usedBytes, user.storageLimit),
+        ...this.serializeUser(user),
+        storage: this.buildStorageInfo(usedBytes, user.storageLimit),
       };
     });
 
@@ -114,7 +124,7 @@ export const adminService = {
         totalPages: Math.ceil(total / safeLimit),
       },
     };
-  },
+  }
 
   /**
    * Detail user beserta penggunaan storage.
@@ -148,10 +158,10 @@ export const adminService = {
     const usedBytes = usage._sum.fileSize ?? 0;
 
     return {
-      ...serializeUser(user),
-      storage: buildStorageInfo(usedBytes, user.storageLimit),
+      ...this.serializeUser(user),
+      storage: this.buildStorageInfo(usedBytes, user.storageLimit),
     };
-  },
+  }
 
   /**
    * Ubah role user lain. Admin tidak boleh menurunkan role dirinya sendiri.
@@ -174,7 +184,7 @@ export const adminService = {
     }
 
     // ADMIN = storage unlimited (null). Saat diturunkan ke USER, kembalikan ke default 5GB.
-    const nextStorageLimit = newRole === 'ADMIN' ? null : DEFAULT_STORAGE_LIMIT;
+    const nextStorageLimit = newRole === 'ADMIN' ? null : AdminService.DEFAULT_STORAGE_LIMIT;
 
     const updated = await prisma.user.update({
       where: { id: targetUserId },
@@ -208,8 +218,8 @@ export const adminService = {
       to: newRole,
     });
 
-    return serializeUser(updated);
-  },
+    return this.serializeUser(updated);
+  }
 
   /**
    * Atur batas penyimpanan (storage limit) user dalam bytes.
@@ -273,10 +283,10 @@ export const adminService = {
     });
 
     return {
-      ...serializeUser(updated),
-      storage: buildStorageInfo(usedBytes, updated.storageLimit),
+      ...this.serializeUser(updated),
+      storage: this.buildStorageInfo(usedBytes, updated.storageLimit),
     };
-  },
+  }
 
   /**
    * Catat aksi admin ke activity log (non-blocking, tidak melempar error).
@@ -306,5 +316,9 @@ export const adminService = {
         error: error.message,
       });
     }
-  },
-};
+  }
+}
+
+// Singleton instance (backward-compatible dengan controller yang pakai adminService.method())
+export const adminService = new AdminService();
+export default adminService;

@@ -2404,3 +2404,136 @@ export const bulkMoveItems = async (
     return { success: true, count: logs.length, appliedPrivacy: targetPrivacy, location: targetFolderName };
   });
 };
+// ═══════════════════════════════════════════════════════════════════════════════
+// DocumentService CLASS — OOP Wrapper
+// Membungkus semua fungsi standalone di atas menjadi instance/static methods.
+// Logika bisnis tetap tidak berubah; class ini mendelegasikan ke fungsi-fungsi
+// yang sudah ada di atas.
+// ═══════════════════════════════════════════════════════════════════════════════
+export class DocumentService {
+  // ── Static utility methods (tidak memerlukan state instance) ────────────────
+  static sanitizeDocument(doc: any, currentUserId?: string) {
+    return sanitizeDocument(doc, currentUserId);
+  }
+
+  static sanitizeDocuments(docs: any[], currentUserId?: string) {
+    return sanitizeDocuments(docs, currentUserId);
+  }
+
+  // ── Instance methods ────────────────────────────────────────────────────────
+  validateDocumentAccess(documentId: string, userId: string) {
+    return validateDocumentAccess(documentId, userId);
+  }
+
+  getDocumentStreamForDownload(documentId: string, userId: string) {
+    return getDocumentStreamForDownload(documentId, userId);
+  }
+
+  logDownloadActivity(...args: Parameters<typeof logDownloadActivity>) {
+    return logDownloadActivity(...args);
+  }
+
+  createDocumentsArchive(documents: ArchiveDocument[], emptyFolderPaths: string[] = []) {
+    return createDocumentsArchive(documents, emptyFolderPaths);
+  }
+
+  prepareFolderArchive(folderId: string, userId: string) {
+    return prepareFolderArchive(folderId, userId);
+  }
+
+  bulkDownloadDocuments(input: BulkDownloadInput, userId: string) {
+    return bulkDownloadDocuments(input, userId);
+  }
+
+  logBulkDownloadActivity(...args: Parameters<typeof logBulkDownloadActivity>) {
+    return logBulkDownloadActivity(...args);
+  }
+
+  uploadMultipleFiles(...args: Parameters<typeof uploadMultipleFiles>) {
+    return uploadMultipleFiles(...args);
+  }
+
+  getRootDocuments(userId: string) {
+    return getRootDocuments(userId);
+  }
+
+  moveMultipleDocuments(...args: Parameters<typeof moveMultipleDocuments>) {
+    return moveMultipleDocuments(...args);
+  }
+
+  searchPublicDocuments(userId: string, query: string, limit = 12) {
+    return searchPublicDocuments(userId, query, limit);
+  }
+
+  getUserDocuments(userId: string, folderId: string | null) {
+    return getUserDocuments(userId, folderId);
+  }
+
+  archiveDocuments(documentIds: string[], userId: string) {
+    return archiveDocuments(documentIds, userId);
+  }
+
+  getArchivedDocuments(userId: string) {
+    return getArchivedDocuments(userId);
+  }
+
+  restoreDocuments(documentIds: string[], userId: string) {
+    return restoreDocuments(documentIds, userId);
+  }
+
+  destroyMultipleDocuments(documentIds: string[], userId: string) {
+    return destroyMultipleDocuments(documentIds, userId);
+  }
+
+  updateDocumentMetadata(...args: Parameters<typeof updateDocumentMetadata>) {
+    return updateDocumentMetadata(...args);
+  }
+
+  updateDocumentsPrivacy(...args: Parameters<typeof updateDocumentsPrivacy>) {
+    return updateDocumentsPrivacy(...args);
+  }
+
+  shareDocumentsToUsers(...args: Parameters<typeof shareDocumentsToUsers>) {
+    return shareDocumentsToUsers(...args);
+  }
+
+  revokeDocumentsAccess(...args: Parameters<typeof revokeDocumentsAccess>) {
+    return revokeDocumentsAccess(...args);
+  }
+
+  getDocumentsSharedUsers(documentIds: string[], ownerId: string) {
+    return getDocumentsSharedUsers(documentIds, ownerId);
+  }
+
+  getAllDocumentsForAdmin() {
+    return getAllDocumentsForAdmin();
+  }
+
+  getSystemStatsForAdmin() {
+    return getSystemStatsForAdmin();
+  }
+
+  getMyStorageUsage(userId: string) {
+    return getMyStorageUsage(userId);
+  }
+
+  getSharedWithMeDocuments(userId: string) {
+    return getSharedWithMeDocuments(userId);
+  }
+
+  getActivityLogs(userId: string) {
+    return getActivityLogs(userId);
+  }
+
+  bulkShareItems(...args: Parameters<typeof bulkShareItems>) {
+    return bulkShareItems(...args);
+  }
+
+  bulkMoveItems(...args: Parameters<typeof bulkMoveItems>) {
+    return bulkMoveItems(...args);
+  }
+}
+
+// Singleton instance
+export const documentService = new DocumentService();
+export default documentService;
