@@ -57,13 +57,13 @@
   let isConfirmingBatch = $state(false);
   let confirmationProgress = $state(0);
   
-  // ✅ Validation config
+  // ✅ Validation config (termasuk iPhone media formats: MOV, HEIC, HEIF, dll.)
   const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
   const MAX_FILES = 10;                     // ✅ Max 10 files per upload
   const ALLOWED_TYPES = [
     'application/pdf',
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-    'video/mp4', 'video/webm',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence', 'image/tiff', 'image/bmp', 'image/svg+xml',
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-quicktime', 'video/x-m4v', 'video/3gpp',
     'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg',
     'text/plain', 'text/csv', 'application/json'
   ];
@@ -88,8 +88,8 @@
   function validateFile(file: File): string | null {
     if (file.size > MAX_FILE_SIZE) return `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`;
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    const isImageFile = file.type.startsWith('image/') && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-    const isVideoFile = file.type.startsWith('video/') && ['mp4', 'webm'].includes(ext);
+    const isImageFile = (file.type.startsWith('image/') || ['application/octet-stream', ''].includes(file.type)) && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'tiff', 'tif', 'bmp', 'svg'].includes(ext);
+    const isVideoFile = (file.type.startsWith('video/') || ['application/octet-stream', ''].includes(file.type)) && ['mp4', 'webm', 'mov', 'qt', 'm4v', '3gp'].includes(ext);
     const isAudioFile = (file.type.startsWith('audio/') || ['application/octet-stream', ''].includes(file.type)) && ['mp3', 'wav', 'ogg'].includes(ext);
 
     if (!ALLOWED_TYPES.includes(file.type) && !isImageFile && !isVideoFile && !isAudioFile) {
@@ -640,7 +640,7 @@ if (payload.length === 1) {
           <!-- Progress Bar untuk Batch Confirmation -->
           {#if isConfirmingBatch}
             <div class="w-full bg-gray-700/50 rounded-full h-1.5 mb-4 overflow-hidden">
-              <div class="bg-gradient-to-r from-purple-500 to-blue-500 h-1.5 rounded-full transition-all duration-300" 
+              <div class="bg-gradient-to-r from-blue-600 to-cyan-500 h-1.5 rounded-full transition-all duration-300" 
                    style="width: {confirmationProgress}%"></div>
             </div>
           {/if}
@@ -677,6 +677,7 @@ if (payload.length === 1) {
                aria-disabled={isUploading || isConfirmingBatch || files.length >= MAX_FILES}>
           <input type="file"
                  multiple
+                 accept="image/*,video/*,audio/*,application/pdf,text/plain,text/csv,application/json,.mov,.qt,.heic,.heif,.m4v"
                  disabled={isUploading || isConfirmingBatch || isCheckingBlockchain || files.length >= MAX_FILES}
                  class="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" 
                  onchange={(e) => handleFiles(e.currentTarget.files)} 

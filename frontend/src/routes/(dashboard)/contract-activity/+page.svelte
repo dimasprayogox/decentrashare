@@ -190,7 +190,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
         </div>
         <div>
@@ -217,7 +217,7 @@
     <!-- Table -->
     <div class="relative backdrop-blur-2xl bg-[#0a0a0f]/80 border border-white/10 rounded-2xl shadow-xl overflow-hidden">
       {#if isLoading}
-        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 animate-pulse"></div>
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 via-cyan-500 to-teal-400 animate-pulse"></div>
       {/if}
 
       <div class="overflow-x-auto">
@@ -290,7 +290,7 @@
                         onclick={() => openProfileModal(matchedUser)}
                         class="group/from flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-all duration-200 cursor-pointer text-left focus:outline-none"
                       >
-                        <div class="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 group-hover/from:border-blue-400/40 flex items-center justify-center shrink-0 transition-all duration-200">
+                        <div class="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-white/10 group-hover/from:border-blue-400/40 flex items-center justify-center shrink-0 transition-all duration-200">
                           {#if matchedUser.avatarUrl}
                             <img src={matchedUser.avatarUrl} alt="" class="w-full h-full object-cover" />
                           {:else}

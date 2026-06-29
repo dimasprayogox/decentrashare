@@ -207,4 +207,35 @@ describe('Feature: file upload filtering and size limits', () => {
       });
     });
   });
+
+  test('given an iPhone MOV video file, when the file filter runs, then the file is accepted', async () => {
+    const { uploadMiddleware } = await import('../../../src/middlewares/upload.middleware');
+    const fileFilter = (uploadMiddleware as any).fileFilter;
+
+    await new Promise<void>((resolve, reject) => {
+      fileFilter({}, { mimetype: 'video/quicktime', originalname: 'video.mov' }, (err: any, accepted: boolean) => {
+        try {
+          expect(err).toBeNull();
+          expect(accepted).toBe(true);
+          resolve();
+        } catch (e) { reject(e); }
+      });
+    });
+  });
+
+  test('given an iPhone HEIC image file, when the file filter runs, then the file is accepted', async () => {
+    const { uploadMiddleware } = await import('../../../src/middlewares/upload.middleware');
+    const fileFilter = (uploadMiddleware as any).fileFilter;
+
+    await new Promise<void>((resolve, reject) => {
+      fileFilter({}, { mimetype: 'image/heic', originalname: 'photo.heic' }, (err: any, accepted: boolean) => {
+        try {
+          expect(err).toBeNull();
+          expect(accepted).toBe(true);
+          resolve();
+        } catch (e) { reject(e); }
+      });
+    });
+  });
 });
+

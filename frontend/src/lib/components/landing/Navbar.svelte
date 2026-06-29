@@ -9,7 +9,8 @@
   const links = [
     { href: '#features', label: 'Features' },
     { href: '#how', label: 'How it Works' },
-    { href: '#stats', label: 'Network' }
+    { href: '#supported-creations', label: 'Supported Formats' },
+    { href: '#faq', label: 'FAQ' }
   ];
 
   onMount(() => {
@@ -21,36 +22,42 @@
 </script>
 
 <header
-  class="fixed inset-x-0 top-0 z-50 px-4 transition-all duration-500 {scrolled ? 'py-3' : 'py-5'}"
+  class="fixed inset-x-0 top-0 z-[100] px-4 transition-all duration-500 {scrolled ? 'py-3' : 'py-5'}"
 >
   <nav
     class="mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-5 py-3 transition-all duration-500 md:px-7 {scrolled
-      ? 'border border-white/10 bg-white/5 shadow-2xl shadow-black/40 backdrop-blur-xl'
-      : 'border border-transparent'}"
+      ? 'border border-white/10 bg-transparent backdrop-blur-md shadow-xl'
+      : 'border border-transparent bg-transparent'}"
   >
-    <!-- Brand -->
-    <a href="/" class="group flex items-center gap-2.5">
-      <div class="relative h-10 w-10 overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-105">
-        <img src={logo} alt="DecentraShare" class="h-full w-full object-contain p-1" />
-      </div>
-      <span class="text-xl font-bold tracking-tight text-white">
-        Decentra<span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Share</span>
-      </span>
-    </a>
+    <!-- Brand (Left) -->
+    <div class="flex flex-1 justify-start">
+      <a href="/" class="group flex items-center gap-2.5">
+        <div class="relative h-10 w-10 overflow-hidden rounded-xl bg-white/[0.03] ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-105">
+          <img src={logo} alt="DecentraShare" class="h-full w-full object-contain p-1" />
+        </div>
+        <span class="text-xl font-bold tracking-tight text-white">
+          Decentra<span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Share</span>
+        </span>
+      </a>
+    </div>
 
-    <!-- Desktop links -->
+    <!-- Desktop links (Center) -->
     <div class="hidden items-center gap-8 text-sm font-medium text-gray-400 md:flex">
       {#each links as link}
-        <a href={link.href} class="relative transition-colors hover:text-white">
+        <a href={link.href} class="relative transition-colors hover:text-white group/link">
           <span>{link.label}</span>
-          <span class="absolute -bottom-1.5 left-0 h-px w-0 bg-gradient-to-r from-blue-400 to-purple-400 transition-all duration-300 hover:w-full"></span>
+          <span class="absolute -bottom-1 left-1/2 h-0.5 w-0 bg-gradient-to-r from-blue-400 to-cyan-400 transition-all duration-300 group-hover/link:w-full group-hover/link:left-0"></span>
         </a>
       {/each}
+    </div>
+
+    <!-- Desktop CTA (Right) -->
+    <div class="hidden flex-1 justify-end items-center md:flex">
       <a
         href="/login"
-        class="group relative overflow-hidden rounded-full bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-2.5 font-semibold text-white shadow-lg shadow-purple-500/20 transition-all hover:shadow-purple-500/40"
+        class="group relative overflow-hidden rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-2.5 font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/45 hover:scale-[1.02] active:scale-[0.98]"
       >
-        <span class="relative z-10">Enter Dashboard</span>
+        <span class="relative z-10">Get Started</span>
         <span class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span>
       </a>
     </div>
@@ -87,9 +94,9 @@
         {/each}
         <a
           href="/login"
-          class="mt-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-3 text-center font-semibold text-white"
+          class="mt-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-3 text-center font-semibold text-white"
         >
-          Enter Dashboard
+          Get Started
         </a>
       </div>
     </div>

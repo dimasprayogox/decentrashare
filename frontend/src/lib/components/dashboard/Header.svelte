@@ -505,7 +505,7 @@
                 <div class="relative" data-profile-dropdown-container>
                     <button 
                         onclick={() => showProfileDropdown = !showProfileDropdown}
-                        class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 p-[2px] active:scale-95 transition-transform"
+                        class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 p-[2px] active:scale-95 transition-transform"
                     >
                         <div class="w-full h-full rounded-full bg-[#0a0a0c] flex items-center justify-center overflow-hidden">
                             {#if profile.avatarUrl}

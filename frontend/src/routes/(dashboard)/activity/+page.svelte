@@ -176,9 +176,9 @@
         return { bg: 'bg-red-500/10 border-red-500/20 text-red-400', label: action === 'PERMANENT_DELETE' ? 'Permanent Delete' : 'Bulk Delete', icon: 'text-red-400', iconBg: 'bg-red-500/10' };
       case 'CONFIRM_CHAIN':
       case 'BLOCKCHAIN_CONFIRM':
-        return { bg: 'bg-purple-500/10 border-purple-500/20 text-purple-400', label: 'Blockchain', icon: 'text-purple-400', iconBg: 'bg-purple-500/10' };
+        return { bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400', label: 'Blockchain', icon: 'text-blue-400', iconBg: 'bg-blue-500/10' };
       case 'BLOCKCHAIN_CONFIRM_BATCH':
-        return { bg: 'bg-purple-500/10 border-purple-500/20 text-purple-400', label: 'Blockchain Confirm', icon: 'text-purple-400', iconBg: 'bg-purple-500/10' };
+        return { bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400', label: 'Blockchain Confirm', icon: 'text-blue-400', iconBg: 'bg-blue-500/10' };
       case 'ADMIN_UPDATE_ROLE':
         return { bg: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400', label: 'Role Update', icon: 'text-indigo-400', iconBg: 'bg-indigo-500/10' };
       case 'ADMIN_UPDATE_STORAGE_LIMIT':
@@ -517,7 +517,7 @@
   <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 pb-2">
     <!-- Left: Title & Subtitle -->
     <div class="flex items-center gap-4">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -568,7 +568,7 @@
   <!-- Logs Table / List Layout -->
   <div class="backdrop-blur-2xl bg-[#0a0a0f]/80 border border-white/10 rounded-3xl shadow-2xl overflow-hidden relative">
     {#if isLoading}
-      <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 animate-pulse"></div>
+      <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 via-cyan-500 to-teal-400 animate-pulse"></div>
     {/if}
 
     <div class="overflow-x-auto">
@@ -667,8 +667,8 @@
                 <td class="px-6 py-4 text-center">
                   <div class="flex items-center justify-center">
                     {#if log.blockchainTx && !['RENAME', 'EDIT_METADATA', 'EDIT_DESCRIPTION', 'MOVE', 'BULK_SHARE', 'BULK_MOVE', 'SHARE', 'REVOKE', 'CHANGE_PRIVACY', 'DOWNLOAD', 'BULK_DOWNLOAD', 'ARCHIVE', 'PERMANENT_DELETE', 'RESTORE', 'BULK_ARCHIVE', 'BULK_RESTORE', 'BULK_PERMANENT_DELETE'].includes(log.action)}
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium shadow-[0_0_12px_rgba(168,85,247,0.1)]">
-                        <span class="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium shadow-[0_0_12px_rgba(59,130,246,0.1)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
                         Verified
                       </span>
                     {:else}
@@ -700,7 +700,7 @@
                            <span class="text-xs font-bold uppercase tracking-wider text-blue-400">{log.action.replace(/_/g, ' ')}</span>
                         </div>
                         {#if log.blockchainTx && log.action !== 'RENAME' && log.action !== 'EDIT_METADATA' && log.action !== 'EDIT_DESCRIPTION' && log.action !== 'MOVE' && log.action !== 'BULK_SHARE' && log.action !== 'BULK_MOVE'}
-                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 border border-purple-500/20 text-purple-300">Verified On-Chain</span>
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 border border-blue-500/20 text-blue-300">Verified On-Chain</span>
                          {/if}
                       </div>
 
@@ -895,7 +895,7 @@
                                     {#each shareRevokeInfo.users as user}
                                       <div class="flex items-center justify-between p-1.5 rounded-lg bg-white/5 border border-white/10">
                                         <div class="flex items-center gap-2 min-w-0">
-                                          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-[9px] font-bold text-white uppercase flex-shrink-0">
+                                          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-[9px] font-bold text-white uppercase flex-shrink-0">
                                             {user.username.charAt(0)}
                                           </div>
                                           <div class="min-w-0">
@@ -1007,13 +1007,13 @@
                                           {#each item.users as user}
                                             <div class="flex items-center justify-between p-1.5 rounded bg-white/5 border border-white/10 text-[10px]">
                                               <div class="flex items-center gap-1.5 min-w-0">
-                                                <div class="w-5 h-5 rounded-full bg-violet-600/30 flex items-center justify-center text-[9px] font-bold text-violet-200 uppercase shrink-0 font-mono">
+                                                <div class="w-5 h-5 rounded-full bg-blue-600/30 flex items-center justify-center text-[9px] font-bold text-blue-200 uppercase shrink-0 font-mono">
                                                   {user.username.charAt(0)}
                                                 </div>
                                                 <span class="text-white truncate font-medium">{user.username}</span>
                                               </div>
                                               {#if user.role}
-                                                <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-violet-500/10 text-violet-400 border border-violet-500/20 font-mono">
+                                                <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
                                                   {user.role}
                                                 </span>
                                               {/if}

@@ -189,13 +189,13 @@
          class="relative backdrop-blur-2xl bg-[#0a0a0f]/80 border border-white/10 rounded-2xl shadow-xl shadow-black/30 overflow-hidden">
       
       <!-- Top Accent -->
-      <div class="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500"></div>
+      <div class="h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-400"></div>
       
       <!-- Header: Title Left + Progress Right -->
       <div class="px-5 py-4 md:px-6 md:py-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <!-- Left: Title -->
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-500 flex items-center justify-center">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-400 flex items-center justify-center">
             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
@@ -215,7 +215,7 @@
           </div>
           <div class="flex-1 sm:w-132 h-1.5 bg-white/5 rounded-full overflow-hidden">
             <div 
-              class="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 rounded-full transition-all duration-500 ease-out" 
+              class="h-full bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-400 rounded-full transition-all duration-500 ease-out" 
               style="width: {(getCompletionCount() / 5) * 100}%"></div>
           </div>
         </div>
@@ -256,17 +256,17 @@
           {/if}
           
           <div class="relative">
-            <!-- Avatar Circle (Tetap ada sedikit scale up fotonya agar dinamis) -->
-            <div class="w-56 h-56 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-purple-500/20 border-4 border-white/10 flex items-center justify-center shadow-lg shadow-black-500/20 ring-4 transition-all">
+            <!-- Avatar Circle -->
+            <div class="w-56 h-56 rounded-full overflow-hidden bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-4 border-white/10 flex items-center justify-center shadow-lg shadow-black-500/20 ring-4 transition-all">
               {#if avatarPreview}
                 <img src={avatarPreview} alt="Avatar" class="w-full h-full object-cover transition-transform group-hover:scale-105" onerror={(e) => (e.currentTarget as HTMLImageElement).style.display = 'none'} />
               {:else}
-                <span class="text-4xl md:text-5xl font-bold bg-gradient-to-br from-blue-400 to-purple-400 bg-clip-text text-transparent">{getInitials()}</span>
+                <span class="text-4xl md:text-5xl font-bold bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent">{getInitials()}</span>
               {/if}
             </div>
             
-            <!-- 📱 Edit Badge - Hanya bagian ini yang merespon hover (membesar dan efek shadow naik) -->
-            <div class="absolute bottom-2 right-2 sm:right-6 w-11 h-11 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center border-3 border-[#0a0a0f] shadow-lg group-hover:scale-110 group-hover:shadow-purple-500/50 transition-all duration-300">
+            <!-- 📱 Edit Badge -->
+            <div class="absolute bottom-2 right-2 sm:right-6 w-11 h-11 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-full flex items-center justify-center border-3 border-[#0a0a0f] shadow-lg group-hover:scale-110 group-hover:shadow-cyan-500/50 transition-all duration-300">
               <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
               </svg>

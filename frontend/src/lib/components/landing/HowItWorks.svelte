@@ -31,11 +31,13 @@
 
 <section id="how" class="relative mx-auto max-w-6xl px-6 py-28">
   <div use:inView class="reveal mb-16 text-center">
-    <span class="text-sm font-bold uppercase tracking-widest text-purple-400">How it Works</span>
     <h2 class="mt-4 text-4xl font-extrabold tracking-tight text-white md:text-5xl">
-      From upload to on-chain
-      <span class="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">in seconds.</span>
+      Simple Steps to
+      <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Protect Your Creations</span>
     </h2>
+    <p class="mx-auto mt-5 max-w-2xl text-lg text-gray-400">
+      Store, verify, and share your digital creations securely in just a few simple steps.
+    </p>
   </div>
 
   <div class="relative">
@@ -46,22 +48,22 @@
       {#each steps as s, i}
         <div
           use:inView
-          class="reveal relative text-center"
+          class="reveal relative text-center group"
           style="--reveal-delay: {i * 130}ms"
         >
           <div class="relative mx-auto mb-6 flex h-18 w-18 items-center justify-center">
-            <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-md"></div>
-            <div class="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-[#0c0c10]">
-              <svg class="h-7 w-7 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 blur-md opacity-70 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-[#0c0c10] group-hover:border-blue-500/30 group-hover:scale-105 transition-all duration-300">
+              <svg class="h-7 w-7 text-blue-300 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d={s.icon} />
               </svg>
             </div>
-            <span class="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-xs font-bold text-white">
-              {i + 1}
+            <span class="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-xs font-bold text-white shadow-md ring-2 ring-black">
+              {s.step}
             </span>
           </div>
-          <h3 class="mb-2 text-lg font-bold text-white">{s.title}</h3>
-          <p class="text-sm leading-relaxed text-gray-500">{s.desc}</p>
+          <h3 class="mb-2 text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-300">{s.title}</h3>
+          <p class="text-sm leading-relaxed text-gray-500 group-hover:text-gray-400 transition-colors duration-300">{s.desc}</p>
         </div>
       {/each}
     </div>

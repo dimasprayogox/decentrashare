@@ -437,7 +437,7 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   const ext = fileName?.split('.').pop()?.toLowerCase() || '';
   
   // 🖼️ Images
-  if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'avif'].includes(ext)) {
+  if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif', 'bmp'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
@@ -485,7 +485,7 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   }
   
   // 🎬 Video
-  if (mime.startsWith('video/') || ['mp4', 'webm', 'mkv', 'avi', 'mov', 'flv'].includes(ext)) {
+  if (mime.startsWith('video/') || ['mp4', 'webm', 'mkv', 'avi', 'mov', 'flv', 'qt', 'm4v', '3gp'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`,
       color: 'text-purple-400',

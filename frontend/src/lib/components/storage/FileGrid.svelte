@@ -220,29 +220,36 @@ $effect(() => {
  // ─────────────────────────────────────────────────────────────
 // ✅ STATE UNTUK IMAGE PREVIEW (menggunakan storageService)
 // ─────────────────────────────────────────────────────────────
-function isImageMimeType(mimeType: string | null | undefined): boolean {
-  if (!mimeType) return false;
-  const supported = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
-  return supported.includes(mimeType.toLowerCase());
+function isImageMimeType(mimeType: string | null | undefined, fileName: string | null | undefined = ''): boolean {
+  const mime = mimeType?.toLowerCase() || '';
+  const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+  const supportedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'image/svg+xml'];
+  const supportedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif', 'tiff', 'tif', 'bmp', 'svg'];
+  return supportedMimes.includes(mime) || mime.startsWith('image/') || supportedExts.includes(ext);
 }
 
-function isVideoMimeType(mimeType: string | null | undefined): boolean {
-  return mimeType?.toLowerCase().startsWith('video/') ?? false;
+function isVideoMimeType(mimeType: string | null | undefined, fileName: string | null | undefined = ''): boolean {
+  const mime = mimeType?.toLowerCase() || '';
+  const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+  const supportedExts = ['mp4', 'webm', 'mov', 'qt', 'm4v', '3gp'];
+  return mime.startsWith('video/') || mime === 'video/quicktime' || supportedExts.includes(ext);
 }
 
-function isAudioMimeType(mimeType: string | null | undefined): boolean {
-  return mimeType?.toLowerCase().startsWith('audio/') ?? false;
+function isAudioMimeType(mimeType: string | null | undefined, fileName: string | null | undefined = ''): boolean {
+  const mime = mimeType?.toLowerCase() || '';
+  const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+  return mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(ext);
 }
 
 function isBlobPreviewMimeType(mimeType: string | null | undefined, fileName: string | null | undefined): boolean {
-  if (isImageMimeType(mimeType) || isVideoMimeType(mimeType)) return true;
+  if (isImageMimeType(mimeType, fileName) || isVideoMimeType(mimeType, fileName)) return true;
   const normalized = mimeType?.toLowerCase() || '';
   const extension = getFileExtension(fileName).toLowerCase();
   return normalized.includes('pdf') || normalized.startsWith('text/') || normalized.includes('json') || ['txt', 'csv', 'json', 'md', 'pdf'].includes(extension);
 }
 
 function isDocumentPreviewMimeType(mimeType: string | null | undefined, fileName: string | null | undefined): boolean {
-  return isBlobPreviewMimeType(mimeType, fileName) && !isImageMimeType(mimeType) && !isVideoMimeType(mimeType);
+  return isBlobPreviewMimeType(mimeType, fileName) && !isImageMimeType(mimeType, fileName) && !isVideoMimeType(mimeType, fileName);
 }
 
 function getFileExtension(fileName: string | null | undefined): string {
@@ -257,10 +264,10 @@ function getFilePreviewMeta(item: Document) {
   if (mimeType.includes('pdf')) {
     return { label: 'PDF', icon: 'pdf', gradient: 'from-red-500/25 via-rose-500/10 to-orange-500/20', text: 'text-red-200', badge: 'bg-red-500/20 text-red-200 border-red-400/30' };
   }
-  if (mimeType.startsWith('video/')) {
+  if (mimeType.startsWith('video/') || mimeType === 'video/quicktime' || ['MOV', 'QT', 'MP4', 'WEBM', 'M4V'].includes(extension)) {
     return { label: extension === 'FILE' ? 'VIDEO' : extension, icon: 'video', gradient: 'from-purple-500/25 via-fuchsia-500/10 to-pink-500/20', text: 'text-purple-200', badge: 'bg-purple-500/20 text-purple-200 border-purple-400/30' };
   }
-  if (mimeType.startsWith('audio/')) {
+  if (mimeType.startsWith('audio/') || ['MP3', 'WAV', 'OGG', 'M4A'].includes(extension)) {
     return { label: extension === 'FILE' ? 'AUDIO' : extension, icon: 'audio', gradient: 'from-emerald-500/25 via-teal-500/10 to-cyan-500/20', text: 'text-emerald-200', badge: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30' };
   }
   if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || ['XLS', 'XLSX', 'CSV'].includes(extension)) {
@@ -274,6 +281,9 @@ function getFilePreviewMeta(item: Document) {
   }
   if (mimeType.includes('zip') || mimeType.includes('compressed') || ['ZIP', 'RAR', '7Z', 'TAR', 'GZ'].includes(extension)) {
     return { label: extension === 'FILE' ? 'ZIP' : extension, icon: 'archive', gradient: 'from-yellow-500/25 via-stone-500/10 to-zinc-500/20', text: 'text-yellow-200', badge: 'bg-yellow-500/20 text-yellow-200 border-yellow-400/30' };
+  }
+  if (mimeType.startsWith('image/') || ['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF', 'HEIC', 'HEIF', 'AVIF'].includes(extension)) {
+    return { label: extension === 'FILE' ? 'IMG' : extension, icon: 'image', gradient: 'from-amber-500/25 via-orange-500/10 to-yellow-500/20', text: 'text-amber-200', badge: 'bg-amber-500/20 text-amber-200 border-amber-400/30' };
   }
 
   return { label: extension, icon: 'file', gradient: 'from-slate-500/25 via-gray-500/10 to-zinc-500/20', text: 'text-slate-200', badge: 'bg-slate-500/20 text-slate-200 border-slate-400/30' };

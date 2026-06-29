@@ -3,45 +3,45 @@
 
   const features = [
     {
-      title: 'Truly Decentralized',
-      desc: 'Your files live across the IPFS network, not a single vulnerable server. No outages, no single point of failure.',
+      title: 'Secure Digital Storage',
+      desc: 'Store your digital creations securely on IPFS while keeping ownership records on the Ethereum blockchain.',
       gradient: 'from-blue-500/20 to-cyan-500/20',
       ring: 'group-hover:border-blue-500/40',
       icon: 'globe'
     },
     {
-      title: 'Blockchain Security',
-      desc: 'Every access and transfer is permanently recorded on an Ethereum smart contract. Tamper-proof by design.',
-      gradient: 'from-purple-500/20 to-fuchsia-500/20',
-      ring: 'group-hover:border-purple-500/40',
+      title: 'Blockchain Ownership',
+      desc: 'Every uploaded digital work is linked to blockchain metadata, helping preserve ownership and authenticity.',
+      gradient: 'from-blue-600/20 to-indigo-500/20',
+      ring: 'group-hover:border-blue-500/40',
       icon: 'shield'
     },
     {
-      title: 'No Accounts Needed',
-      desc: 'Just connect your crypto wallet to start sharing. Your keys are your identity — nothing else to remember.',
+      title: 'Wallet Authentication',
+      desc: 'Sign in securely with your crypto wallet without creating traditional usernames or passwords.',
       gradient: 'from-pink-500/20 to-rose-500/20',
       ring: 'group-hover:border-pink-500/40',
       icon: 'wallet'
     },
     {
-      title: 'End-to-End Encrypted',
-      desc: 'Files are encrypted before they ever leave your device. Only the people you choose can ever read them.',
+      title: 'Flexible Privacy Control',
+      desc: 'Choose whether your digital creations are Private, Public, Link Only, or shared with specific users.',
       gradient: 'from-emerald-500/20 to-teal-500/20',
       ring: 'group-hover:border-emerald-500/40',
       icon: 'lock'
     },
     {
-      title: 'Granular Sharing',
-      desc: 'Share folders, set roles, expire links, and revoke access at any time — all enforced on-chain.',
+      title: 'Easy & Secure Sharing',
+      desc: 'Share digital creations safely while maintaining full control over who can access your files.',
       gradient: 'from-amber-500/20 to-orange-500/20',
       ring: 'group-hover:border-amber-500/40',
       icon: 'share'
     },
     {
-      title: 'Verifiable Integrity',
-      desc: 'Each document carries a cryptographic hash anchored to the blockchain, so you can prove it was never altered.',
-      gradient: 'from-indigo-500/20 to-violet-500/20',
-      ring: 'group-hover:border-indigo-500/40',
+      title: 'Verified File Integrity',
+      desc: 'Blockchain verification ensures your digital creations remain authentic and unchanged after upload.',
+      gradient: 'from-sky-500/20 to-blue-500/20',
+      ring: 'group-hover:border-sky-500/40',
       icon: 'check'
     }
   ];
@@ -58,13 +58,12 @@
 
 <section id="features" class="relative mx-auto max-w-6xl px-6 py-28">
   <div use:inView class="reveal mb-16 text-center">
-    <span class="text-sm font-bold uppercase tracking-widest text-blue-400">Why DecentraShare</span>
     <h2 class="mt-4 text-4xl font-extrabold tracking-tight text-white md:text-5xl">
-      Built for a world that
-      <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">trusts no one.</span>
+      Protecting
+      <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Digital Creations</span>
     </h2>
     <p class="mx-auto mt-5 max-w-2xl text-lg text-gray-400">
-      Every feature is engineered around a single principle: you stay in control of your data.
+      Securely store, manage, and share your digital creations using Ethereum blockchain and decentralized IPFS storage.
     </p>
   </div>
 
@@ -72,20 +71,20 @@
     {#each features as feature, i}
       <div
         use:inView
-        class="reveal group relative overflow-hidden rounded-3xl border border-white/5 bg-white/[0.02] p-8 transition-all duration-500 hover:-translate-y-1.5 {feature.ring}"
+        class="reveal group relative overflow-hidden rounded-3xl border border-white/5 bg-[#0c0c10]/40 p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-white/15 hover:bg-[#121217]/60 shadow-xl shadow-black/30 backdrop-blur-sm"
         style="--reveal-delay: {(i % 3) * 120}ms"
       >
         <!-- hover glow -->
         <div class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gradient-to-br {feature.gradient} opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"></div>
 
-        <div class="relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br {feature.gradient} ring-1 ring-white/10">
-          <svg class="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br {feature.gradient} ring-1 ring-white/10 group-hover:scale-105 group-hover:rotate-3 transition-all duration-500">
+          <svg class="h-7 w-7 text-white transition-colors duration-500 group-hover:text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d={paths[feature.icon]} />
           </svg>
         </div>
 
-        <h3 class="relative mb-3 text-xl font-bold text-white">{feature.title}</h3>
-        <p class="relative text-sm leading-relaxed text-gray-500 transition-colors group-hover:text-gray-400">
+        <h3 class="relative mb-3 text-xl font-bold text-white group-hover:text-blue-300 transition-colors duration-300">{feature.title}</h3>
+        <p class="relative text-sm leading-relaxed text-gray-500 transition-colors duration-300 group-hover:text-gray-300">
           {feature.desc}
         </p>
       </div>

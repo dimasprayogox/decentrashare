@@ -58,11 +58,11 @@
   }
 
   function getFileCategory(mimeType: string, fileName = ''): PreviewCategory {
-    const mime = mimeType.toLowerCase();
-    const extension = fileName.split('.').pop()?.toLowerCase() || '';
-    if (mime.startsWith('image/')) return 'image';
-    if (mime.startsWith('video/')) return 'video';
-    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg'].includes(extension)) return 'audio';
+    const mime = mimeType?.toLowerCase() || '';
+    const extension = fileName?.split('.').pop()?.toLowerCase() || '';
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif', 'tiff', 'tif', 'bmp', 'svg'].includes(extension)) return 'image';
+    if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'qt', 'm4v', '3gp'].includes(extension)) return 'video';
+    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(extension)) return 'audio';
     if (mime === 'application/pdf' || extension === 'pdf') return 'pdf';
     if (['docx'].includes(extension) || mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
     if (['xlsx', 'xls', 'csv'].includes(extension) || ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'].includes(mime)) return 'spreadsheet';
@@ -311,7 +311,12 @@
           </div>
         {:else if category === 'video' && previewBlobUrl}
           <div class="flex justify-center">
-            <video controls class="max-w-full max-h-[65vh] rounded-xl bg-black"><source src={previewBlobUrl} type={file.mimeType} />Your browser does not support video preview.</video>
+            <video controls class="max-w-full max-h-[65vh] rounded-xl bg-black">
+              <source src={previewBlobUrl} type={file.mimeType || 'video/mp4'} />
+              <source src={previewBlobUrl} type="video/quicktime" />
+              <source src={previewBlobUrl} type="video/mp4" />
+              Your browser does not support video preview.
+            </video>
           </div>
         {:else if category === 'audio' && previewBlobUrl}
           <div class="flex flex-col items-center py-12">

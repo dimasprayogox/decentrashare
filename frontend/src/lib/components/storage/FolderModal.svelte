@@ -10,13 +10,13 @@
     onClose, 
     onCreated, 
     parentId = null,
-    existingFolders = []  // ✅ Untuk client-side duplicate check
+    existingFolders = []  // ✅ For client-side duplicate check
   }: {
     isOpen: boolean;
     onClose: () => void;
     onCreated?: () => void;
     parentId?: string | null;
-    existingFolders?: Folder[];  // ✅ Daftar folder yang sudah ada di lokasi ini
+    existingFolders?: Folder[];  // ✅ List of folders already existing in this location
   } = $props();
 
   // ── State ──
@@ -117,7 +117,7 @@
       <!-- Header -->
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h3 class="text-xl font-bold text-white">Buat Folder Baru</h3>
+          <h3 class="text-xl font-bold text-white">Create New Folder</h3>
           <p class="text-[10px] text-gray-500 mt-1 uppercase tracking-tighter">
           </p>
         </div>
@@ -129,14 +129,14 @@
       <!-- Form -->
       <form onsubmit={handleSubmit} class="space-y-6">
         <div>
-          <label for="folderName" class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Nama Folder</label>
+          <label for="folderName" class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Folder Name</label>
           <input 
             bind:this={inputElement}
             type="text" 
             id="folderName"
             bind:value={folderName}
             oninput={handleInput} 
-            placeholder="Contoh: Project Skripsi"
+            placeholder="e.g. Thesis Project"
             class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all disabled:opacity-50 {errorMsg ? 'border-red-500/50 focus:border-red-500/50 focus:ring-red-500/50' : ''}"
             disabled={isSubmitting}
           />
@@ -156,7 +156,7 @@
             disabled={isSubmitting}
             class="flex-1 h-14 bg-white/5 text-white rounded-2xl font-bold hover:bg-white/10 transition-all disabled:opacity-30"
           >
-            Batal
+            Cancel
           </button>
           <button 
             type="submit"
@@ -166,7 +166,7 @@
             {#if isSubmitting}
               <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
             {:else}
-              Buat Folder
+              Create Folder
             {/if}
           </button>
         </div>

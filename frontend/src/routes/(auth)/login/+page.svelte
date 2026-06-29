@@ -194,7 +194,7 @@
   
   <!-- Animated Background Orbs -->
   <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
-  <div class="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] animate-pulse" style="animation-delay: 1s"></div>
+  <div class="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-cyan-600/10 rounded-full blur-[100px] animate-pulse" style="animation-delay: 1s"></div>
   <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[120px]"></div>
 
   <!-- Main Card -->
@@ -203,7 +203,7 @@
     class="w-full max-w-md relative"
   >
     <!-- Glow effect behind card -->
-    <div class="absolute -inset-1 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 rounded-3xl blur-xl opacity-50"></div>
+    <div class="absolute -inset-1 bg-gradient-to-r from-blue-600/20 via-cyan-500/20 to-blue-600/20 rounded-3xl blur-xl opacity-50"></div>
     
     <div 
       class="relative backdrop-blur-2xl bg-[#0a0a0c]/80 border border-white/10 p-8 rounded-3xl shadow-2xl shadow-black/50"
@@ -219,7 +219,7 @@
         </div>
 
         <h1 class="text-3xl font-bold text-white tracking-tight">
-          Decentra<span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Share</span>
+          Decentra<span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Share</span>
         </h1>
         <p class="text-gray-400 mt-2 text-sm">Secure Web3 File Sharing</p>
       </div>
@@ -246,7 +246,7 @@
         {#if !isLoading}
           <button 
             onclick={connectWallet}
-            class="group w-full relative overflow-hidden flex items-center justify-center gap-3 h-14 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl font-semibold text-base transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/30 active:scale-[0.99]"
+            class="group w-full relative overflow-hidden flex items-center justify-center gap-3 h-14 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl font-semibold text-base transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/30 active:scale-[0.99]"
           >
             <!-- Shine effect on hover -->
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
@@ -262,7 +262,7 @@
             <div class="relative">
               <!-- Animated spinner ring -->
               <div class="w-14 h-14 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin"></div>
-              <div class="absolute inset-0 w-14 h-14 rounded-full border-4 border-transparent border-b-purple-500/60 animate-spin" style="animation-duration: 1.5s; animation-direction: reverse"></div>
+              <div class="absolute inset-0 w-14 h-14 rounded-full border-4 border-transparent border-b-cyan-500/60 animate-spin" style="animation-duration: 1.5s; animation-direction: reverse"></div>
               <!-- Center dot -->
               <div class="absolute inset-0 flex items-center justify-center">
                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
@@ -272,8 +272,8 @@
             <!-- Dots animation -->
             <div class="mt-4 flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce"></span>
-              <span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style="animation-delay: 100ms"></span>
-              <span class="w-1.5 h-1.5 rounded-full bg-pink-500 animate-bounce" style="animation-delay: 200ms"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style="animation-delay: 100ms"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style="animation-delay: 200ms"></span>
             </div>
           </div>
         {/if}
