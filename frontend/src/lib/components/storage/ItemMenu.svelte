@@ -256,7 +256,7 @@ function updateMenuPosition() {
   bind:this={buttonElement}
   type="button"
   onclick={toggleMenu}
-  class="p-2 m-2 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 relative z-30 touch-manipulation"
+  class="p-2 m-2 text-slate-400 dark:text-gray-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 relative z-30 touch-manipulation"
   aria-label="More options for {itemName}"
   aria-expanded={isOpen}
   aria-haspopup="true"
@@ -283,7 +283,7 @@ function updateMenuPosition() {
       duration: 150, 
       easing: cubicOut 
     }}
-    class="bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl shadow-black/50 py-1 z-[99999] w-48 max-w-[90vw]"
+    class="bg-white dark:bg-[#1a1a1e] border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl shadow-slate-250/50 dark:shadow-black/50 py-1 z-[99999] w-48 max-w-[90vw]"
     role="menu"
     onclick={(e) => e.stopPropagation()}
     ontouchstart={(e) => e.stopPropagation()}
@@ -310,7 +310,7 @@ function updateMenuPosition() {
       {#if itemType === 'document' && onDownload}
         <button
           onclick={handleDownload}
-          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/10 active:bg-slate-200 dark:active:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-colors min-h-[44px]"
           role="menuitem"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,7 +323,7 @@ function updateMenuPosition() {
       {#if isOwner}
         <button
           onclick={handleRestore}
-          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-green-400 hover:bg-green-500/10 active:bg-green-500/20 hover:text-green-300 transition-colors min-h-[44px]"
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-green-600 dark:text-green-400 hover:bg-green-500/10 active:bg-green-500/20 hover:text-green-700 dark:hover:text-green-300 transition-colors min-h-[44px]"
           role="menuitem"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,11 +332,11 @@ function updateMenuPosition() {
           <span class="truncate">Restore</span>
         </button>
 
-        <div class="my-1 h-px bg-white/10"></div>
+        <div class="my-1 h-px bg-slate-200 dark:bg-white/10"></div>
 
         <button
           onclick={handleDelete}
-          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-300 transition-colors min-h-[44px]"
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-700 dark:hover:text-red-300 transition-colors min-h-[44px]"
           role="menuitem"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -352,7 +352,7 @@ function updateMenuPosition() {
         {#if itemType === 'folder' && onRename}
           <button
             onclick={handleRename}
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/10 active:bg-slate-200 dark:active:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-colors min-h-[44px]"
             role="menuitem"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,7 +363,7 @@ function updateMenuPosition() {
         {:else if itemType === 'document' && onEdit}
           <button
             onclick={handleEdit}
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/10 active:bg-slate-200 dark:active:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-colors min-h-[44px]"
             role="menuitem"
           >
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,7 +378,7 @@ function updateMenuPosition() {
       {#if isOwner && onMove}
         <button
           onclick={handleMove}
-          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/10 active:bg-slate-200 dark:active:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-colors min-h-[44px]"
           role="menuitem"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -392,7 +392,7 @@ function updateMenuPosition() {
       {#if isOwner && onShare}
         <button
           onclick={handleShare}
-          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]"
+          class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/10 active:bg-slate-200 dark:active:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-colors min-h-[44px]"
           role="menuitem"
         >
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -407,7 +407,7 @@ function updateMenuPosition() {
     {#if onDownload}
       <button 
         onclick={handleDownload} 
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 active:bg-white/20 hover:text-white transition-colors min-h-[44px]" 
+        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/10 active:bg-slate-200 dark:active:bg-white/20 hover:text-slate-900 dark:hover:text-white transition-colors min-h-[44px]" 
         role="menuitem"
       >
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -419,12 +419,12 @@ function updateMenuPosition() {
 
     {#if isOwner && !sharedMode && onDelete}
       <!-- Divider -->
-      <div class="my-1 h-px bg-white/10"></div>
+      <div class="my-1 h-px bg-slate-250 dark:bg-white/10"></div>
 
       <!-- Delete (Danger) -->
       <button
         onclick={handleDelete}
-        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-300 transition-colors min-h-[44px]"
+        class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 active:bg-red-500/20 hover:text-red-700 dark:hover:text-red-300 transition-colors min-h-[44px]"
         role="menuitem"
       >
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

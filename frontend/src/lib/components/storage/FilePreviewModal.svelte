@@ -60,8 +60,8 @@
   function getFileCategory(mimeType: string, fileName = ''): PreviewCategory {
     const mime = mimeType?.toLowerCase() || '';
     const extension = fileName?.split('.').pop()?.toLowerCase() || '';
+    if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'qt', 'm4v', '3gp'].includes(extension) || mime.includes('webm')) return 'video';
     if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif', 'tiff', 'tif', 'bmp', 'svg'].includes(extension)) return 'image';
-    if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'qt', 'm4v', '3gp'].includes(extension)) return 'video';
     if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(extension)) return 'audio';
     if (mime === 'application/pdf' || extension === 'pdf') return 'pdf';
     if (['docx'].includes(extension) || mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
@@ -120,8 +120,28 @@
         ? await storageService.fetchDocumentPreviewBlob(nextFile.id, 'image/*')
         : await storageService.fetchDocumentPreviewBlob(nextFile.id, nextFile.mimeType || '*/*');
 
+      let finalBlob = blob;
+      if (category === 'image') {
+        const ext = nextFile.fileName.split('.').pop()?.toLowerCase() || '';
+        const isHeic = ext === 'heic' || ext === 'heif' || nextFile.mimeType?.includes('heic') || nextFile.mimeType?.includes('heif');
+        if (isHeic) {
+          try {
+            const heic2anyModule = await import('heic2any');
+            const heic2any = heic2anyModule.default || heic2anyModule;
+            const converted = await heic2any({
+              blob,
+              toType: 'image/jpeg',
+              quality: 0.85
+            });
+            finalBlob = Array.isArray(converted) ? converted[0] : converted;
+          } catch (heicErr) {
+            console.warn('Failed to convert HEIC preview, falling back to raw blob:', heicErr);
+          }
+        }
+      }
+
       if (file?.id !== nextFile.id) return;
-      previewBlobUrl = URL.createObjectURL(blob);
+      previewBlobUrl = URL.createObjectURL(finalBlob);
 
       if (category === 'text') {
         if (blob.size > 1_000_000) throw new Error('File is too large to preview inline');
@@ -231,7 +251,7 @@
     tabindex="-1"
   >
     <div
-      class="relative bg-gradient-to-br from-[#1a1a1e] to-[#121214] rounded-3xl border border-white/10 shadow-2xl shadow-black/50 w-full max-w-6xl max-h-[90vh] mx-4 flex flex-col"
+      class="file-preview-modal relative bg-gradient-to-br from-[#1a1a1e] to-[#121214] rounded-3xl border border-white/10 shadow-2xl shadow-black/50 w-full max-w-6xl max-h-[90vh] mx-4 flex flex-col"
       in:scale={{ duration: 250 }}
       onclick={(event) => event.stopPropagation()}
     >

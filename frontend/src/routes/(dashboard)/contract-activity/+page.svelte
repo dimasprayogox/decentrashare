@@ -185,7 +185,7 @@
     </div>
   </div>
 {:else}
-  <div class="w-full max-w-[1400px] mx-auto space-y-6" in:fly={{ y: 20, duration: 400 }}>
+  <div class="contract-activity-page w-full max-w-[1400px] mx-auto space-y-6" in:fly={{ y: 20, duration: 400 }}>
     
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

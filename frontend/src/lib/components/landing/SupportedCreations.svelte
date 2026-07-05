@@ -19,7 +19,7 @@
     {
       id: 1,
       title: "Images & Artworks",
-      date: "PNG, JPG, WEBP, GIF, HEIC",
+      date: "PNG, JPG, GIF, HEIC",
       content: "High-resolution graphics, digital art, iPhone HEIC photos, and NFT assets anchored immutably to IPFS.",
       category: "Graphics",
       icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z',
@@ -52,7 +52,7 @@
     {
       id: 4,
       title: "Documents & Data",
-      date: "PDF, TXT, CSV, JSON",
+      date: "PDF, CSV",
       content: "Encrypted whitepapers, structured datasets, and contracts signed and verified on Ethereum.",
       category: "Document",
       icon: 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z',
@@ -140,7 +140,7 @@
       case 'completed':
         return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
       case 'in-progress':
-        return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
+        return 'text-blue-400 bg-blue-500/10 border-blue-500/30 dark:text-cyan-400 dark:bg-cyan-500/10 dark:border-cyan-500/30';
       case 'pending':
         return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
       default:
@@ -151,15 +151,14 @@
 
 <section id="supported-creations" class="relative mx-auto max-w-6xl px-6 py-28 isolate">
   <!-- Soft background ambient glows -->
-  <div class="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[600px] w-full max-w-4xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-600/10 via-cyan-500/10 to-transparent blur-[140px]"></div>
+  <div class="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[600px] w-full max-w-4xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-600/10 via-blue-500/5 dark:via-cyan-500/10 to-transparent blur-[140px]"></div>
 
   <!-- Header -->
   <div use:inView class="reveal text-center mb-12">
-
-    <h2 class="mt-2 text-4xl font-extrabold tracking-tight text-white md:text-5xl lg:text-6xl">
-      Supported <span class="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Digital Creations</span>
+    <h2 class="mt-2 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white md:text-5xl lg:text-6xl">
+      Supported <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 dark:from-blue-400 dark:via-cyan-300 dark:to-indigo-400 bg-clip-text text-transparent">Digital Creations</span>
     </h2>
-    <p class="mx-auto mt-4 max-w-2xl text-base text-gray-400 md:text-lg leading-relaxed">
+    <p class="mx-auto mt-4 max-w-2xl text-base text-slate-600 dark:text-gray-400 md:text-lg leading-relaxed">
       Seamlessly store, encrypt, and verify your creations on IPFS & Ethereum. Click any node to view supported formats.
     </p>
   </div>
@@ -174,21 +173,21 @@
   >
     <div class="orbital-track relative w-full h-full flex items-center justify-center">
       <!-- Circular Glowing Background with Transparent Gradient Edges -->
-      <div class="pointer-events-none absolute w-[520px] h-[520px] rounded-full bg-[radial-gradient(circle,rgba(6,182,212,0.18)_0%,rgba(59,130,246,0.08)_40%,rgba(10,10,12,0)_75%)] animate-pulse" style="animation-duration: 4s;"></div>
-      <div class="pointer-events-none absolute w-[440px] h-[440px] rounded-full border border-cyan-500/20 bg-[radial-gradient(circle,rgba(14,165,233,0.06)_0%,transparent_70%)]"></div>
+      <div class="pointer-events-none absolute w-[520px] h-[520px] rounded-full bg-[radial-gradient(circle,rgba(37,99,235,0.18)_0%,rgba(37,99,235,0.08)_40%,rgba(10,10,12,0)_75%)] dark:bg-[radial-gradient(circle,rgba(6,182,212,0.18)_0%,rgba(59,130,246,0.08)_40%,rgba(10,10,12,0)_75%)] animate-pulse" style="animation-duration: 4s;"></div>
+      <div class="pointer-events-none absolute w-[440px] h-[440px] rounded-full border border-blue-500/20 dark:border-cyan-500/20 bg-[radial-gradient(circle,rgba(37,99,235,0.06)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(14,165,233,0.06)_0%,transparent_70%)]"></div>
       <div class="pointer-events-none absolute w-[580px] h-[580px] rounded-full border border-blue-500/10 bg-[radial-gradient(circle,rgba(99,102,241,0.04)_0%,transparent_80%)]"></div>
 
       <!-- Central Glowing Core Orb -->
-      <div class="absolute w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-500 animate-pulse flex items-center justify-center z-10 shadow-xl shadow-cyan-500/50">
-        <div class="absolute w-28 h-28 rounded-full border border-cyan-400/40 animate-ping opacity-70 pointer-events-none"></div>
+      <div class="absolute w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 via-indigo-500 to-blue-600 dark:via-cyan-500 dark:to-teal-500 animate-pulse flex items-center justify-center z-10 shadow-xl shadow-blue-500/50 dark:shadow-cyan-500/50">
+        <div class="absolute w-28 h-28 rounded-full border border-blue-400/40 dark:border-cyan-400/40 animate-ping opacity-70 pointer-events-none"></div>
         <div class="absolute w-32 h-32 rounded-full border border-blue-400/30 animate-ping opacity-50 pointer-events-none" style="animation-delay: 0.5s"></div>
-        <div class="w-16 h-16 rounded-full bg-[#080d1a]/95 backdrop-blur-md border-2 border-cyan-400/50 flex items-center justify-center p-2 overflow-hidden shadow-2xl shadow-cyan-500/30">
+        <div class="w-16 h-16 rounded-full bg-white/95 dark:bg-[#080d1a]/95 backdrop-blur-md border-2 border-blue-400/50 dark:border-cyan-400/50 flex items-center justify-center p-2 overflow-hidden shadow-2xl shadow-blue-500/30 dark:shadow-cyan-500/30">
           <img src={logo} alt="DecentraShare" class="w-full h-full object-contain drop-shadow" />
         </div>
       </div>
 
       <!-- Orbital Track Ring -->
-      <div class="orbital-track absolute w-[400px] h-[400px] rounded-full border border-cyan-400/25 bg-gradient-to-br from-cyan-500/5 via-blue-500/5 to-transparent shadow-[0_0_60px_rgba(6,182,212,0.12)] pointer-events-none"></div>
+      <div class="orbital-track absolute w-[400px] h-[400px] rounded-full border border-slate-200 dark:border-cyan-400/25 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-transparent dark:from-cyan-500/5 dark:via-blue-500/5 shadow-[0_0_60px_rgba(37,99,235,0.12)] dark:shadow-[0_0_60px_rgba(6,182,212,0.12)] pointer-events-none"></div>
 
       <!-- Orbiting Nodes -->
       {#each timelineData as item, index}
@@ -216,12 +215,12 @@
           <!-- Energy aura / pulse background -->
           <div
             class="absolute rounded-full -inset-1 {isPulsing ? 'animate-pulse duration-1000' : ''}"
-            style="background: radial-gradient(circle, rgba(34,211,238,0.25) 0%, rgba(34,211,238,0) 70%); width: {item.energy * 0.5 + 40}px; height: {item.energy * 0.5 + 40}px; left: {-((item.energy * 0.5 + 40) - 40) / 2}px; top: {-((item.energy * 0.5 + 40) - 40) / 2}px;"
+            style="background: radial-gradient(circle, var(--orb-aura-color-1) 0%, var(--orb-aura-color-2) 70%); width: {item.energy * 0.5 + 40}px; height: {item.energy * 0.5 + 40}px; left: {-((item.energy * 0.5 + 40) - 40) / 2}px; top: {-((item.energy * 0.5 + 40) - 40) / 2}px;"
           ></div>
 
           <!-- Icon Circle Button -->
           <div
-            class="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 transform border-2 {isExpanded ? 'bg-cyan-400 text-black border-white scale-150 shadow-xl shadow-cyan-400/50' : isRelated ? 'bg-cyan-500/40 text-white border-cyan-300 animate-pulse' : 'bg-[#0e131f] text-cyan-300 border-white/30 hover:border-cyan-400 hover:scale-110'}"
+            class="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 transform border-2 {isExpanded ? 'bg-blue-600 dark:bg-cyan-400 text-white dark:text-black border-white scale-150 shadow-xl shadow-blue-600/50 dark:shadow-cyan-400/50' : isRelated ? 'bg-blue-500/40 dark:bg-cyan-500/40 text-white border-blue-300 dark:border-cyan-300 animate-pulse' : 'bg-white dark:bg-[#0e131f] text-blue-600 dark:text-cyan-300 border-slate-200 dark:border-white/30 hover:border-blue-600 dark:hover:border-cyan-400 hover:scale-110'}"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d={item.icon} />
@@ -230,7 +229,7 @@
 
           <!-- Node Title Label -->
           <div
-            class="absolute top-13 whitespace-nowrap text-xs font-bold tracking-wider transition-all duration-300 pointer-events-none {isExpanded ? 'text-cyan-300 scale-125 font-extrabold' : 'text-gray-300'}"
+            class="absolute top-13 whitespace-nowrap text-xs font-bold tracking-wider transition-all duration-300 pointer-events-none {isExpanded ? 'text-blue-600 dark:text-cyan-300 scale-125 font-extrabold' : 'text-slate-600 dark:text-gray-300'}"
           >
             {item.title}
           </div>
@@ -238,25 +237,25 @@
           <!-- Popup Interactive Card when expanded -->
           {#if isExpanded}
             <div
-              class="absolute top-20 left-1/2 -translate-x-1/2 w-64 bg-[#080d19]/95 backdrop-blur-2xl border border-cyan-400/40 shadow-2xl shadow-cyan-500/25 rounded-2xl p-4 text-center z-50 animate-fadeIn"
+              class="absolute top-20 left-1/2 -translate-x-1/2 w-64 bg-white/95 dark:bg-[#080d19]/95 backdrop-blur-2xl border border-blue-500/40 dark:border-cyan-400/40 shadow-2xl shadow-slate-200/50 dark:shadow-cyan-500/25 rounded-2xl p-4 text-center z-50 animate-fadeIn"
               onclick={(e) => e.stopPropagation()}
               role="dialog"
               aria-label={item.title}
             >
-              <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-cyan-400"></div>
+              <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-blue-600 dark:bg-cyan-400"></div>
 
-              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-[10px] font-bold uppercase tracking-wider mb-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-500/30 dark:border-cyan-500/30 bg-blue-500/10 dark:bg-cyan-500/10 text-blue-600 dark:text-cyan-300 text-[10px] font-bold uppercase tracking-wider mb-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-cyan-400 animate-pulse"></span>
                 Supported Data Formats
               </div>
 
-              <h3 class="text-sm font-bold text-white mb-3">{item.title}</h3>
+              <h3 class="text-sm font-bold text-slate-800 dark:text-white mb-3">{item.title}</h3>
 
               <!-- Supported Format Badges Cloud -->
               <div class="flex flex-wrap items-center justify-center gap-1.5">
                 {#each item.date.split(', ') as fmt}
-                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] text-cyan-200 font-mono text-xs font-bold tracking-wide shadow-sm hover:border-cyan-400/50 hover:bg-cyan-500/10 transition-colors">
-                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-550/40 dark:bg-white/[0.04] text-blue-600 dark:text-cyan-200 font-mono text-xs font-bold tracking-wide shadow-sm hover:border-blue-600/50 dark:hover:border-cyan-400/50 hover:bg-blue-600/10 dark:hover:bg-cyan-500/10 transition-colors">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-cyan-400"></span>
                     {fmt}
                   </span>
                 {/each}
@@ -270,6 +269,14 @@
 </section>
 
 <style>
+  :root {
+    --orb-aura-color-1: rgba(37,99,235,0.25);
+    --orb-aura-color-2: rgba(37,99,235,0);
+  }
+  :global(.dark) {
+    --orb-aura-color-1: rgba(34,211,238,0.25);
+    --orb-aura-color-2: rgba(34,211,238,0);
+  }
   @keyframes fadeIn {
     from {
       opacity: 0;

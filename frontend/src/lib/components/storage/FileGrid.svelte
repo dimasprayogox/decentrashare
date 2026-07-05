@@ -223,6 +223,7 @@ $effect(() => {
 function isImageMimeType(mimeType: string | null | undefined, fileName: string | null | undefined = ''): boolean {
   const mime = mimeType?.toLowerCase() || '';
   const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'webm' || mime.includes('webm')) return false;
   const supportedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'image/svg+xml'];
   const supportedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif', 'tiff', 'tif', 'bmp', 'svg'];
   return supportedMimes.includes(mime) || mime.startsWith('image/') || supportedExts.includes(ext);
@@ -262,31 +263,31 @@ function getFilePreviewMeta(item: Document) {
   const extension = getFileExtension(item.fileName || item.title);
 
   if (mimeType.includes('pdf')) {
-    return { label: 'PDF', icon: 'pdf', gradient: 'from-red-500/25 via-rose-500/10 to-orange-500/20', text: 'text-red-200', badge: 'bg-red-500/20 text-red-200 border-red-400/30' };
+    return { label: 'PDF', icon: 'pdf', gradient: 'from-red-500/10 via-red-500/5 to-rose-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-red-600 dark:text-red-400', badge: 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-400/30' };
   }
   if (mimeType.startsWith('video/') || mimeType === 'video/quicktime' || ['MOV', 'QT', 'MP4', 'WEBM', 'M4V'].includes(extension)) {
-    return { label: extension === 'FILE' ? 'VIDEO' : extension, icon: 'video', gradient: 'from-purple-500/25 via-fuchsia-500/10 to-pink-500/20', text: 'text-purple-200', badge: 'bg-purple-500/20 text-purple-200 border-purple-400/30' };
+    return { label: extension === 'FILE' ? 'VIDEO' : extension, icon: 'video', gradient: 'from-purple-500/10 via-purple-500/5 to-pink-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-purple-600 dark:text-purple-400', badge: 'bg-purple-50 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-400/30' };
   }
   if (mimeType.startsWith('audio/') || ['MP3', 'WAV', 'OGG', 'M4A'].includes(extension)) {
-    return { label: extension === 'FILE' ? 'AUDIO' : extension, icon: 'audio', gradient: 'from-emerald-500/25 via-teal-500/10 to-cyan-500/20', text: 'text-emerald-200', badge: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30' };
+    return { label: extension === 'FILE' ? 'AUDIO' : extension, icon: 'audio', gradient: 'from-emerald-500/10 via-emerald-500/5 to-teal-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-emerald-600 dark:text-emerald-400', badge: 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-400/30' };
   }
   if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || ['XLS', 'XLSX', 'CSV'].includes(extension)) {
-    return { label: extension === 'FILE' ? 'SHEET' : extension, icon: 'sheet', gradient: 'from-green-500/25 via-lime-500/10 to-emerald-500/20', text: 'text-green-200', badge: 'bg-green-500/20 text-green-200 border-green-400/30' };
+    return { label: extension === 'FILE' ? 'SHEET' : extension, icon: 'sheet', gradient: 'from-green-500/10 via-green-500/5 to-emerald-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-green-600 dark:text-green-400', badge: 'bg-green-50 dark:bg-green-500/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-400/30' };
   }
   if (mimeType.includes('word') || mimeType.includes('document') || ['DOC', 'DOCX', 'TXT', 'RTF'].includes(extension)) {
-    return { label: extension === 'FILE' ? 'DOC' : extension, icon: 'doc', gradient: 'from-blue-500/25 via-sky-500/10 to-cyan-500/20', text: 'text-blue-200', badge: 'bg-blue-500/20 text-blue-200 border-blue-400/30' };
+    return { label: extension === 'FILE' ? 'DOC' : extension, icon: 'doc', gradient: 'from-blue-500/10 via-blue-500/5 to-cyan-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-blue-600 dark:text-blue-400', badge: 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-400/30' };
   }
   if (mimeType.includes('presentation') || ['PPT', 'PPTX'].includes(extension)) {
-    return { label: extension === 'FILE' ? 'SLIDE' : extension, icon: 'slide', gradient: 'from-orange-500/25 via-amber-500/10 to-yellow-500/20', text: 'text-orange-200', badge: 'bg-orange-500/20 text-orange-200 border-orange-400/30' };
+    return { label: extension === 'FILE' ? 'SLIDE' : extension, icon: 'slide', gradient: 'from-orange-500/10 via-orange-500/5 to-yellow-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-orange-600 dark:text-orange-400', badge: 'bg-orange-50 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-400/30' };
   }
   if (mimeType.includes('zip') || mimeType.includes('compressed') || ['ZIP', 'RAR', '7Z', 'TAR', 'GZ'].includes(extension)) {
-    return { label: extension === 'FILE' ? 'ZIP' : extension, icon: 'archive', gradient: 'from-yellow-500/25 via-stone-500/10 to-zinc-500/20', text: 'text-yellow-200', badge: 'bg-yellow-500/20 text-yellow-200 border-yellow-400/30' };
+    return { label: extension === 'FILE' ? 'ZIP' : extension, icon: 'archive', gradient: 'from-amber-500/10 via-amber-500/5 to-orange-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-amber-700 dark:text-yellow-400', badge: 'bg-amber-50 dark:bg-yellow-500/20 text-amber-700 dark:text-yellow-400 border border-amber-100 dark:border-yellow-400/30' };
   }
   if (mimeType.startsWith('image/') || ['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF', 'HEIC', 'HEIF', 'AVIF'].includes(extension)) {
-    return { label: extension === 'FILE' ? 'IMG' : extension, icon: 'image', gradient: 'from-amber-500/25 via-orange-500/10 to-yellow-500/20', text: 'text-amber-200', badge: 'bg-amber-500/20 text-amber-200 border-amber-400/30' };
+    return { label: extension === 'FILE' ? 'IMG' : extension, icon: 'image', gradient: 'from-blue-500/10 via-blue-500/5 to-cyan-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-blue-600 dark:text-amber-400', badge: 'bg-blue-50 dark:bg-amber-500/20 text-blue-600 dark:text-amber-400 border border-blue-100 dark:border-amber-400/30' };
   }
 
-  return { label: extension, icon: 'file', gradient: 'from-slate-500/25 via-gray-500/10 to-zinc-500/20', text: 'text-slate-200', badge: 'bg-slate-500/20 text-slate-200 border-slate-400/30' };
+  return { label: extension, icon: 'file', gradient: 'from-slate-500/10 via-slate-500/5 to-zinc-500/10 dark:from-white/[0.04] dark:via-white/[0.01] dark:to-white/[0.02]', text: 'text-slate-600 dark:text-slate-300', badge: 'bg-slate-100 dark:bg-slate-500/20 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-400/30' };
 }
 
 async function loadPreviewForItem(item: Document) {
@@ -312,7 +313,28 @@ async function loadPreviewForItem(item: Document) {
     previewLoading[id] = true;
 
     const blob = await storageService.fetchDocumentPreviewBlob(id);
-    const blobUrl = URL.createObjectURL(blob);
+
+    let finalBlob = blob;
+    if (isImageMimeType(item.mimeType, item.fileName || item.title)) {
+      const ext = (item.fileName || item.title).split('.').pop()?.toLowerCase() || '';
+      const isHeic = ext === 'heic' || ext === 'heif' || item.mimeType?.includes('heic') || item.mimeType?.includes('heif');
+      if (isHeic) {
+        try {
+          const heic2anyModule = await import('heic2any');
+          const heic2any = heic2anyModule.default || heic2anyModule;
+          const converted = await heic2any({
+            blob,
+            toType: 'image/jpeg',
+            quality: 0.7
+          });
+          finalBlob = Array.isArray(converted) ? converted[0] : converted;
+        } catch (heicErr) {
+          console.warn('Failed to convert HEIC grid thumbnail:', heicErr);
+        }
+      }
+    }
+
+    const blobUrl = URL.createObjectURL(finalBlob);
 
     // ✅ Update state - this WILL trigger re-render now!
     previewUrls[id] = blobUrl;
@@ -597,13 +619,12 @@ $effect(() => {
 {#if viewMode === 2}
   {#each folders as folder (folder.id)}
     <div 
-      class="group relative bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/10 rounded-[10px] p-6 
-             hover:from-white/[0.06] hover:to-white/[0.02] hover:border-white/20 hover:shadow-xl hover:shadow-blue-500/5 
+      class="folder-card group relative rounded-[10px] p-6 
              transition-all duration-300 flex flex-col items-center text-center cursor-pointer overflow-visible select-none
              min-h-[200px] h-full
              {selectionMode && selectedItems.includes(folder.id) 
-               ? 'ring-2 ring-blue-500/70 bg-blue-500/10 border-blue-500/30 shadow-lg shadow-blue-500/10' 
-               : ''}"
+               ? 'ring-2 ring-blue-500/70 bg-blue-500/10 border-blue-500/30 shadow-lg shadow-blue-500/10 hover:bg-blue-500/20' 
+               : 'bg-slate-50/70 dark:bg-transparent dark:bg-gradient-to-br dark:from-white/[0.03] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/10 hover:bg-slate-100/80 dark:hover:bg-transparent dark:hover:from-white/[0.06] dark:hover:to-white/[0.02] hover:border-slate-300/80 dark:hover:border-white/20 hover:shadow-xl hover:shadow-blue-500/5'}"
       onclick={(e) => {
         // ... (event handler tetap sama)
         if (selectionMode) {
@@ -632,7 +653,7 @@ $effect(() => {
             openOwnerListModal(folderOwners.length ? folderOwners : [folder.owner]);
           }}
         >
-          <span class="absolute left-0 top-0 flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border-2 border-[#1a1a1e] bg-gradient-to-br from-blue-500 to-purple-600 text-[10px] font-bold text-white shadow-[0_8px_20px_rgba(0,0,0,0.55)]">
+          <span class="absolute left-0 top-0 flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border-2 border-slate-100 dark:border-[#1a1a1e] bg-gradient-to-br from-blue-600 to-cyan-500 dark:from-blue-500 dark:to-indigo-600 text-[10px] font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.55)]">
             {#if primaryAvatar.type === 'image'}
               <img src={primaryAvatar.value} alt={formatOwnerName(primaryOwner, currentUserId || undefined, primaryOwner?.id)} class="h-full w-full object-cover" />
             {:else}
@@ -640,7 +661,7 @@ $effect(() => {
             {/if}
           </span>
           {#if folderOwners.length > 1}
-            <span class="absolute  -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#1a1a1e] bg-blue-700 px-1 text-[8px] font-black text-white">
+            <span class="absolute  -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-slate-100 dark:border-[#1a1a1e] bg-blue-600 dark:bg-blue-700 px-1 text-[8px] font-black text-white">
               +{folderOwners.length - 1}
             </span>
           {/if}
@@ -655,7 +676,7 @@ $effect(() => {
               onchange={(e) => { e.stopPropagation(); onToggleSelect?.(folder.id); }}
               onclick={(e) => e.stopPropagation()} class="peer sr-only" />
             <div class="w-6 h-6 rounded-full border-2 transition-all duration-300 flex items-center justify-center backdrop-blur-md
-                      {selectedItems.includes(folder.id) ? 'bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/40' : 'bg-white/10 border-white/30 hover:border-white/50'}">
+                      {selectedItems.includes(folder.id) ? 'bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/40' : 'bg-slate-100 dark:bg-white/10 border-slate-350 dark:border-white/30 hover:border-slate-400 dark:hover:border-white/50'}">
               {#if selectedItems.includes(folder.id)}
                 <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
@@ -670,28 +691,34 @@ $effect(() => {
       <div class="relative w-full flex-1 flex items-center justify-center mb-2">
         <div class="relative w-20 h-20 flex items-center justify-center">
           
-          <div class="absolute inset-0 rounded-[28px] blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 bg-gradient-to-br from-amber-400/40 via-orange-400/30 to-amber-600/40"></div>
+          <div class="folder-glow-bg absolute inset-0 rounded-[28px] blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 bg-gradient-to-br from-amber-400/40 via-orange-400/30 to-amber-600/40"></div>
           
           {#if selectionMode && selectedItems.includes(folder.id)}
             <div class="absolute inset-0 rounded-[28px] blur-xl bg-gradient-to-br from-blue-500/40 to-cyan-400/40 animate-pulse"></div>
           {/if}
 
-          <div class="relative w-20 h-20 rounded-[28px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.1)_inset] group-hover:scale-105 group-hover:border-amber-400/40 transition-all duration-300 overflow-visible" title="Buka folder">
+          <div class="folder-icon-container relative w-20 h-20 rounded-[28px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.1)_inset] group-hover:scale-105 group-hover:border-amber-400/40 transition-all duration-300 overflow-visible" title="Buka folder">
 
             <svg class="w-12 h-12 drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="folderGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient id="folderGrad1Light" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#3b82f6" /><stop offset="50%" stop-color="#2563eb" /><stop offset="100%" stop-color="#1d4ed8" />
+                </linearGradient>
+                <linearGradient id="folderGrad1Dark" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#f59e0b" /><stop offset="50%" stop-color="#f97316" /><stop offset="100%" stop-color="#ea580c" />
                 </linearGradient>
                 <linearGradient id="folderGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stop-color="white" stop-opacity="0.4" /><stop offset="50%" stop-color="white" stop-opacity="0.1" /><stop offset="100%" stop-color="white" stop-opacity="0" />
                 </linearGradient>
-                <filter id="folderGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <filter id="folderGlowLight" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="2" result="blur" /><feFlood flood-color="#3b82f6" flood-opacity="0.3" result="glowColor" /><feComposite in="glowColor" in2="blur" operator="in" result="softGlow" /><feMerge><feMergeNode in="softGlow" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <filter id="folderGlowDark" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="2" result="blur" /><feFlood flood-color="#f59e0b" flood-opacity="0.3" result="glowColor" /><feComposite in="glowColor" in2="blur" operator="in" result="softGlow" /><feMerge><feMergeNode in="softGlow" /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
               </defs>
-              <path d="M15 30 C15 25, 20 20, 25 20 L40 20 L48 28 L85 28 C90 28, 95 33, 95 38 L95 80 C95 85, 90 90, 85 90 L15 90 C10 90, 5 85, 5 80 L5 30 Z" fill="url(#folderGrad1)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" filter="url(#folderGlow)" />
-              <path d="M25 20 L40 20 L48 28 L38 28 C33 28, 28 25, 25 20 Z" fill="url(#folderGrad1)" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+              <path class="folder-path-main" d="M15 30 C15 25, 20 20, 25 20 L40 20 L48 28 L85 28 C90 28, 95 33, 95 38 L95 80 C95 85, 90 90, 85 90 L15 90 C10 90, 5 85, 5 80 L5 30 Z" fill="url(#folderGrad1Light)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" filter="url(#folderGlowLight)" />
+              <path class="folder-path-tab" d="M25 20 L40 20 L48 28 L38 28 C33 28, 28 25, 25 20 Z" fill="url(#folderGrad1Light)" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
               <path d="M15 30 C15 25, 20 20, 25 20 L40 20 L48 28 L85 28 C90 28, 95 33, 95 38 L95 80 C95 85, 90 90, 85 90 L15 90 C10 90, 5 85, 5 80 L5 30 Z" fill="url(#folderGrad2)" class="opacity-60" />
               <path d="M18 32 C18 28, 22 24, 26 24 L39 24 L46 30 L83 30 C87 30, 91 34, 91 38 L91 78 C91 82, 87 86, 83 86 L18 86 C14 86, 10 82, 10 78 L10 32 Z" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8" />
               <g class="opacity-70">
@@ -709,11 +736,11 @@ $effect(() => {
 
       <div class="w-full flex flex-col items-center gap-2 mt-auto">
         <div class="flex w-full items-center justify-center gap-2 min-w-0">
-          <h4 class="text-xs font-semibold text-white/90 truncate uppercase tracking-wide group-hover:text-white transition-colors duration-200">
+          <h4 class="folder-title text-xs font-semibold text-slate-700 dark:text-white/90 truncate uppercase tracking-wide group-hover:text-slate-900 dark:group-hover:text-white transition-colors duration-200">
             {folder.name}
           </h4>
           {#if folder.accessRole}
-            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+            <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/20' : 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/20'}">
               {folder.accessRole === 'EDITOR' ? 'Editor' : folder.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
             </span>
           {/if}
@@ -744,12 +771,10 @@ $effect(() => {
   {@const previewMeta = getFilePreviewMeta(item)}
 
   <div
-    class="group relative bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/10 rounded-[10px] 
-           hover:from-white/[0.06] hover:to-white/[0.02] hover:border-white/20 transition-all duration-300 
-           flex flex-col cursor-pointer overflow-visible select-none
+    class="group relative rounded-[10px] transition-all duration-300 flex flex-col cursor-pointer overflow-visible select-none
            {selectionMode && selectedItems.includes(item.id) 
-             ? 'ring-2 ring-blue-500/70 bg-blue-500/10 border-blue-500/30' 
-             : ''}"
+             ? 'ring-2 ring-blue-500/70 bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20' 
+             : 'bg-slate-50/70 dark:bg-transparent dark:bg-gradient-to-br dark:from-white/[0.03] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/10 hover:bg-slate-100/80 dark:hover:bg-transparent dark:hover:from-white/[0.06] dark:hover:to-white/[0.02] hover:border-slate-300/80 dark:hover:border-white/20'}"
     onclick={(e) => {
       if (selectionMode) {
         e.preventDefault(); e.stopPropagation();
@@ -778,14 +803,14 @@ $effect(() => {
               checked={selectedItems.includes(item.id)}
               onchange={(e) => { e.stopPropagation(); onToggleSelect?.(item.id); }}
               onclick={(e) => e.stopPropagation()}
-              class="w-6 h-6 rounded-full border-2 border-white/50 bg-white/10
+              class="w-6 h-6 rounded-full border-2 border-slate-350 dark:border-white/50 bg-slate-100 dark:bg-white/10
                      checked:bg-blue-600 checked:border-blue-600 cursor-pointer appearance-none opacity-0"
             />
             <span 
               class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none
                      {selectedItems.includes(item.id) 
                        ? 'bg-blue-600 border-blue-600' 
-                       : 'bg-white/10 border-white/50'}
+                       : 'bg-slate-100 dark:bg-white/10 border-slate-350 dark:border-white/50'}
                      transition-all duration-200"
             >
               {#if selectedItems.includes(item.id)}
@@ -798,7 +823,7 @@ $effect(() => {
           
           <!-- ✅ Title -->
           <div class="flex min-w-0 items-center gap-2 pt-4 pb-4">
-            <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
+            <h4 class="text-sm font-medium text-slate-700 dark:text-white/90 truncate group-hover:text-slate-900 dark:group-hover:text-white transition-colors duration-200">
               {item.title}
             </h4>
           </div>
@@ -806,7 +831,7 @@ $effect(() => {
       {:else}
         <!-- ✅ Title (tanpa checkbox) -->
         <div class="flex min-w-0 items-center gap-2 pt-4 pb-4">
-          <h4 class="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors duration-200">
+          <h4 class="text-sm font-medium text-slate-700 dark:text-white/90 truncate group-hover:text-slate-900 dark:group-hover:text-white transition-colors duration-200">
             {item.title}
           </h4>
         </div>
@@ -842,17 +867,17 @@ $effect(() => {
 
     <!-- ✅ FULL FILE PREVIEW AREA -->
     <div class="pr-2 pl-2 pb-2">
-      <div class="relative w-full max-h-35 aspect-square rounded-[8px] overflow-hidden bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-300">
+      <div class="relative w-full max-h-35 aspect-square rounded-[8px] overflow-hidden bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 group-hover:border-slate-350 dark:group-hover:border-white/20 transition-all duration-300">
         {#if previewLoading[item.id]}
           <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/20">
             <div class="w-8 h-8 rounded-full border-3 border-white/20 border-t-blue-500 animate-spin"></div>
             <span class="text-[10px] text-gray-400">Loading preview...</span>
           </div>
-        {:else if previewUrls[item.id] && isImageMimeType(item.mimeType)}
+        {:else if previewUrls[item.id] && isImageMimeType(item.mimeType, item.fileName || item.title)}
           {#key previewUrls[item.id]}
             <img src={previewUrls[item.id]} alt={item.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror={() => { previewErrors[item.id] = 'Failed to render image'; delete previewUrls[item.id]; }} />
           {/key}
-        {:else if previewUrls[item.id] && isVideoMimeType(item.mimeType)}
+        {:else if previewUrls[item.id] && isVideoMimeType(item.mimeType, item.fileName || item.title)}
           <video src={previewUrls[item.id]} class="w-full h-full object-cover bg-black" preload="metadata" muted playsinline onerror={() => { previewErrors[item.id] = 'Failed to render video'; }}></video>
           <div class="absolute inset-0 z-10 flex items-center justify-center bg-black/10 pointer-events-none">
             <div class="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 border border-white/20 backdrop-blur-sm shadow-lg shadow-black/40 group-hover:scale-110 transition-transform duration-300">
@@ -863,7 +888,7 @@ $effect(() => {
           </div>
         {:else if previewUrls[item.id] && isDocumentPreviewMimeType(item.mimeType, item.fileName || item.title)}
           <iframe src={previewUrls[item.id]} title={item.title} class="w-full h-full bg-white border-0 pointer-events-none"></iframe>
-        {:else if !isImageMimeType(item.mimeType)}
+        {:else if !isImageMimeType(item.mimeType, item.fileName || item.title)}
           <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br {previewMeta.gradient}">
             {#if isAudioMimeType(item.mimeType)}
               <div class="relative w-20 h-20 rounded-full bg-white/10 border border-white/20 shadow-xl backdrop-blur-sm flex items-center justify-center {previewMeta.text} group-hover:scale-105 transition-transform duration-300">
@@ -896,7 +921,7 @@ $effect(() => {
         {#if !selectionMode && (publicExploreMode || item.owner)}
           {@const documentAvatar = getOwnerAvatar(item.owner)}
           <button
-            class="absolute top-2 left-2 z-20 flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-gradient-to-br from-blue-500 to-purple-600 text-[10px] font-bold text-white backdrop-blur-sm transition-all hover:scale-105 hover:border-blue-400/60 {isMobile ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'}"
+            class="absolute top-2 left-2 z-20 flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-slate-200 dark:border-white/20 bg-gradient-to-br from-blue-600 to-cyan-500 dark:from-blue-500 dark:to-indigo-600 text-[10px] font-bold text-white backdrop-blur-sm transition-all hover:scale-105 hover:border-blue-400/60 {isMobile ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'}"
             onclick={(e) => {
               e.stopPropagation();
               openProfileModal(item.owner, item.ownerId);
@@ -910,8 +935,8 @@ $effect(() => {
             {/if}
           </button>
         {/if}
-        <span class="absolute top-2 right-2 z-20 text-[8px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-sm {isImageMimeType(item.mimeType) ? 'bg-black/60 text-white border-white/10' : previewMeta.badge}">
-          {isImageMimeType(item.mimeType) ? 'IMG' : previewMeta.label}
+        <span class="absolute top-2 right-2 z-20 text-[8px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-sm {previewMeta.badge}">
+          {previewMeta.label}
         </span>
       </div>
     </div>
@@ -964,3 +989,12 @@ $effect(() => {
     await submitEdit();
   }}
 />
+<style>
+  :global(.dark) .folder-path-main {
+    fill: url(#folderGrad1Dark) !important;
+    filter: url(#folderGlowDark) !important;
+  }
+  :global(.dark) .folder-path-tab {
+    fill: url(#folderGrad1Dark) !important;
+  }
+</style>

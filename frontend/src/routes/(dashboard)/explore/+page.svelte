@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { fade, scale } from 'svelte/transition';
 
   import Breadcrumbs from '$lib/components/storage/Breadcrumbs.svelte';
@@ -25,7 +25,6 @@
   let searchError = $state('');
   let viewMode = $state(2);
   let currentUser = $state<{ id: string; username: string; walletAddress: string } | null>(null);
-  let searchTimeout: ReturnType<typeof setTimeout>;
   let requestSeq = 0;
 
   const sortOption = $state<{ field: SortField; direction: SortDirection }>({
@@ -139,12 +138,7 @@
     }
   }
 
-  function scheduleSearch(searchQuery = query) {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      void performSearch(searchQuery);
-    }, 350);
-  }
+
 
   async function handleDownload(id: string, type: 'folder' | 'document' = 'document') {
     try {
@@ -194,10 +188,7 @@
 
   function noop() {}
 
-  $effect(() => {
-    if (currentFolder) return;
-    scheduleSearch(query);
-  });
+
 
   onMount(() => {
     storageService.getCurrentUser()
@@ -215,12 +206,10 @@
       });
   });
 
-  onDestroy(() => {
-    if (searchTimeout) clearTimeout(searchTimeout);
-  });
+
 </script>
 
-<main class="relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto">
+<main class="explore-page relative w-full flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto max-w-[1600px] mx-auto">
   {#if isProcessing}
     <div class="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm" transition:fade>
       <div class="bg-[#121214] p-8 rounded-[40px] border border-white/10 shadow-2xl flex flex-col items-center" in:scale>
@@ -250,6 +239,11 @@
             class="w-full h-13 rounded-2xl border border-white/10 bg-black/20 pl-12 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all disabled:opacity-60"
             placeholder="Search folders or documents public..."
             disabled={currentFolder !== null}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' && query.trim().length >= 2 && currentFolder === null && !isSearching) {
+                performSearch(query);
+              }
+            }}
           />
         </div>
         <button

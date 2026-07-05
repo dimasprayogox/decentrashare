@@ -312,13 +312,13 @@
         <section>
           <label class="block text-sm font-medium text-gray-300 mb-2">Share mode</label>
           <div class="grid grid-cols-2 gap-2 rounded-xl bg-white/[0.03] p-1 border border-white/10">
-            <button onclick={() => accessMode = 'all'} class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all {accessMode === 'all' ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isProcessing}>
+            <button onclick={() => accessMode = 'all'} class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all {accessMode === 'all' ? 'bg-violet-600 text-white keep-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isProcessing}>
               <div class="flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 Apply to all
               </div>
             </button>
-            <button onclick={() => accessMode = 'individual'} class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all {accessMode === 'individual' ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isProcessing}>
+            <button onclick={() => accessMode = 'individual'} class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all {accessMode === 'individual' ? 'bg-violet-600 text-white keep-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isProcessing}>
               <div class="flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                 Individual
@@ -375,7 +375,7 @@
                     <button onclick={(e) => toggleItemDropdown(target.id, e)} class="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all text-left" disabled={isProcessing}>
                       <div class="flex items-center gap-2 min-w-0">
                         <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br {config.gradient} {config.color}">{@html config.icon}</span>
-                        <span class="text-[11px] text-gray-200 font-bold truncate">{config.label}</span>
+                        <span class="text-[11px] text-white font-bold truncate">{config.label}</span>
                       </div>
                       <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0 {openItemDropdown === target.id ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
@@ -407,10 +407,10 @@
                         <div class="space-y-1.5">
                           {#each targetSpecificUsers as user (user.id)}
                             <div class="group flex items-center gap-2.5 p-2.5 rounded-xl bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5 hover:border-violet-500/30 hover:from-white/[0.06] hover:shadow-lg hover:shadow-violet-500/5 transition-all duration-200">
-                              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/10 group-hover:ring-violet-400/50 transition-all shadow-lg shadow-violet-900/20 shrink-0 overflow-hidden">
+                              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center text-xs font-bold text-white keep-white ring-2 ring-white/10 group-hover:ring-violet-400/50 transition-all shadow-lg shadow-violet-900/20 shrink-0 overflow-hidden">
                                 {#if user.avatarUrl}
                                   <img src={user.avatarUrl} alt={user.username} class="w-full h-full object-cover" onerror={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; if (el.nextElementSibling) el.nextElementSibling.classList.remove('hidden'); }} />
-                                  <span class="hidden text-xs font-bold text-white">{initial(user.username)}</span>
+                                  <span class="hidden text-xs font-bold text-white keep-white">{initial(user.username)}</span>
                                 {:else}
                                   {initial(user.username)}
                                 {/if}
@@ -445,10 +445,10 @@
                         <div class="border border-white/10 rounded-xl max-h-36 overflow-y-auto bg-black/20 backdrop-blur-sm">
                           {#each searchResults as user (user.id)}
                             <button onclick={() => toggleTargetUser(target.id, user)} class="w-full flex items-center gap-2.5 p-2.5 hover:bg-white/5 transition-all text-left group" disabled={isProcessing}>
-                              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0 group-hover:scale-110 transition-transform overflow-hidden">
+                              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white keep-white shrink-0 group-hover:scale-110 transition-transform overflow-hidden">
                                 {#if user.avatarUrl}
                                   <img src={user.avatarUrl} alt={user.username} class="w-full h-full object-cover" onerror={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; if (el.nextElementSibling) el.nextElementSibling.classList.remove('hidden'); }} />
-                                  <span class="hidden text-[10px] font-bold text-white">{initial(user.username)}</span>
+                                  <span class="hidden text-[10px] font-bold text-white keep-white">{initial(user.username)}</span>
                                 {:else}
                                   {initial(user.username)}
                                 {/if}
@@ -518,7 +518,7 @@
               <div class="border border-white/10 rounded-lg max-h-44 overflow-y-auto bg-black/10">
                 {#each searchResults as user (user.id)}
                   <button onclick={() => accessMode === 'individual' && activeTarget ? toggleTargetUser(activeTarget.id, user) : toggleGlobalUser(user)} class="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white shrink-0 overflow-hidden">{#if user.avatarUrl}<img src={user.avatarUrl} alt={user.username} class="w-full h-full rounded-full object-cover" />{:else}{initial(user.username)}{/if}</div>
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white keep-white shrink-0 overflow-hidden">{#if user.avatarUrl}<img src={user.avatarUrl} alt={user.username} class="w-full h-full rounded-full object-cover" />{:else}{initial(user.username)}{/if}</div>
                     <div class="min-w-0 flex-1"><p class="text-sm font-medium text-white truncate">{user.username}</p><p class="text-xs text-gray-500 truncate">{user.walletAddress}</p></div>
                     <svg class="w-5 h-5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                   </button>
@@ -554,7 +554,7 @@
   <div class="space-y-2">
     {#each users as user (user.id)}
       <div class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5">
-        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden">{#if user.avatarUrl}<img src={user.avatarUrl} alt={user.username} class="w-full h-full rounded-full object-cover" />{:else}{initial(user.username)}{/if}</div>
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white keep-white shrink-0 overflow-hidden">{#if user.avatarUrl}<img src={user.avatarUrl} alt={user.username} class="w-full h-full rounded-full object-cover" />{:else}{initial(user.username)}{/if}</div>
         <div class="min-w-0 flex-1"><p class="text-sm font-semibold text-white truncate">{user.username}</p><p class="text-[10px] text-gray-500 font-mono truncate">{user.walletAddress}</p></div>
         {#if showRole}
           <div class="relative inline-flex items-center shrink-0">

@@ -85,30 +85,30 @@ describe('Feature: file upload filtering and size limits', () => {
     });
   });
 
-  test('given a JSON file, when the file filter runs, then the file is accepted', async () => {
+  test('given a JSON file, when the file filter runs, then the file is rejected', async () => {
     const { uploadMiddleware } = await import('../../../src/middlewares/upload.middleware');
     const fileFilter = (uploadMiddleware as any).fileFilter;
 
     await new Promise<void>((resolve, reject) => {
       fileFilter({}, { mimetype: 'application/json', originalname: 'data.json' }, (err: any, accepted: boolean) => {
         try {
-          expect(err).toBeNull();
-          expect(accepted).toBe(true);
+          expect(err).toBeInstanceOf(Error);
+          expect(accepted).toBe(false);
           resolve();
         } catch (e) { reject(e); }
       });
     });
   });
 
-  test('given a plain text file, when the file filter runs, then the file is accepted', async () => {
+  test('given a plain text file, when the file filter runs, then the file is rejected', async () => {
     const { uploadMiddleware } = await import('../../../src/middlewares/upload.middleware');
     const fileFilter = (uploadMiddleware as any).fileFilter;
 
     await new Promise<void>((resolve, reject) => {
       fileFilter({}, { mimetype: 'text/plain', originalname: 'readme.txt' }, (err: any, accepted: boolean) => {
         try {
-          expect(err).toBeNull();
-          expect(accepted).toBe(true);
+          expect(err).toBeInstanceOf(Error);
+          expect(accepted).toBe(false);
           resolve();
         } catch (e) { reject(e); }
       });
@@ -193,15 +193,15 @@ describe('Feature: file upload filtering and size limits', () => {
     });
   });
 
-  test('given a WebP image, when the file filter runs, then the file is accepted', async () => {
+  test('given an unsupported WebP image, when the file filter runs, then the file is rejected', async () => {
     const { uploadMiddleware } = await import('../../../src/middlewares/upload.middleware');
     const fileFilter = (uploadMiddleware as any).fileFilter;
 
     await new Promise<void>((resolve, reject) => {
       fileFilter({}, { mimetype: 'image/webp', originalname: 'image.webp' }, (err: any, accepted: boolean) => {
         try {
-          expect(err).toBeNull();
-          expect(accepted).toBe(true);
+          expect(err).toBeInstanceOf(Error);
+          expect(accepted).toBe(false);
           resolve();
         } catch (e) { reject(e); }
       });

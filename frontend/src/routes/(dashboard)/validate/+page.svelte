@@ -80,7 +80,7 @@
   <title>Validate Document | DecentraShare</title>
 </svelte:head>
 
-<main class="relative mx-auto w-full max-w-[1600px] flex-1 overflow-y-auto p-4 sm:p-6 md:p-10" in:fade>
+<main class="validate-page relative mx-auto w-full max-w-[1600px] flex-1 overflow-y-auto p-4 sm:p-6 md:p-10" in:fade>
   <section class="relative mb-8 overflow-hidden rounded-[36px] border border-white/10 bg-gradient-to-br from-blue-600/10 via-white/[0.03] to-purple-600/10 p-6 shadow-2xl shadow-black/20 md:p-8">
     <div class="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl"></div>
     <div class="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-purple-500/10 blur-3xl"></div>
@@ -144,7 +144,7 @@
               <button onclick={() => openOwnerProfile(validationResult.document?.owner)} class="rounded-xl border border-white/10 bg-black/20 p-3 text-left transition-colors hover:border-blue-400/40 hover:bg-blue-500/10 disabled:cursor-default disabled:hover:border-white/10 disabled:hover:bg-black/20" disabled={!validationResult.document.owner?.id}>
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Owner</p>
                 <div class="mt-2 flex min-w-0 items-center gap-3">
-                  <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-bold text-white">
+                  <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-bold text-white keep-white">
                     {#if validationResult.document.owner?.avatarUrl}
                       <img src={validationResult.document.owner.avatarUrl} alt={formatOwner(validationResult.document.owner)} class="h-full w-full object-cover" />
                     {:else}

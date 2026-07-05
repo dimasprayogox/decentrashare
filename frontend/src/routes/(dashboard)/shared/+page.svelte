@@ -470,7 +470,7 @@
     <div class="flex gap-3 w-full sm:w-auto">
       <button
         onclick={toggleSelectMode}
-        class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center gap-2 disabled:opacity-50 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
+        class="flex-1 sm:flex-none px-4 py-3 bg-indigo-50/80 dark:bg-white/5 border border-indigo-100/60 dark:border-white/10 text-indigo-600 dark:text-white rounded-[20px] font-medium text-sm hover:bg-indigo-100/80 dark:hover:bg-white/10 transition-all duration-300 flex items-center gap-2 disabled:opacity-50 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
         disabled={isLoading || totalCount === 0 || isProcessing}
         title={selectionMode ? 'Exit selection mode' : 'Select items'}
       >
@@ -487,10 +487,10 @@
         <span class="hidden sm:inline transition-colors duration-300 {selectionMode ? 'text-blue-100 font-semibold' : ''}">{selectionMode ? 'Cancel' : 'Select'}</span>
       </button>
 
-      <button onclick={refreshSharedItems} class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all disabled:opacity-50" disabled={isLoading || isRefreshing || isProcessing}>Refresh</button>
+      <button onclick={refreshSharedItems} class="flex-1 sm:flex-none px-4 py-3 bg-blue-50/80 dark:bg-white/5 border border-blue-100/60 dark:border-white/10 text-blue-600 dark:text-white rounded-[20px] font-medium text-sm hover:bg-blue-100/80 dark:hover:bg-white/10 transition-all disabled:opacity-50" disabled={isLoading || isRefreshing || isProcessing}>Refresh</button>
 
       {#if canEditCurrentFolder}
-        <button onclick={() => showFolder = true} class="flex-1 sm:w-32 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-bold text-sm hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+        <button onclick={() => showFolder = true} class="flex-1 sm:w-32 px-4 py-3 bg-blue-50/80 dark:bg-white/5 border border-blue-100/60 dark:border-white/10 text-blue-600 dark:text-white rounded-[20px] font-bold text-sm hover:bg-blue-100/80 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2">
           <span class="text-lg leading-none">+</span>
           Folder
         </button>

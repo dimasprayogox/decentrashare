@@ -212,7 +212,7 @@
   }
 </script>
 
-<div class="space-y-8" in:fade={{ duration: 250 }}>
+<div class="wallet-activity-page space-y-8" in:fade={{ duration: 250 }}>
   <!-- Page Header -->
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div class="flex flex-col sm:flex-row sm:items-center gap-3">

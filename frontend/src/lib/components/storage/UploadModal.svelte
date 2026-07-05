@@ -62,10 +62,10 @@
   const MAX_FILES = 10;                     // ✅ Max 10 files per upload
   const ALLOWED_TYPES = [
     'application/pdf',
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence', 'image/tiff', 'image/bmp', 'image/svg+xml',
+    'image/jpeg', 'image/png', 'image/gif', 'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence',
     'video/mp4', 'video/webm', 'video/quicktime', 'video/x-quicktime', 'video/x-m4v', 'video/3gpp',
     'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg',
-    'text/plain', 'text/csv', 'application/json'
+    'text/csv'
   ];
 
   // ── Helpers ────────────────────────────────────────────────
@@ -88,7 +88,7 @@
   function validateFile(file: File): string | null {
     if (file.size > MAX_FILE_SIZE) return `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`;
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    const isImageFile = (file.type.startsWith('image/') || ['application/octet-stream', ''].includes(file.type)) && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'tiff', 'tif', 'bmp', 'svg'].includes(ext);
+    const isImageFile = (file.type.startsWith('image/') || ['application/octet-stream', ''].includes(file.type)) && ['jpg', 'jpeg', 'png', 'gif', 'heic', 'heif'].includes(ext);
     const isVideoFile = (file.type.startsWith('video/') || ['application/octet-stream', ''].includes(file.type)) && ['mp4', 'webm', 'mov', 'qt', 'm4v', '3gp'].includes(ext);
     const isAudioFile = (file.type.startsWith('audio/') || ['application/octet-stream', ''].includes(file.type)) && ['mp3', 'wav', 'ogg'].includes(ext);
 
@@ -603,18 +603,18 @@ if (payload.length === 1) {
     <!-- Modal -->
     <div in:scale={{ start: 0.95, duration: 250, easing: cubicOut }} 
          out:fade={{ duration: 150 }}
-         class="relative w-full max-w-xl bg-[#1a1a1e] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl"
+         class="relative w-full max-w-xl bg-white dark:bg-[#1a1a1e] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden shadow-2xl"
          role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
       
       <!-- Header -->
-      <div class="p-6 md:p-8 border-b border-white/5">
+      <div class="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
         <div class="flex justify-between items-start">
           <div>
-            <h3 id="upload-modal-title" class="text-xl font-bold text-white">Upload to DecentraShare</h3>
+            <h3 id="upload-modal-title" class="text-xl font-bold text-slate-800 dark:text-white">Upload to DecentraShare</h3>
           </div>
           <button onclick={onClose} 
                   disabled={isUploading || isConfirmingBatch} 
-                  class="p-2 text-gray-500 hover:text-white transition-colors disabled:opacity-50" 
+                  class="p-2 text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:hover:text-white transition-colors disabled:opacity-50" 
                   aria-label="Close">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -626,7 +626,7 @@ if (payload.length === 1) {
       <div class="p-6 md:p-8">
         <!-- Status Progress -->
         {#if uploadStatus}
-          <div class="mb-4 px-4 py-3 rounded-xl border bg-blue-500/10 border-blue-500/20 text-blue-400 flex items-center gap-3" role="status">
+          <div class="mb-4 px-4 py-3 rounded-xl border bg-blue-50/80 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center gap-3" role="status">
             <svg class="w-5 h-5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -639,7 +639,7 @@ if (payload.length === 1) {
           
           <!-- Progress Bar untuk Batch Confirmation -->
           {#if isConfirmingBatch}
-            <div class="w-full bg-gray-700/50 rounded-full h-1.5 mb-4 overflow-hidden">
+            <div class="w-full bg-slate-100 dark:bg-gray-700/50 rounded-full h-1.5 mb-4 overflow-hidden">
               <div class="bg-gradient-to-r from-blue-600 to-cyan-500 h-1.5 rounded-full transition-all duration-300" 
                    style="width: {confirmationProgress}%"></div>
             </div>
@@ -649,7 +649,7 @@ if (payload.length === 1) {
         <!-- ✅ Inline Feedback Banner -->
         {#if uploadError || uploadSuccess}
           <div transition:slide={{ axis: 'y', duration: 150 }}
-               class="mb-6 px-4 py-3 rounded-xl border flex items-start gap-3 {uploadError ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}"
+               class="mb-6 px-4 py-3 rounded-xl border flex items-start gap-3 {uploadError ? 'bg-red-50/80 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-600 dark:text-red-400' : 'bg-green-50/80 dark:bg-green-500/10 border-green-100 dark:border-green-500/20 text-green-600 dark:text-green-400'}"
                role="alert" aria-live="polite">
             {#if uploadError}
               <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -661,7 +661,7 @@ if (payload.length === 1) {
               </svg>
             {/if}
             <p class="text-sm flex-1">{uploadError || uploadSuccess}</p>
-            <button onclick={clearFeedback} class="p-1 hover:bg-white/10 rounded" aria-label="Dismiss">
+            <button onclick={clearFeedback} class="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded" aria-label="Dismiss">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -673,11 +673,11 @@ if (payload.length === 1) {
         <label ondragover={(e) => { e.preventDefault(); isDragging = true; }} 
                ondragleave={() => isDragging = false} 
                ondrop={handleDrop}
-               class="group border-2 border-dashed {isDragging ? 'border-blue-500 bg-blue-500/5' : 'border-white/10 hover:border-white/20'} rounded-2xl p-8 md:p-10 text-center transition-all cursor-pointer block relative disabled:opacity-50"
+               class="group border-2 border-dashed {isDragging ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20'} rounded-2xl p-8 md:p-10 text-center transition-all cursor-pointer block relative disabled:opacity-50"
                aria-disabled={isUploading || isConfirmingBatch || files.length >= MAX_FILES}>
           <input type="file"
                  multiple
-                 accept="image/*,video/*,audio/*,application/pdf,text/plain,text/csv,application/json,.mov,.qt,.heic,.heif,.m4v"
+                 accept="image/*,video/*,audio/*,application/pdf,text/csv,.mov,.qt,.heic,.heif,.m4v"
                  disabled={isUploading || isConfirmingBatch || isCheckingBlockchain || files.length >= MAX_FILES}
                  class="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed" 
                  onchange={(e) => handleFiles(e.currentTarget.files)} 
@@ -696,21 +696,21 @@ if (payload.length === 1) {
             {/if}
           </div>
           {#if isCheckingBlockchain}
-            <p class="text-white font-medium">Checking blockchain...</p>
-            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Detecting duplicate content</p>
+            <p class="text-slate-700 dark:text-white font-medium">Checking blockchain...</p>
+            <p class="text-slate-400 dark:text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Detecting duplicate content</p>
           {:else if isConfirmingBatch}
-            <p class="text-white font-medium">Confirming on blockchain...</p>
-            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">1 wallet signature for all files</p>
+            <p class="text-slate-700 dark:text-white font-medium">Confirming on blockchain...</p>
+            <p class="text-slate-400 dark:text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">1 wallet signature for all files</p>
           {:else if isUploading}
-            <p class="text-white font-medium">Uploading to IPFS...</p>
-            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Please wait</p>
+            <p class="text-slate-700 dark:text-white font-medium">Uploading to IPFS...</p>
+            <p class="text-slate-400 dark:text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">Please wait</p>
           {:else}
-            <p class="text-white font-medium">Click or drag files here</p>
-            <p class="text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">
+            <p class="text-slate-700 dark:text-white font-medium">Click or drag files here</p>
+            <p class="text-slate-400 dark:text-gray-500 text-[10px] uppercase tracking-widest mt-2 font-bold">
               Max {MAX_FILES} files • {MAX_FILE_SIZE / 1024 / 1024}MB
             </p>
             {#if files.length > 0}
-              <p class="text-[9px] text-blue-400 mt-1">
+              <p class="text-[9px] text-blue-600 dark:text-blue-400 mt-1">
                 {MAX_FILES - files.length} slot{MAX_FILES - files.length !== 1 ? 's' : ''} remaining
               </p>
             {/if}
@@ -721,17 +721,17 @@ if (payload.length === 1) {
         {#if files.length > 0}
           <div class="mt-6">
             <div class="flex items-center justify-between mb-3">
-              <h4 class="text-sm font-medium text-gray-300">{files.length} file{files.length > 1 ? 's' : ''} selected</h4>
+              <h4 class="text-sm font-medium text-slate-600 dark:text-gray-300">{files.length} file{files.length > 1 ? 's' : ''} selected</h4>
               <button onclick={clearAllFiles} 
                       disabled={isUploading || isConfirmingBatch || isCheckingBlockchain}
-                      class="text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50">
+                      class="text-xs text-slate-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50">
                 Clear all
               </button>
             </div>
             
             <!-- ✅ Warning banner when at max limit -->
             {#if files.length >= MAX_FILES}
-              <div class="mt-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-[10px] text-yellow-400 flex items-center gap-2">
+              <div class="mt-2 px-3 py-2 bg-yellow-50/80 dark:bg-yellow-500/10 border border-yellow-100 dark:border-yellow-500/20 rounded-lg text-[10px] text-yellow-600 dark:text-yellow-400 flex items-center gap-2">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
@@ -746,13 +746,13 @@ if (payload.length === 1) {
                 {@const chainStatus = blockchainChecks[metaKey]}
                  
                 <div transition:slide={{ axis: 'y', duration: 150, easing: cubicOut }}
-                     class="flex flex-col p-3 bg-white/[0.03] border {fileStatuses[i] === 'duplicate' ? 'border-yellow-500/30' : fileStatuses[i] === 'error' ? 'border-red-500/30' : 'border-white/5'} rounded-xl">
+                     class="flex flex-col p-3 bg-slate-50 dark:bg-white/[0.03] border {fileStatuses[i] === 'duplicate' ? 'border-yellow-500/30' : fileStatuses[i] === 'error' ? 'border-red-500/30' : 'border-slate-100 dark:border-white/5'} rounded-xl">
                   
                   <!-- Header: File Info + Remove + Status Badge -->
                   <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                       <!-- Icon -->
-                      <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
+                      <div class="w-8 h-8 rounded-lg bg-slate-200/50 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-gray-400 shrink-0">
                         {#if file.type.startsWith('image/')}
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -775,26 +775,26 @@ if (payload.length === 1) {
                       <!-- Name + Size + Status -->
                       <div class="truncate min-w-0 flex-1">
                         <div class="flex items-center gap-2">
-                          <p class="text-sm text-gray-200 truncate">{file.name}</p>
+                          <p class="text-sm text-slate-700 dark:text-gray-200 truncate">{file.name}</p>
                           {#if chainStatus?.checking}
-                            <span class="px-1.5 py-0.5 bg-blue-500/20 text-blue-300 text-[8px] rounded border border-blue-500/30">Checking chain</span>
+                            <span class="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[8px] rounded border border-blue-100 dark:border-blue-500/30">Checking chain</span>
                           {:else if chainStatus?.existsOnChain}
-                            <span class="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[8px] rounded border border-yellow-500/30">On-chain duplicate</span>
+                            <span class="px-1.5 py-0.5 bg-yellow-50 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-[8px] rounded border border-yellow-100 dark:border-yellow-500/30">On-chain duplicate</span>
                           {:else if chainStatus?.hash && !chainStatus?.error}
-                            <span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-[8px] rounded border border-emerald-500/30">New on-chain</span>
+                            <span class="px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[8px] rounded border border-emerald-100 dark:border-emerald-500/30">New on-chain</span>
                           {:else if chainStatus?.error}
-                            <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] rounded border border-red-500/30">Check failed</span>
+                            <span class="px-1.5 py-0.5 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-[8px] rounded border border-red-100 dark:border-red-500/30">Check failed</span>
                           {:else if fileStatuses[i] === 'duplicate'}
-                            <span class="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[8px] rounded border border-yellow-500/30">Duplicate</span>
+                            <span class="px-1.5 py-0.5 bg-yellow-50 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 text-[8px] rounded border border-yellow-100 dark:border-yellow-500/30">Duplicate</span>
                           {:else if fileStatuses[i] === 'error'}
-                            <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[8px] rounded border border-red-500/30">Error</span>
+                            <span class="px-1.5 py-0.5 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-[8px] rounded border border-red-100 dark:border-red-500/30">Error</span>
                           {:else if fileStatuses[i] === 'uploaded'}
-                            <span class="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[8px] rounded border border-blue-500/30">Uploaded</span>
+                            <span class="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[8px] rounded border border-blue-100 dark:border-blue-500/30">Uploaded</span>
                           {:else if !isUploading && !isConfirmingBatch}
-                            <span class="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[8px] rounded border border-green-500/30">Ready</span>
+                            <span class="px-1.5 py-0.5 bg-green-50 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-[8px] rounded border border-green-100 dark:border-green-500/30">Ready</span>
                           {/if}
                         </div>
-                        <p class="text-[10px] text-gray-500 font-mono">
+                        <p class="text-[10px] text-slate-400 dark:text-gray-500 font-mono">
                           {formatSize(file.size)}
                         </p>
                       </div>
@@ -803,7 +803,7 @@ if (payload.length === 1) {
                     <!-- Remove Button -->
                     <button onclick={() => { removeFile(i); delete fileMetadata[metaKey]; }} 
                             disabled={isUploading || isConfirmingBatch || isCheckingBlockchain}
-                            class="p-2 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-50" 
+                            class="p-2 text-slate-400 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50" 
                             aria-label={`Remove ${file.name}`}>
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -812,11 +812,11 @@ if (payload.length === 1) {
                   </div>
                   
                   {#if chainStatus?.existsOnChain || chainStatus?.error}
-                    <div class="mt-3 rounded-lg border p-3 text-[11px] {chainStatus?.existsOnChain ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-100' : 'border-red-500/20 bg-red-500/10 text-red-200'}">
+                    <div class="mt-3 rounded-lg border p-3 text-[11px] {chainStatus?.existsOnChain ? 'border-yellow-100 dark:border-yellow-500/20 bg-yellow-50/80 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-100' : 'border-red-100 dark:border-red-500/20 bg-red-50/80 dark:bg-red-500/10 text-red-700 dark:text-red-200'}">
                       {#if chainStatus?.existsOnChain}
                         <p class="font-semibold">This file is already recorded on-chain and will be skipped.</p>
                         {#if chainStatus.document}
-                          <div class="mt-2 space-y-1 text-yellow-200/80">
+                          <div class="mt-2 space-y-1 text-yellow-600/80 dark:text-yellow-200/80">
                             <p>Owner: {formatOwner(chainStatus.document.owner)}</p>
                             <p>Uploaded: {formatDate(chainStatus.document.uploadedAt)}</p>
                             {#if chainStatus.document.blockchainTx}<p class="truncate">Tx: {chainStatus.document.blockchainTx}</p>{/if}
@@ -829,10 +829,10 @@ if (payload.length === 1) {
                   {/if}
 
                   <!-- ✅ Expandable Metadata Inputs -->
-                  <div class="mt-3 pt-3 border-t border-white/5">
+                  <div class="mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
                     <!-- Title Input -->
                     <div class="mb-2">
-                      <label class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">
+                      <label class="block text-[10px] uppercase tracking-wider text-slate-400 dark:text-gray-500 mb-1">
                         Title
                       </label>
                       <input 
@@ -846,13 +846,13 @@ if (payload.length === 1) {
                         }}
                         placeholder="Leave empty to use filename"
                         disabled={isUploading || isConfirmingBatch}
-                        class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 disabled:opacity-50 transition-colors"
+                        class="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-650 focus:outline-none focus:border-blue-500/50 disabled:opacity-50 transition-colors"
                       />
                     </div>
                     
                     <!-- Description Input -->
                     <div>
-                      <label class="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">
+                      <label class="block text-[10px] uppercase tracking-wider text-slate-400 dark:text-gray-500 mb-1">
                         Description
                       </label>
                       <textarea 
@@ -867,10 +867,10 @@ if (payload.length === 1) {
                         disabled={isUploading || isConfirmingBatch}
                         rows={2}
                         maxlength={500}
-                        class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 disabled:opacity-50 transition-colors resize-none"
+                        class="w-full px-3 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg text-sm text-slate-800 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-650 focus:outline-none focus:border-blue-500/50 disabled:opacity-50 transition-colors resize-none"
                       />
                       {#if meta.description.length > 450}
-                        <p class="text-[9px] text-gray-600 text-right mt-1">
+                        <p class="text-[9px] text-slate-400 dark:text-gray-650 text-right mt-1">
                           {meta.description.length}/500
                         </p>
                       {/if}
@@ -886,7 +886,7 @@ if (payload.length === 1) {
         <!-- Upload Button -->
         <button disabled={files.length === 0 || isUploading || isConfirmingBatch || isCheckingBlockchain}
                 onclick={startUpload}
-                class="w-full mt-8 h-14 bg-blue-600 disabled:bg-white/5 disabled:text-gray-500 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 disabled:cursor-not-allowed">
+                class="w-full mt-8 h-14 bg-blue-600 disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-blue-600 dark:disabled:text-gray-500 text-black rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 disabled:cursor-not-allowed">
           {#if isConfirmingBatch}
             <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -914,6 +914,8 @@ if (payload.length === 1) {
 <style>
   .custom-scrollbar::-webkit-scrollbar { width: 4px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+  :global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+  :global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 </style>

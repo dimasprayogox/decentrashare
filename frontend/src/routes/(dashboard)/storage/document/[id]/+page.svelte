@@ -296,7 +296,7 @@
   });
 </script>
 
-<main class="min-h-full p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
+<main class="document-detail-page min-h-full p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <button onclick={goBackToOrigin} class="mb-4 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">

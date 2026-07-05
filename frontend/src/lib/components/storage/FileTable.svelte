@@ -425,7 +425,7 @@ async function submitEdit() {
     showEditModal = false;
     editingDoc = null;
   }
-// ✅ Helper: Get file type info (icon, color, gradient, label)
+// Helper: Get file type info (icon, color, gradient, label)
 function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string): {
   icon: string;
   color: string;
@@ -437,17 +437,18 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   const ext = fileName?.split('.').pop()?.toLowerCase() || '';
   
   // 🖼️ Images
-  if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif', 'bmp'].includes(ext)) {
+  if ((mime.startsWith('image/') && !mime.includes('webm')) || (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'avif', 'heic', 'heif', 'tiff', 'tif', 'bmp'].includes(ext) && ext !== 'webm')) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
                       d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 <circle cx="17" cy="7" r="1" fill="currentColor" opacity="0.6"/>
               </svg>`,
-      color: 'text-amber-400',
-      gradient: 'from-amber-500/20 to-orange-500/20',
-      label: 'IMG',
-      bgHover: 'group-hover/file-row:shadow-amber-500/30'
+      color: 'text-blue-600 dark:text-amber-400',
+      gradient: 'from-blue-500/10 to-cyan-500/10 dark:from-amber-500/20 dark:to-orange-500/20',
+      label: ext ? ext.toUpperCase().slice(0, 5) : 'IMG',
+      bgHover: 'group-hover/file-row:shadow-amber-500/30',
+      badge: 'bg-blue-50 dark:bg-amber-500/20 text-blue-600 dark:text-amber-400 border-blue-100 dark:border-amber-400/30'
     };
   }
   
@@ -455,10 +456,11 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   if (mime === 'application/pdf' || ext === 'pdf') {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 9h.01M12 9h.01M15 9h.01"/></svg>`,
-      color: 'text-red-400',
-      gradient: 'from-red-500/20 to-rose-500/20',
+      color: 'text-red-600 dark:text-red-400',
+      gradient: 'from-red-500/10 to-rose-500/10 dark:from-red-500/20 dark:to-rose-500/20',
       label: 'PDF',
-      bgHover: 'group-hover/file-row:shadow-red-500/30'
+      bgHover: 'group-hover/file-row:shadow-red-500/30',
+      badge: 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-400/30'
     };
   }
   
@@ -466,10 +468,11 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   if (['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/rtf'].includes(mime) || ['doc', 'docx', 'txt', 'rtf', 'odt'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 9h.01M12 9h.01M15 9h.01M9 15h.01M12 15h.01"/></svg>`,
-      color: 'text-blue-400',
-      gradient: 'from-blue-500/20 to-cyan-500/20',
+      color: 'text-blue-600 dark:text-blue-400',
+      gradient: 'from-blue-500/10 to-cyan-500/10 dark:from-blue-500/20 dark:to-cyan-500/20',
       label: 'DOC',
-      bgHover: 'group-hover/file-row:shadow-blue-500/30'
+      bgHover: 'group-hover/file-row:shadow-blue-500/30',
+      badge: 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-400/30'
     };
   }
   
@@ -477,10 +480,11 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   if (['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'].includes(mime) || ['xls', 'xlsx', 'csv', 'ods'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
-      color: 'text-emerald-400',
-      gradient: 'from-emerald-500/20 to-green-500/20',
+      color: 'text-green-600 dark:text-emerald-400',
+      gradient: 'from-green-500/10 to-emerald-500/10 dark:from-emerald-500/20 dark:to-green-500/20',
       label: 'XLS',
-      bgHover: 'group-hover/file-row:shadow-emerald-500/30'
+      bgHover: 'group-hover/file-row:shadow-emerald-500/30',
+      badge: 'bg-green-50 dark:bg-green-500/20 text-green-600 dark:text-emerald-400 border-green-100 dark:border-emerald-400/30'
     };
   }
   
@@ -488,10 +492,11 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   if (mime.startsWith('video/') || ['mp4', 'webm', 'mkv', 'avi', 'mov', 'flv', 'qt', 'm4v', '3gp'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`,
-      color: 'text-purple-400',
-      gradient: 'from-purple-500/20 to-violet-500/20',
+      color: 'text-purple-600 dark:text-purple-400',
+      gradient: 'from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-violet-500/20',
       label: 'VID',
-      bgHover: 'group-hover/file-row:shadow-purple-500/30'
+      bgHover: 'group-hover/file-row:shadow-purple-500/30',
+      badge: 'bg-purple-50 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-400/30'
     };
   }
   
@@ -499,10 +504,11 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>`,
-      color: 'text-pink-400',
-      gradient: 'from-pink-500/20 to-rose-500/20',
+      color: 'text-emerald-600 dark:text-pink-400',
+      gradient: 'from-emerald-500/10 to-teal-500/10 dark:from-pink-500/20 dark:to-rose-500/20',
       label: 'AUD',
-      bgHover: 'group-hover/file-row:shadow-pink-500/30'
+      bgHover: 'group-hover/file-row:shadow-pink-500/30',
+      badge: 'bg-emerald-50 dark:bg-pink-500/20 text-emerald-600 dark:text-pink-400 border-emerald-100 dark:border-pink-400/30'
     };
   }
   
@@ -510,10 +516,11 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   if (['application/zip', 'application/x-rar-compressed', 'application/x-tar', 'application/gzip'].includes(mime) || ['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>`,
-      color: 'text-orange-400',
-      gradient: 'from-orange-500/20 to-amber-500/20',
+      color: 'text-amber-700 dark:text-orange-400',
+      gradient: 'from-amber-500/10 to-orange-500/10 dark:from-orange-500/20 dark:to-amber-500/20',
       label: 'ZIP',
-      bgHover: 'group-hover/file-row:shadow-orange-500/30'
+      bgHover: 'group-hover/file-row:shadow-orange-500/30',
+      badge: 'bg-amber-50 dark:bg-orange-500/20 text-amber-700 dark:text-orange-400 border-amber-100 dark:border-orange-400/30'
     };
   }
   
@@ -521,20 +528,22 @@ function getFileTypeInfo(mimeType: string | null | undefined, fileName?: string)
   if (['text/html', 'text/css', 'application/javascript', 'application/json', 'application/xml'].includes(mime) || ['html', 'css', 'js', 'ts', 'jsx', 'tsx', 'json', 'xml', 'py', 'php', 'rb', 'go', 'rs'].includes(ext)) {
     return {
       icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>`,
-      color: 'text-cyan-400',
-      gradient: 'from-cyan-500/20 to-teal-500/20',
+      color: 'text-cyan-600 dark:text-cyan-400',
+      gradient: 'from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/20 dark:to-teal-500/20',
       label: 'CODE',
-      bgHover: 'group-hover/file-row:shadow-cyan-500/30'
+      bgHover: 'group-hover/file-row:shadow-cyan-500/30',
+      badge: 'bg-cyan-50 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-400/30'
     };
   }
   
   // 📦 Default / Unknown
   return {
     icon: `<svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 17v-4m0 0V9m0 4h4m-4 0H8"/></svg>`,
-    color: 'text-gray-400',
-    gradient: 'from-gray-500/20 to-slate-500/20',
+    color: 'text-slate-600 dark:text-gray-400',
+    gradient: 'from-slate-500/10 to-zinc-500/10 dark:from-gray-500/20 dark:to-slate-500/20',
     label: 'FILE',
-    bgHover: 'group-hover/file-row:shadow-gray-500/30'
+    bgHover: 'group-hover/file-row:shadow-gray-500/30',
+    badge: 'bg-slate-100 dark:bg-slate-500/20 text-slate-600 dark:text-gray-400 border-slate-200 dark:border-gray-400/30'
   };
 }
 
@@ -647,7 +656,7 @@ async function handleConfirmBlockchain(item: Document) {
   <table class="hidden sm:table w-full text-left border-collapse">
     
     <!-- THEAD -->
-    <thead class="bg-white/5 text-[10px] text-gray-400 uppercase tracking-widest border-b border-white/10">
+    <thead class="bg-slate-100/60 dark:bg-white/5 text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-widest border-b border-slate-200 dark:border-white/10">
       <tr>
         <th class="px-6 py-4 w-14">
           {#if selectionMode}
@@ -687,7 +696,7 @@ async function handleConfirmBlockchain(item: Document) {
                          [...(viewMode === 2 ? folders : []), ...items]
                            .every(i => selectedItems.includes(i.id))
                            ? 'bg-blue-600 border-blue-600' 
-                           : 'bg-white/10 border-gray-500/50'
+                           : 'bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-gray-500/50'
                        }
                        transition-all duration-200"
               >
@@ -717,13 +726,13 @@ async function handleConfirmBlockchain(item: Document) {
     </thead>
     
     <!-- TBODY -->
-    <tbody class="divide-y divide-white/5">
+    <tbody class="divide-y divide-slate-100 dark:divide-white/5">
       
       <!-- FOLDERS -->
       {#if viewMode === 2}
         {#each folders as folder}  
           <tr 
-            class="group hover:bg-white/[0.04] transition-all duration-200 cursor-pointer select-none
+            class="group hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all duration-200 cursor-pointer select-none
                    {selectionMode && selectedItems.includes(folder.id) 
                      ? 'bg-blue-500/10 border-l-4 border-blue-500' 
                      : 'border-l-4 border-transparent'}"
@@ -762,7 +771,7 @@ async function handleConfirmBlockchain(item: Document) {
                     class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none w-5 h-5
                            {selectedItems.includes(folder.id) 
                              ? 'bg-blue-600 border-blue-600' 
-                             : 'bg-white/10 border-gray-500/50'}
+                             : 'bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-gray-500/50'}
                            transition-all duration-200"
                   >
                     {#if selectedItems.includes(folder.id)}
@@ -776,17 +785,14 @@ async function handleConfirmBlockchain(item: Document) {
             </td>
             
             <!-- Name -->
-            <!-- Name Column - Updated with Complex Folder Icon -->
 <td class="pl-4 pr-2 py-4 min-w-[200px] sm:w-[360px] sm:max-w-[360px]">
   <div class="flex items-center gap-3 min-w-0">
-    
-    <!-- 📁 Complex Folder Icon Container (Scaled for Table) -->
     <div class="relative w-10 h-10 flex-shrink-0">
-      <div class="absolute inset-0 rounded-[14px] blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-amber-400/40 via-orange-400/30 to-amber-600/40"></div>
+      <div class="folder-glow-bg absolute inset-0 rounded-[14px] blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-amber-400/40 via-orange-400/30 to-amber-600/40"></div>
       {#if selectionMode && selectedItems.includes(folder.id)}
         <div class="absolute inset-0 rounded-[14px] blur-md bg-blue-500/30 animate-pulse"></div>
       {/if}
-      <div class="relative w-10 h-10 rounded-[14px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.2),0_0_0_1px_rgba(255,255,255,0.1)_inset] group-hover:scale-105 group-hover:border-amber-400/40 transition-all duration-300 overflow-visible">
+      <div class="folder-icon-container relative w-10 h-10 rounded-[14px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] backdrop-blur-xl border border-slate-200 dark:border-white/20 flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.05)_inset] group-hover:scale-105 group-hover:border-amber-400/40 transition-all duration-300 overflow-visible">
         <svg class="w-7 h-7 drop-shadow-sm" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="folderGrad1Tbl" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -799,43 +805,17 @@ async function handleConfirmBlockchain(item: Document) {
               <stop offset="50%" stop-color="white" stop-opacity="0.1" />
               <stop offset="100%" stop-color="white" stop-opacity="0" />
             </linearGradient>
-            <filter id="folderGlowTbl" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="1.5" result="blur" />
-              <feFlood flood-color="#f59e0b" flood-opacity="0.3" result="glowColor" />
-              <feComposite in="glowColor" in2="blur" operator="in" result="softGlow" />
-              <feMerge>
-                <feMergeNode in="softGlow" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
-          <path d="M15 30 C15 25, 20 20, 25 20 L40 20 L48 28 L85 28 C90 28, 95 33, 95 38 L95 80 C95 85, 90 90, 85 90 L15 90 C10 90, 5 85, 5 80 L5 30 Z" fill="url(#folderGrad1Tbl)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" filter="url(#folderGlowTbl)" />
-          <path d="M25 20 L40 20 L48 28 L38 28 C33 28, 28 25, 25 20 Z" fill="url(#folderGrad1Tbl)" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
-          <path d="M15 30 C15 25, 20 20, 25 20 L40 20 L48 28 L85 28 C90 28, 95 33, 95 38 L95 80 C95 85, 90 90, 85 90 L15 90 C10 90, 5 85, 5 80 L5 30 Z" fill="url(#folderGrad2Tbl)" class="opacity-60" />
-          <path d="M18 32 C18 28, 22 24, 26 24 L39 24 L46 30 L83 30 C87 30, 91 34, 91 38 L91 78 C91 82, 87 86, 83 86 L18 86 C14 86, 10 82, 10 78 L10 32 Z" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8" />
-          <g class="opacity-70">
-            <rect x="24" y="48" width="52" height="6" rx="1.5" fill="white" fill-opacity="0.15" />
-            <rect x="28" y="57" width="44" height="6" rx="1.5" fill="white" fill-opacity="0.1" />
-          </g>
-          <g class="opacity-80">
-            <circle cx="76" cy="36" r="1.5" fill="white" fill-opacity="0.6" />
-          </g>
+          <path d="M15 30 C15 25, 20 20, 25 20 L40 20 L48 28 L85 28 C90 28, 95 33, 95 38 L95 80 C95 85, 90 90, 85 90 L15 90 C10 90, 5 85, 5 80 L5 30 Z" fill="url(#folderGrad1Tbl)" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
         </svg>
-        <div class="absolute inset-0 rounded-[14px] opacity-0 group-hover:opacity-100 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none" style="background-size: 200% 100%;"></div>
       </div>
     </div>
 
-    <!-- Folder Name Text -->
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2 min-w-0">
-        <span class="block text-sm font-semibold text-white/90 uppercase tracking-wide truncate" title={folder.name}>
+        <span class="folder-title block text-sm font-semibold text-slate-800 dark:text-white/90 uppercase tracking-wide truncate" title={folder.name}>
           {folder.name}
         </span>
-        {#if folder.accessRole}
-          <span class="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
-            {folder.accessRole === 'EDITOR' ? 'Editor' : folder.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
-          </span>
-        {/if}
       </div>
     </div>
   </div>
@@ -852,9 +832,8 @@ async function handleConfirmBlockchain(item: Document) {
                 <button
                   class="group/owner flex items-center justify-center gap-2
                          hover:scale-[1.02] active:scale-[0.98]
-                         hover:bg-white/5 hover:rounded-lg
+                         hover:bg-slate-100 dark:hover:bg-white/5 hover:rounded-lg
                          transition-all duration-200 ease-out
-                         focus:outline-none focus:ring-2 focus:ring-blue-500/50
                          text-left w-full"
                   title={formatOwnerListTitle(folder)}
                   onclick={(e) => {
@@ -871,65 +850,48 @@ async function handleConfirmBlockchain(item: Document) {
                       <img
                         src={avatar.value}
                         alt={formatOwnerList(folder)}
-                        class="w-6 h-6 rounded-full object-cover border border-white/10
-                               group-hover/owner:border-blue-400/50 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
-                               transition-all duration-200"
-                        onerror={(e) => {
-                          const el = e.target as HTMLImageElement;
-                          el.style.display = 'none';
-                          el.nextElementSibling?.classList.remove('hidden');
-                        }}
+                        class="w-6 h-6 rounded-full object-cover border border-slate-200 dark:border-white/10
+                               group-hover/owner:border-blue-400/50 transition-all duration-200"
                       />
-                      <div class="hidden w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600
-                                  flex items-center justify-center text-[10px] font-bold text-white
-                                  group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
-                                  transition-shadow duration-200">
-                        {avatar.value}
-                      </div>
                     {:else}
-                      <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600
-                                  flex items-center justify-center text-[10px] font-bold text-white
-                                  group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
-                                  transition-shadow duration-200">
+                      <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 dark:from-blue-500 dark:to-indigo-600
+                                  flex items-center justify-center text-[10px] font-bold text-white transition-shadow duration-200">
                         {avatar.value}
                       </div>
                     {/if}
                     {#if folderOwners.length > 1}
-                      <span class="absolute -bottom-1 -right-1 min-w-4 h-4 rounded-full bg-blue-600 border-2 border-[#1a1a1e] px-1 text-[8px] font-black text-white leading-3">
+                      <span class="absolute -bottom-1 -right-1 min-w-4 h-4 rounded-full bg-blue-600 border-2 border-slate-50 dark:border-[#1a1a1e] px-1 text-[8px] font-black text-white leading-3">
                         +{folderOwners.length - 1}
                       </span>
                     {:else}
                       <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full
-                                   bg-blue-500 border-2 border-[#1a1a1e] opacity-0
+                                   bg-blue-500 border-2 border-slate-50 dark:border-[#1a1a1e] opacity-0
                                    group-hover/owner:opacity-100 transition-opacity duration-200"></span>
                     {/if}
                   </div>
 
-                  <span class="text-xs truncate max-w-[100px] transition-colors duration-200 {isCurrentUser ? 'text-blue-400 font-semibold' : 'text-gray-300 group-hover/owner:text-blue-300 group-hover/owner:font-medium'}">
+                  <span class="text-xs truncate max-w-[100px] transition-colors duration-200 {isCurrentUser ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-700 dark:text-gray-300 group-hover/owner:text-blue-600 dark:group-hover/owner:text-blue-300'}">
                     {formatOwnerList(folder)}
                   </span>
                 </button>
-              {:else}
-                <span class="text-xs text-gray-600 italic">Unknown</span>
               {/if}
             </td>
             
             <!-- Size -->
             <td class="hidden md:table-cell px-4 py-4 text-center">
-              <span class="text-xs text-gray-500 font-medium">—</span>
+              <span class="text-xs text-slate-500 font-medium">—</span>
             </td>
 
             <!-- Modified -->
             <td class="hidden xl:table-cell px-4 py-4 text-center">
-              <span class="text-xs text-gray-500 whitespace-nowrap"
-                    title={(trashMode ? folder.deletedAt : folder.updatedAt)?.toString() || folder.createdAt?.toString()}>
+              <span class="text-xs text-slate-500 whitespace-nowrap">
                 {formatDate((trashMode ? folder.deletedAt : folder.updatedAt) || folder.createdAt)}
               </span>
             </td>
             
             {#if trashMode}
               <td class="hidden xl:table-cell px-4 py-4 text-center">
-                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-300 border border-red-500/20" title="Item akan dihapus otomatis setelah 60 hari di Trash">
+                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300 border border-red-200 dark:border-red-500/20">
                   {formatTrashRetentionCountdown(folder.deletedAt)}
                 </span>
               </td>
@@ -937,7 +899,7 @@ async function handleConfirmBlockchain(item: Document) {
 
             <!-- IPFS -->
             <td class="hidden lg:table-cell px-4 py-4 text-center">
-              <span class="text-xs text-gray-500 font-medium">—</span>
+              <span class="text-xs text-slate-500 font-medium">—</span>
             </td>
 
             <!-- Actions -->
@@ -970,11 +932,11 @@ async function handleConfirmBlockchain(item: Document) {
         {@const theme = getFileTheme(item.mimeType)}
         
         <tr 
-          class="group/file-row hover:bg-white/[0.06] transition-all duration-200 cursor-pointer select-none
+          class="group/file-row hover:bg-slate-50 dark:hover:bg-white/[0.06] transition-all duration-200 cursor-pointer select-none
                {selectionMode && selectedItems.includes(item.id) 
                  ? 'bg-blue-500/10 border-l-4 border-blue-500' 
                  : 'border-l-4 border-transparent hover:border-l-blue-400/30'}
-               hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]" 
+               hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]" 
           onclick={(e) => {
             if (selectionMode) {
               e.stopPropagation();
@@ -1006,7 +968,7 @@ async function handleConfirmBlockchain(item: Document) {
                   checked={selectedItems.includes(item.id)}
                   onchange={(e) => { e.stopPropagation(); onToggleSelect?.(item.id); }}
                   onclick={(e) => e.stopPropagation()}
-                  class="w-5 h-5 rounded-full border-2 border-gray-500/50 bg-white/10
+                  class="w-5 h-5 rounded-full border-2 border-slate-350 dark:border-gray-500/50 bg-slate-100 dark:bg-white/10
                          checked:bg-blue-600 checked:border-blue-600
                          cursor-pointer appearance-none transition-all duration-200 opacity-0"
                 />
@@ -1037,7 +999,7 @@ async function handleConfirmBlockchain(item: Document) {
               <!-- 🎨 File Type Icon with Glassmorphism -->
               <div class="relative w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
                           bg-gradient-to-br {fileInfo.gradient}
-                          border border-white/10 backdrop-blur-sm
+                          border border-slate-200 dark:border-white/10 backdrop-blur-sm
                           {fileInfo.color}
                           group-hover/file-row:scale-110 
                           {fileInfo.bgHover}
@@ -1051,8 +1013,8 @@ async function handleConfirmBlockchain(item: Document) {
                 {@html fileInfo.icon}
                 
                 <!-- ✨ Badge Label -->
-                <span class="absolute -top-1 -right-1 text-[8px] font-bold 
-                            bg-black/60 backdrop-blur-sm text-white 
+                <span class="absolute -top-1 -right-1 text-[8px] font-bold border backdrop-blur-sm
+                            {fileInfo.badge}
                             px-1 py-0.5 rounded-[3px] opacity-0 group-hover/file-row:opacity-100
                             transition-opacity duration-200">
                   {fileInfo.label}
@@ -1063,8 +1025,8 @@ async function handleConfirmBlockchain(item: Document) {
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 min-w-0">
                   <p
-                    class="text-sm font-medium text-gray-200 truncate
-                           group-hover/file-row:text-white group-hover/file-row:underline decoration-blue-400/50 underline-offset-4
+                    class="text-sm font-medium text-slate-800 dark:text-gray-200 truncate
+                           group-hover/file-row:text-slate-900 dark:group-hover/file-row:text-white group-hover/file-row:underline decoration-blue-400/50 underline-offset-4
                            transition-all duration-200"
                     title={item.title}
                   >
@@ -1088,7 +1050,7 @@ async function handleConfirmBlockchain(item: Document) {
               <button 
                 class="group/owner flex items-center justify-center gap-2 
                        hover:scale-[1.02] active:scale-[0.98] 
-                       hover:bg-white/5 hover:rounded-lg 
+                       hover:bg-slate-100 dark:hover:bg-white/5 hover:rounded-lg 
                        transition-all duration-200 ease-out
                        focus:outline-none focus:ring-2 focus:ring-blue-500/50
                        text-left w-full"
@@ -1103,7 +1065,7 @@ async function handleConfirmBlockchain(item: Document) {
                     <img 
                       src={avatar.value} 
                       alt={formatOwnerName(item.owner, currentUserId, item.ownerId)}  
-                      class="w-6 h-6 rounded-full object-cover border border-white/10 
+                      class="w-6 h-6 rounded-full object-cover border border-slate-200 dark:border-white/10 
                              group-hover/owner:border-blue-400/50 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
                              transition-all duration-200"
                       onerror={(e) => { 
@@ -1112,14 +1074,14 @@ async function handleConfirmBlockchain(item: Document) {
                         el.nextElementSibling?.classList.remove('hidden');
                       }}
                     />
-                    <div class="hidden w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 
+                    <div class="hidden w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 dark:from-blue-500 dark:to-indigo-600 
                                 flex items-center justify-center text-[10px] font-bold text-white
                                 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
                                 transition-shadow duration-200">
                       {avatar.value}
                     </div>
                   {:else}
-                    <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 dark:from-blue-500 dark:to-indigo-600 
                                 flex items-center justify-center text-[10px] font-bold text-white
                                 group-hover/owner:shadow-[0_0_12px_rgba(59,130,246,0.4)]
                                 transition-shadow duration-200">
@@ -1131,7 +1093,7 @@ async function handleConfirmBlockchain(item: Document) {
                                group-hover/owner:opacity-100 transition-opacity duration-200"></span>
                 </div>
                 
-                <span class="text-xs truncate max-w-[100px] transition-colors duration-200 {isCurrentUser ? 'text-blue-400 font-semibold' : 'text-gray-300 group-hover/owner:text-blue-300 group-hover/owner:font-medium'}">
+                <span class="text-xs truncate max-w-[100px] transition-colors duration-200 {isCurrentUser ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-700 dark:text-gray-300 group-hover/owner:text-blue-600 dark:group-hover/owner:text-blue-300'}">
                   {formatOwnerName(item.owner, currentUserId, item.ownerId)}
                 </span>
               </button>
@@ -1165,7 +1127,7 @@ async function handleConfirmBlockchain(item: Document) {
                   Confirmation expired
                 </span>
               {:else}
-                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-500/10 text-red-300 border border-red-500/20" title="Item akan dihapus otomatis setelah 60 hari di Trash">
+                <span class="inline-flex text-[10px] font-medium px-2 py-1 rounded-full whitespace-nowrap bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/20" title="Item akan dihapus otomatis setelah 60 hari di Trash">
                   {formatTrashRetentionCountdown(item.deletedAt)}
                 </span>
               {/if}
@@ -1183,7 +1145,7 @@ async function handleConfirmBlockchain(item: Document) {
       target="_blank"
       rel="noopener noreferrer"
       class="inline-flex items-center gap-1.5 text-xs font-mono
-             text-blue-400 bg-white/5 hover:bg-blue-500/10 hover:text-blue-300
+             text-blue-600 dark:text-blue-400 bg-slate-100 dark:bg-white/5 hover:bg-blue-500/10 hover:text-blue-700 dark:hover:text-blue-300
              px-2.5 py-1.5 rounded-lg transition-all duration-150 ease-out"
       title="View on Etherscan"
       onclick={(e) => e.stopPropagation()}
@@ -1318,7 +1280,7 @@ async function handleConfirmBlockchain(item: Document) {
     {#if viewMode === 2}
       {#each folders as folder}
         <div 
-          class="relative p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 flex items-center justify-between gap-3 active:scale-[0.99] transition-all select-none
+          class="relative p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] hover:bg-slate-100/50 dark:hover:bg-white/[0.04] border border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-3 active:scale-[0.99] transition-all select-none
                  {selectionMode && selectedItems.includes(folder.id) ? 'bg-blue-500/10 border-blue-500/30' : ''}"
           onclick={(e) => {
             if (selectionMode) {
@@ -1341,7 +1303,7 @@ async function handleConfirmBlockchain(item: Document) {
                   onchange={(e) => { e.stopPropagation(); onToggleSelect?.(folder.id); }}
                   class="w-5 h-5 rounded-full border-2 border-gray-500/50 bg-white/10 checked:bg-blue-600 checked:border-blue-600 cursor-pointer appearance-none opacity-0"
                 />
-                <span class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none w-5 h-5 {selectedItems.includes(folder.id) ? 'bg-blue-600 border-blue-600' : 'bg-white/10 border-gray-500/50'}">
+                <span class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none w-5 h-5 {selectedItems.includes(folder.id) ? 'bg-blue-600 border-blue-600' : 'bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-gray-500/50'}">
                   {#if selectedItems.includes(folder.id)}
                     <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
@@ -1353,8 +1315,8 @@ async function handleConfirmBlockchain(item: Document) {
 
             <!-- 📁 Folder Icon wrapper -->
             <div class="relative w-10 h-10 flex-shrink-0">
-              <div class="relative w-10 h-10 rounded-[14px] bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] border border-white/20 flex items-center justify-center shadow-lg">
-                <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="relative w-10 h-10 rounded-[14px] bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100/30 dark:from-white/10 dark:via-white/5 dark:to-white/[0.02] border border-slate-200 dark:border-white/20 flex items-center justify-center shadow-lg">
+                <svg class="w-6 h-6 text-blue-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                 </svg>
               </div>
@@ -1363,9 +1325,9 @@ async function handleConfirmBlockchain(item: Document) {
             <!-- Info -->
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-1.5 min-w-0">
-                <span class="block text-sm font-semibold text-white/90 truncate">{folder.name}</span>
+                <span class="block text-sm font-semibold text-slate-800 dark:text-white/90 truncate">{folder.name}</span>
                 {#if folder.accessRole}
-                  <span class="shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'}">
+                  <span class="shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider {folder.accessRole === 'EDITOR' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20' : folder.accessRole === 'ADMIN' ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/20' : 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/20'}">
                     {folder.accessRole === 'EDITOR' ? 'Editor' : folder.accessRole === 'ADMIN' ? 'Admin' : 'Viewer'}
                   </span>
                 {/if}
@@ -1403,7 +1365,7 @@ async function handleConfirmBlockchain(item: Document) {
     {#each items as item}
       {@const fileInfo = getFileTypeInfo(item.mimeType, item.fileName)}
       <div 
-        class="relative p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 flex flex-col gap-3 active:scale-[0.99] transition-all select-none
+        class="relative p-4 rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] hover:bg-slate-100/50 dark:hover:bg-white/[0.04] border border-slate-200/60 dark:border-white/5 flex flex-col gap-3 active:scale-[0.99] transition-all select-none
                {selectionMode && selectedItems.includes(item.id) ? 'bg-blue-500/10 border-blue-500/30' : ''}"
         onclick={(e) => {
           if (selectionMode) {
@@ -1427,7 +1389,7 @@ async function handleConfirmBlockchain(item: Document) {
                   onchange={(e) => { e.stopPropagation(); onToggleSelect?.(item.id); }}
                   class="w-5 h-5 rounded-full border-2 border-gray-500/50 bg-white/10 checked:bg-blue-600 checked:border-blue-600 cursor-pointer appearance-none opacity-0"
                 />
-                <span class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none w-5 h-5 {selectedItems.includes(item.id) ? 'bg-blue-600 border-blue-600' : 'bg-white/10 border-gray-500/50'}">
+                <span class="absolute inset-0 flex items-center justify-center rounded-full border-2 pointer-events-none w-5 h-5 {selectedItems.includes(item.id) ? 'bg-blue-600 border-blue-600' : 'bg-slate-100 dark:bg-white/10 border-slate-300 dark:border-gray-500/50'}">
                   {#if selectedItems.includes(item.id)}
                     <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
@@ -1438,13 +1400,13 @@ async function handleConfirmBlockchain(item: Document) {
             {/if}
 
             <!-- File Icon -->
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br {fileInfo.gradient} border border-white/10 {fileInfo.color} flex-shrink-0">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br {fileInfo.gradient} border border-slate-200 dark:border-white/10 {fileInfo.color} flex-shrink-0">
               {@html fileInfo.icon}
             </div>
 
             <!-- Title & Details -->
             <div class="min-w-0 flex-1">
-              <span class="block text-sm font-semibold text-white/90 truncate">{item.title}</span>
+              <span class="block text-sm font-semibold text-slate-800 dark:text-white/90 truncate">{item.title}</span>
               <span class="text-[10px] text-gray-500 uppercase font-medium mt-0.5 block truncate">
                 {item.fileName?.split('.').pop() || 'FILE'} • {formatFileSize(item.fileSize)} • {formatDate((trashMode ? item.deletedAt : item.updatedAt) || item.createdAt)}
               </span>

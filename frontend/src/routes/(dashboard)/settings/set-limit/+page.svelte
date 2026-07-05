@@ -265,7 +265,7 @@
 
 <svelte:head><title>Storage Limits • DecentraShare</title></svelte:head>
 
-<div class="w-full min-h-[calc(100vh-4rem)]">
+<div class="set-limit-page w-full min-h-[calc(100vh-4rem)]">
   <div class="max-w-7xl mx-auto" in:fly={{ y: 20, duration: 400 }}>
 
     <!-- Header -->

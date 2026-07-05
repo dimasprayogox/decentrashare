@@ -18,20 +18,16 @@ const storage = multer.diskStorage({
   },
 });
 
-// ✅ Allowed types sesuai frontend (termasuk format iPhone/iOS seperti MOV, QuickTime, HEIC, HEIF)
+// ✅ Allowed types sesuai frontend SupportedCreations (PNG, JPG, GIF, HEIC, MP4, WEBM, MOV, MP3, WAV, OGG, PDF, CSV)
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
   'image/png',
   'image/gif',
-  'image/webp',
   'image/heic',
   'image/heif',
   'image/heic-sequence',
   'image/heif-sequence',
-  'image/tiff',
-  'image/bmp',
-  'image/svg+xml',
   'video/mp4',
   'video/webm',
   'video/quicktime',
@@ -44,22 +40,20 @@ const ALLOWED_MIME_TYPES = [
   'audio/wave',
   'audio/x-wav',
   'audio/ogg',
-  'text/plain',
-  'text/csv',
-  'application/json'
+  'text/csv'
 ];
 
 export const uploadMiddleware = multer({ 
   storage,
   limits: { 
     fileSize: 100 * 1024 * 1024,  // ✅ 100MB per file
-    files: 10                      // ✅ Max 10 files per request (masuk ke limits!)
+    files: 10                      // ✅ Max 10 files per request
   },
   fileFilter: (req, file, cb) => {
     // ✅ Cek MIME type + extension fallback
     const ext = path.extname(file.originalname).toLowerCase();
     const isAllowed = ALLOWED_MIME_TYPES.includes(file.mimetype) ||
-                      (file.mimetype.startsWith('image/') && /\.(jpeg|jpg|png|gif|webp|heic|heif|tiff|tif|bmp|svg)$/.test(ext)) ||
+                      (file.mimetype.startsWith('image/') && /\.(jpeg|jpg|png|gif|heic|heif)$/.test(ext)) ||
                       (file.mimetype.startsWith('video/') && /\.(mp4|webm|mov|qt|m4v|3gp)$/.test(ext)) ||
                       (file.mimetype.startsWith('audio/') && /\.(mp3|wav|ogg)$/.test(ext)) ||
                       (/\.(mp3|wav|ogg|mov|qt|heic|heif|m4v)$/.test(ext) && ['application/octet-stream', ''].includes(file.mimetype));
@@ -68,7 +62,7 @@ export const uploadMiddleware = multer({
       cb(null, true);
     } else {
       const extensionLabel = ext || 'unknown extension';
-      cb(new Error(`Unsupported file type: ${file.originalname} (${extensionLabel}). Supported previewable formats: PDF, images (JPG/PNG/GIF/WebP/HEIC/HEIF), video (MP4/WebM/MOV), audio (MP3/WAV/OGG), text, CSV, and JSON.`), false);
+      cb(new Error(`Unsupported file type: ${file.originalname} (${extensionLabel}). Supported previewable formats: PDF, CSV, images (JPG/PNG/GIF/HEIC), video (MP4/WebM/MOV), and audio (MP3/WAV/OGG).`), false);
     }
   }
 });

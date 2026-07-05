@@ -5,26 +5,26 @@ import type { PageServerLoad } from './$types';
 // Decode payload JWT (tanpa verifikasi signature — hanya untuk membaca role di sisi server SvelteKit).
 // Verifikasi signature tetap dilakukan backend pada setiap request API.
 function decodeJwtPayload(token: string): { role?: string } | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    return JSON.parse(Buffer.from(parts[1], 'base64').toString());
-  } catch {
-    return null;
-  }
+	try {
+		const parts = token.split('.');
+		if (parts.length !== 3) return null;
+		return JSON.parse(Buffer.from(parts[1], 'base64').toString());
+	} catch {
+		return null;
+	}
 }
 
 export const load: PageServerLoad = async ({ cookies, url }) => {
-  const session = cookies.get('session_token');
-  if (!session) {
-    const fromUrl = url.pathname + url.search;
-    throw redirect(303, `/login?redirectTo=${encodeURIComponent(fromUrl)}`);
-  }
+	const session = cookies.get('session_token');
+	if (!session) {
+		const fromUrl = url.pathname + url.search;
+		throw redirect(303, `/login?redirectTo=${encodeURIComponent(fromUrl)}`);
+	}
 
-  const payload = decodeJwtPayload(session);
-  if (!payload || payload.role !== 'ADMIN') {
-    throw error(403, 'Forbidden. Admin access only.');
-  }
+	const payload = decodeJwtPayload(session);
+	if (!payload || payload.role !== 'ADMIN') {
+		throw error(403, 'Forbidden. Admin access only.');
+	}
 
-  return {};
+	return {};
 };

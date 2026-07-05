@@ -1395,7 +1395,7 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
         {#each bulkDeleteItems.slice(0, 5) as item}
           <p class="text-sm text-gray-300 py-1 flex items-center gap-2">
             {#if item.type === 'folder'}
-              <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+              <svg class="w-4 h-4 text-blue-600 dark:text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
             {:else}
               <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
             {/if}
@@ -1567,8 +1567,8 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
               </div>
 
               <div class="grid grid-cols-2 gap-2 rounded-xl bg-white/[0.03] p-1 border border-white/10">
-                <button onclick={() => bulkShareAccessMode = 'all'} class="px-3 py-2 rounded-lg text-xs font-semibold transition-all {bulkShareAccessMode === 'all' ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isBulkShareProcessing}>Apply to all</button>
-                <button onclick={() => bulkShareAccessMode = 'individual'} class="px-3 py-2 rounded-lg text-xs font-semibold transition-all {bulkShareAccessMode === 'individual' ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isBulkShareProcessing}>Set per item</button>
+                <button onclick={() => bulkShareAccessMode = 'all'} class="px-3 py-2 rounded-lg text-xs font-semibold transition-all {bulkShareAccessMode === 'all' ? 'bg-violet-600 text-white keep-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isBulkShareProcessing}>Apply to all</button>
+                <button onclick={() => bulkShareAccessMode = 'individual'} class="px-3 py-2 rounded-lg text-xs font-semibold transition-all {bulkShareAccessMode === 'individual' ? 'bg-violet-600 text-white keep-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}" disabled={isBulkShareProcessing}>Set per item</button>
               </div>
 
               {#if bulkShareAccessMode === 'individual'}
@@ -1681,13 +1681,13 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
               {/if}
 
               {#if bulkShareHasFolders && bulkShareSelectedUsers.length > 0}
-                <div class="rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-3 text-xs text-violet-200">
+                <div class="rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-3 text-xs text-violet-800 dark:text-violet-200">
                   Set Viewer/Editor per user above. Role applies only to folders{bulkShareHasDocuments ? '; documents only receive user access.' : '.'}
                 </div>
               {/if}
             </div>
           {:else}
-            <div class="flex gap-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-xs text-amber-200">
+            <div class="flex gap-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-xs text-amber-800 dark:text-amber-200">
               <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span>User selection is not required. Backend will clean specific-user access when privacy is not Specific Users.</span>
             </div>
@@ -1738,34 +1738,35 @@ const handleShare = (id: string, type: 'folder' | 'document') => {
     
     <div class="flex gap-3 w-full sm:w-auto">
       <!-- Select Mode Toggle -->
-     <button
-  onclick={toggleSelectMode}
-  class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all duration-300 flex items-center gap-2 {selectionMode ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/50 hover:from-blue-500 hover:to-blue-600 shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' : ''}"
-  title={selectionMode ? 'Exit selection mode' : 'Select items'}
->
-  <span class="relative">
-    <svg class="w-4 h-4 transition-all duration-300 {selectionMode ? 'drop-shadow-[0_0_8px_rgba(248,113,113,0.6)]' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      {#if selectionMode}
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-      {:else}
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-      {/if}
-    </svg>
-    {#if selectionMode}
-      <span class="absolute inset-0 rounded-full bg-blue-500/40 blur-md animate-ping opacity-70"></span>
-    {/if}
-  </span>
-  <span class="hidden sm:inline transition-colors duration-300 {selectionMode ? 'text-blue-100 font-semibold' : ''}">
-    {selectionMode ? 'Cancel' : 'Select'}
-  </span>
-  {#if selectionMode && selectedItems?.length > 0}
-  {/if}
-</button>
+      <button
+        onclick={toggleSelectMode}
+        class="flex-1 sm:flex-none px-4 py-3 rounded-[20px] font-medium text-sm transition-all duration-300 flex items-center gap-2
+               {selectionMode 
+                 ? 'bg-gradient-to-br from-blue-600 to-blue-700 border border-blue-500/50 text-white shadow-lg shadow-blue-500/30 ring-1 ring-blue-400/30 animate-pulse-slow' 
+                 : 'bg-indigo-50/80 dark:bg-white/5 border border-indigo-100/60 dark:border-white/10 text-indigo-600 dark:text-white hover:bg-indigo-100/80 dark:hover:bg-white/10'}"
+        title={selectionMode ? 'Exit selection mode' : 'Select items'}
+      >
+        <span class="relative">
+          <svg class="w-4 h-4 transition-all duration-300 {selectionMode ? 'drop-shadow-[0_0_8px_rgba(248,113,113,0.6)]' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {#if selectionMode}
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            {:else}
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            {/if}
+          </svg>
+          {#if selectionMode}
+            <span class="absolute inset-0 rounded-full bg-blue-500/40 blur-md animate-ping opacity-70"></span>
+          {/if}
+        </span>
+        <span class="hidden sm:inline transition-colors duration-300 {selectionMode ? 'text-blue-100 font-semibold' : ''}">
+          {selectionMode ? 'Cancel' : 'Select'}
+        </span>
+      </button>
 
-      <button onclick={refreshStorage} class="flex-1 sm:flex-none px-4 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-medium text-sm hover:bg-white/10 transition-all disabled:opacity-50" disabled={isLoading || isRefreshingStorage}>Refresh</button>
+      <button onclick={refreshStorage} class="flex-1 sm:flex-none px-4 py-3 bg-blue-50/80 dark:bg-white/5 border border-blue-100/60 dark:border-white/10 text-blue-600 dark:text-white rounded-[20px] font-medium text-sm hover:bg-blue-100/80 dark:hover:bg-white/10 transition-all disabled:opacity-50" disabled={isLoading || isRefreshingStorage}>Refresh</button>
 
       <!-- Action Buttons -->
-      <button onclick={() => showFolder = true} class="flex-1 sm:flex-none px-6 py-3 bg-white/5 border border-white/10 text-white rounded-[20px] font-bold text-sm hover:bg-white/10 transition-all">+ Folder</button>
+      <button onclick={() => showFolder = true} class="flex-1 sm:flex-none px-6 py-3 bg-blue-50/80 dark:bg-white/5 border border-blue-100/60 dark:border-white/10 text-blue-600 dark:text-white rounded-[20px] font-bold text-sm hover:bg-blue-100/80 dark:hover:bg-white/10 transition-all">+ Folder</button>
       <button onclick={() => showUpload = true} class="flex-1 sm:flex-none px-6 py-3 bg-blue-600 text-white rounded-[20px] font-bold text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20">Upload</button>
     </div>
   </header>

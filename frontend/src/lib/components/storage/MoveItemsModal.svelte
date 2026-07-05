@@ -57,7 +57,7 @@
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-4 min-w-0">
             <div class="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center shrink-0">
-              <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
             </div>
             <div class="min-w-0">
               <h3 class="text-white font-black text-xl tracking-tight">Move Item</h3>
@@ -72,7 +72,7 @@
 
       <div class="p-6 space-y-4 overflow-y-auto max-h-[calc(86vh-220px)]">
         {#if notice}
-          <p class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-3" role="status">{notice}</p>
+          <p class="text-xs text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-3" role="status">{notice}</p>
         {/if}
 
         <div class="space-y-2 max-h-72 overflow-y-auto mb-4 pr-1">
@@ -94,7 +94,7 @@
                 {#if isFolderLoading(row.folder.id)}<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{:else}<svg class="w-4 h-4 transition-transform {isFolderExpanded(row.folder.id) ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>{/if}
               </button>
               <button onclick={() => onSelectFolder(row.folder, disabledDestination, permissionError)} class="flex-1 flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all {disabledDestination ? 'bg-red-500/5 border-red-500/20 text-gray-600 cursor-not-allowed' : targetFolderId === row.folder.id ? 'bg-blue-600/20 border-blue-500/50 text-white shadow-lg shadow-blue-500/10' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}" disabled={isProcessing || disabledDestination}>
-                <span class="min-w-0"><span class="flex items-center gap-2 font-medium truncate"><svg class="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>{row.folder.name}</span><span class="block text-xs text-gray-500">{invalidDestination ? 'Invalid destination' : permissionError || getDestinationMeta(row.folder)}</span></span>
+                <span class="min-w-0"><span class="flex items-center gap-2 font-medium truncate"><svg class="w-4 h-4 text-blue-600 dark:text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>{row.folder.name}</span><span class="block text-xs text-gray-500">{invalidDestination ? 'Invalid destination' : permissionError || getDestinationMeta(row.folder)}</span></span>
                 {#if targetFolderId === row.folder.id}<span class="text-blue-400 text-xs font-semibold">Selected</span>{/if}
               </button>
             </div>

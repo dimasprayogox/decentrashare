@@ -7,7 +7,7 @@
   let { children, data } = $props();
 </script>
 
-<div class="min-h-screen bg-[#0a0a0c] lg:flex">
+<div class="min-h-screen bg-slate-50 dark:bg-[#0a0a0c] lg:flex transition-colors duration-300">
   
   <Sidebar
     active={data?.active ?? 'dashboard'}

@@ -5,7 +5,7 @@
     {
       title: 'Secure Digital Storage',
       desc: 'Store your digital creations securely on IPFS while keeping ownership records on the Ethereum blockchain.',
-      gradient: 'from-blue-500/20 to-cyan-500/20',
+      gradient: 'from-blue-500/20 to-blue-600/10 dark:to-cyan-500/20',
       ring: 'group-hover:border-blue-500/40',
       icon: 'globe'
     },
@@ -58,11 +58,11 @@
 
 <section id="features" class="relative mx-auto max-w-6xl px-6 py-28">
   <div use:inView class="reveal mb-16 text-center">
-    <h2 class="mt-4 text-4xl font-extrabold tracking-tight text-white md:text-5xl">
+    <h2 class="mt-4 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white md:text-5xl">
       Protecting
-      <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Digital Creations</span>
+      <span class="bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">Digital Creations</span>
     </h2>
-    <p class="mx-auto mt-5 max-w-2xl text-lg text-gray-400">
+    <p class="mx-auto mt-5 max-w-2xl text-lg text-slate-600 dark:text-gray-400">
       Securely store, manage, and share your digital creations using Ethereum blockchain and decentralized IPFS storage.
     </p>
   </div>
@@ -71,20 +71,20 @@
     {#each features as feature, i}
       <div
         use:inView
-        class="reveal group relative overflow-hidden rounded-3xl border border-white/5 bg-[#0c0c10]/40 p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-white/15 hover:bg-[#121217]/60 shadow-xl shadow-black/30 backdrop-blur-sm"
+        class="reveal group relative overflow-hidden rounded-3xl border border-slate-200/60 dark:border-white/5 bg-white/70 dark:bg-[#0c0c10]/40 p-8 transition-all duration-500 hover:-translate-y-1.5 hover:border-slate-300 dark:hover:border-white/15 hover:bg-slate-100/30 dark:hover:bg-[#121217]/60 shadow-xl shadow-slate-100/50 dark:shadow-black/30 backdrop-blur-sm"
         style="--reveal-delay: {(i % 3) * 120}ms"
       >
         <!-- hover glow -->
         <div class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gradient-to-br {feature.gradient} opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"></div>
 
-        <div class="relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br {feature.gradient} ring-1 ring-white/10 group-hover:scale-105 group-hover:rotate-3 transition-all duration-500">
-          <svg class="h-7 w-7 text-white transition-colors duration-500 group-hover:text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br {feature.gradient} ring-1 ring-slate-200 dark:ring-white/10 group-hover:scale-105 group-hover:rotate-3 transition-all duration-500">
+          <svg class="h-7 w-7 text-slate-700 dark:text-white transition-colors duration-500 group-hover:text-blue-600 dark:group-hover:text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d={paths[feature.icon]} />
           </svg>
         </div>
 
-        <h3 class="relative mb-3 text-xl font-bold text-white group-hover:text-blue-300 transition-colors duration-300">{feature.title}</h3>
-        <p class="relative text-sm leading-relaxed text-gray-500 transition-colors duration-300 group-hover:text-gray-300">
+        <h3 class="relative mb-3 text-xl font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors duration-300">{feature.title}</h3>
+        <p class="relative text-sm leading-relaxed text-slate-500 dark:text-gray-400 transition-colors duration-300 group-hover:text-slate-750 dark:group-hover:text-gray-300">
           {feature.desc}
         </p>
       </div>

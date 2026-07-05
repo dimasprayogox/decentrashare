@@ -37,21 +37,20 @@ const faqs = [
 </script>
 
 <section id="faq" class="relative mx-auto max-w-4xl px-6 py-24">
-  <!-- Decorative ambient glows -->
-  <div class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 h-[500px] w-full max-w-3xl bg-gradient-to-tr from-blue-600/15 via-cyan-600/10 to-transparent blur-[120px]"></div>
+  <div class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 h-[500px] w-full max-w-3xl bg-gradient-to-tr from-blue-600/15 via-indigo-600/10 to-transparent blur-[120px]"></div>
 
   <div class="text-center mb-16">
     <p
       use:inView
       style="--reveal-delay: 100ms"
-      class="reveal mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl"
+      class="reveal mt-3 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl md:text-5xl"
     >
-      Frequently Asked <span class="bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400 bg-clip-text text-transparent">Questions</span>
+      Frequently Asked <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 dark:from-blue-400 dark:via-indigo-400 dark:to-blue-400 bg-clip-text text-transparent">Questions</span>
     </p>
     <p
       use:inView
       style="--reveal-delay: 200ms"
-      class="reveal mx-auto mt-4 max-w-xl text-base text-gray-400"
+      class="reveal mx-auto mt-4 max-w-xl text-base text-slate-600 dark:text-gray-400"
     >
       Learn how DecentraShare securely stores, protects, and shares your digital creations using blockchain and IPFS.
     </p>
@@ -62,22 +61,22 @@ const faqs = [
       <div
         use:inView
         style="--reveal-delay: {i * 100}ms"
-        class="reveal group rounded-2xl border border-white/5 bg-[#0c0c10]/40 transition-all duration-300 hover:border-white/10 hover:bg-[#121217]/60 shadow-lg shadow-black/10 backdrop-blur-sm overflow-hidden"
+        class="reveal group rounded-2xl border border-slate-200 dark:border-white/5 bg-white/70 dark:bg-[#0c0c10]/40 transition-all duration-300 hover:border-slate-300 dark:hover:border-white/10 hover:bg-slate-100/30 dark:hover:bg-[#121217]/60 shadow-lg shadow-slate-100/50 dark:shadow-black/10 backdrop-blur-sm overflow-hidden"
       >
         <button
           type="button"
           onclick={() => toggle(i)}
-          class="flex w-full items-center justify-between px-6 py-5 text-left text-base font-bold text-white transition-colors group-hover:text-blue-300 focus:outline-none"
+          class="flex w-full items-center justify-between px-6 py-5 text-left text-base font-bold text-slate-800 dark:text-white transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-300 focus:outline-none cursor-pointer"
         >
           <span>{faq.q}</span>
-          <span class="ml-4 flex h-6 w-6 items-center justify-center rounded-lg bg-white/5 text-gray-400 transition-all duration-300 group-hover:bg-blue-500/10 group-hover:text-blue-400 {activeIndex === i ? 'rotate-180 bg-blue-500/15 text-blue-400' : ''}">
+          <span class="ml-4 flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-400 transition-all duration-300 group-hover:bg-blue-500/10 group-hover:text-blue-400 {activeIndex === i ? 'rotate-180 bg-blue-500/15 text-blue-400' : ''}">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
           </span>
         </button>
 
         {#if activeIndex === i}
           <div transition:slide={{ duration: 300 }}>
-            <div class="border-t border-white/5 px-6 py-5 text-sm leading-relaxed text-gray-400 bg-white/[0.01]">
+            <div class="border-t border-slate-200/50 dark:border-white/5 px-6 py-5 text-sm leading-relaxed text-slate-600 dark:text-gray-400 bg-slate-50/50 dark:bg-white/[0.01]">
               {faq.a}
             </div>
           </div>

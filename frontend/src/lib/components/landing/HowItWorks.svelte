@@ -29,43 +29,45 @@
   ];
 </script>
 
-<section id="how" class="relative mx-auto max-w-6xl px-6 py-28">
-  <div use:inView class="reveal mb-16 text-center">
-    <h2 class="mt-4 text-4xl font-extrabold tracking-tight text-white md:text-5xl">
-      Simple Steps to
-      <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Protect Your Creations</span>
-    </h2>
-    <p class="mx-auto mt-5 max-w-2xl text-lg text-gray-400">
-      Store, verify, and share your digital creations securely in just a few simple steps.
-    </p>
-  </div>
+<section id="how" class="w-full bg-white dark:bg-[#080b11] border-y border-slate-200/80 dark:border-white/5 py-28 relative overflow-hidden transition-colors duration-300">
+  <div class="mx-auto max-w-6xl px-6 relative z-10">
+    <div use:inView class="reveal mb-16 text-center">
+      <h2 class="mt-4 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white md:text-5xl">
+        Simple Steps to
+        <span class="bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">Protect Your Creations</span>
+      </h2>
+      <p class="mx-auto mt-5 max-w-2xl text-lg text-slate-600 dark:text-gray-400">
+        Store, verify, and share your digital creations securely in just a few simple steps.
+      </p>
+    </div>
 
-  <div class="relative">
-    <!-- connecting line -->
-    <div class="absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-white/15 to-transparent lg:block"></div>
+    <div class="relative">
+      <!-- connecting line -->
+      <div class="absolute left-0 right-0 top-9 hidden h-px bg-gradient-to-r from-transparent via-slate-200/85 dark:via-white/10 to-transparent lg:block"></div>
 
-    <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-      {#each steps as s, i}
-        <div
-          use:inView
-          class="reveal relative text-center group"
-          style="--reveal-delay: {i * 130}ms"
-        >
-          <div class="relative mx-auto mb-6 flex h-18 w-18 items-center justify-center">
-            <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 blur-md opacity-70 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-[#0c0c10] group-hover:border-blue-500/30 group-hover:scale-105 transition-all duration-300">
-              <svg class="h-7 w-7 text-blue-300 group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d={s.icon} />
-              </svg>
+      <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        {#each steps as s, i}
+          <div
+            use:inView
+            class="reveal relative text-center group"
+            style="--reveal-delay: {i * 130}ms"
+          >
+            <div class="relative mx-auto mb-6 flex h-18 w-18 items-center justify-center">
+              <div class="absolute inset-0 rounded-2xl bg-blue-500/10 dark:bg-gradient-to-br dark:from-blue-500/20 dark:to-cyan-500/20 blur-md opacity-70 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div class="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0e131f] group-hover:border-blue-500/40 dark:group-hover:border-cyan-400/40 group-hover:scale-105 transition-all duration-300">
+                <svg class="h-7 w-7 text-blue-600 dark:text-cyan-400 group-hover:text-blue-700 dark:group-hover:text-white transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d={s.icon} />
+                </svg>
+              </div>
+              <span class="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 dark:bg-gradient-to-r dark:from-blue-600 dark:to-cyan-500 text-xs font-bold text-white keep-white shadow-md ring-2 ring-white dark:ring-[#080b11]">
+                {s.step}
+              </span>
             </div>
-            <span class="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-xs font-bold text-white shadow-md ring-2 ring-black">
-              {s.step}
-            </span>
+            <h3 class="mb-2 text-lg font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-cyan-300 transition-colors duration-300">{s.title}</h3>
+            <p class="text-sm leading-relaxed text-slate-500 dark:text-gray-400 group-hover:text-slate-700 dark:group-hover:text-gray-305 transition-colors duration-300">{s.desc}</p>
           </div>
-          <h3 class="mb-2 text-lg font-bold text-white group-hover:text-blue-300 transition-colors duration-300">{s.title}</h3>
-          <p class="text-sm leading-relaxed text-gray-500 group-hover:text-gray-400 transition-colors duration-300">{s.desc}</p>
-        </div>
-      {/each}
+        {/each}
+      </div>
     </div>
   </div>
 </section>

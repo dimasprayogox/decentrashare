@@ -715,7 +715,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
             onerror={(e) => handleAvatarError(e, user.username)}
           />
         {:else}
-          <span class="text-sm font-bold text-white drop-shadow-sm">
+          <span class="text-sm font-bold text-white keep-white drop-shadow-sm">
             {getUserInitial(user.username)}
           </span>
         {/if}
@@ -817,7 +817,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
                 <div class="flex flex-wrap gap-2">
                   {#each selectedUsers as userId}
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-500/20 text-violet-300 text-xs rounded-full border border-violet-500/30">
-                      <div class="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-[8px] font-bold text-white">
+                      <div class="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-[8px] font-bold text-white keep-white">
                         {getUserName(userId).charAt(0).toUpperCase()}
                       </div>
                       <span class="truncate max-w-[100px]">{getUserName(userId)}</span>
@@ -846,7 +846,7 @@ async function handleUpdateUserRoles(): Promise<boolean> {
               <div class="border border-white/10 rounded-lg max-h-40 overflow-y-auto">
                 {#each searchResults as user (user.id)}
                   <button onclick={() => toggleUser(user.id)} class="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white flex-shrink-0 overflow-hidden">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white keep-white flex-shrink-0 overflow-hidden">
                       {#if user.avatarUrl}
                         <img src={user.avatarUrl} alt={user.username} class="w-full h-full object-cover" onerror={(e) => handleAvatarError(e, user.username)} />
                       {:else}

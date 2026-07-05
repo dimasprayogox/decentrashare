@@ -511,7 +511,7 @@
   <title>Activity Log | DecentraShare</title>
 </svelte:head>
 
-<div class="w-full max-w-[1400px] mx-auto space-y-8" in:fly={{ y: 20, duration: 400 }}>
+<div class="activity-page w-full max-w-[1400px] mx-auto space-y-8" in:fly={{ y: 20, duration: 400 }}>
   
   <!-- Header Section -->
   <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 pb-2">
@@ -895,7 +895,7 @@
                                     {#each shareRevokeInfo.users as user}
                                       <div class="flex items-center justify-between p-1.5 rounded-lg bg-white/5 border border-white/10">
                                         <div class="flex items-center gap-2 min-w-0">
-                                          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-[9px] font-bold text-white uppercase flex-shrink-0">
+                                          <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-[9px] font-bold text-white uppercase flex-shrink-0 keep-white">
                                             {user.username.charAt(0)}
                                           </div>
                                           <div class="min-w-0">
@@ -1007,7 +1007,7 @@
                                           {#each item.users as user}
                                             <div class="flex items-center justify-between p-1.5 rounded bg-white/5 border border-white/10 text-[10px]">
                                               <div class="flex items-center gap-1.5 min-w-0">
-                                                <div class="w-5 h-5 rounded-full bg-blue-600/30 flex items-center justify-center text-[9px] font-bold text-blue-200 uppercase shrink-0 font-mono">
+                                                <div class="w-5 h-5 rounded-full bg-blue-600/30 flex items-center justify-center text-[9px] font-bold text-blue-200 uppercase shrink-0 font-mono keep-white">
                                                   {user.username.charAt(0)}
                                                 </div>
                                                 <span class="text-white truncate font-medium">{user.username}</span>

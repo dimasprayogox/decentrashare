@@ -181,7 +181,7 @@
 
 <svelte:head><title>{profile.username || 'Profile'} • DecentraShare</title></svelte:head>
 
-<div class="w-full min-h-[calc(100vh-4rem)] bg-[#050507] px-4 py-6 md:px-6 md:py-8">
+<div class="profile-settings-page w-full min-h-[calc(100vh-4rem)] bg-[#050507] px-4 py-6 md:px-6 md:py-8">
   <div class="max-w-6xl mx-auto">
     
     <!-- 🎴 Dashboard Card -->

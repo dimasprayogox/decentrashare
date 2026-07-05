@@ -25,7 +25,7 @@
       <div class="flex flex-col items-center text-center lg:col-span-6 lg:items-start lg:text-left lg:pr-6">
         {#if true}
           <div in:fly={{ y: 24, duration: 700 }}>
-            <span class="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-300">
+            <span class="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-300">
               <span class="relative flex h-2 w-2">
                 <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
                 <span class="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
@@ -36,18 +36,18 @@
 
           <h1
             in:fly={{ y: 30, duration: 800, delay: 100 }}
-            class="mt-6 text-4xl font-extrabold leading-[1.1] tracking-tighter text-white sm:text-6xl xl:text-7xl"
+            class="mt-6 text-4xl font-extrabold leading-[1.1] tracking-tighter text-slate-900 dark:text-white sm:text-6xl xl:text-7xl"
           >
             Secure Your Creations With
             <br />
-            <span class="bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400 bg-clip-text italic text-transparent">
+            <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 dark:from-blue-400 dark:via-cyan-400 dark:to-indigo-400 bg-clip-text italic text-transparent">
               DecentraShare
             </span>
           </h1>
 
           <p
             in:fly={{ y: 30, duration: 800, delay: 200 }}
-            class="mt-6 max-w-xl text-base leading-relaxed text-gray-400 md:text-lg"
+            class="mt-6 max-w-xl text-base leading-relaxed text-slate-600 dark:text-gray-400 md:text-lg"
           >
             Store, manage, and share your digital creations securely with Ethereum and IPFS technology.
           </p>
@@ -56,12 +56,15 @@
             in:fly={{ y: 30, duration: 800, delay: 300 }}
             class="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start w-full sm:w-auto"
           >
-            <a href="/login" class="shiny-cta">
-              <span>Get Started — Free</span>
-            </a>
+            <div class="relative group/btn w-full sm:w-auto flex justify-center">
+              <div class="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-600 dark:to-cyan-500 opacity-35 blur-md group-hover/btn:opacity-60 transition-all duration-300"></div>
+              <a href="/login" class="shiny-cta relative w-full sm:w-auto">
+                <span>Get Started — Free</span>
+              </a>
+            </div>
             <a
               href="#how"
-              class="flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 text-base font-semibold text-white backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10 sm:w-auto"
+              class="flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5 px-8 text-base font-semibold text-slate-800 dark:text-white backdrop-blur-sm transition-all hover:border-slate-300 hover:bg-slate-100/80 dark:hover:border-white/20 dark:hover:bg-white/10 sm:w-auto"
             >
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               See How it Works
@@ -75,15 +78,15 @@
         in:fade={{ duration: 900, delay: 500 }}
         class="group relative w-full lg:col-span-6 lg:ml-auto"
       >
-        <div class="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-r from-blue-600/20 via-indigo-600/20 to-cyan-600/20 blur-2xl opacity-50 transition-opacity duration-500 group-hover:opacity-100"></div>
+        <div class="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-r from-blue-600/20 via-indigo-600/20 to-blue-600/10 dark:to-cyan-600/20 blur-2xl opacity-40 transition-opacity duration-500 group-hover:opacity-80"></div>
 
-        <div class="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c10]/90 shadow-2xl backdrop-blur-xl transition-all duration-500 group-hover:-translate-y-2 group-hover:border-blue-500/30 group-hover:shadow-[0_20px_50px_rgba(59,130,246,0.15)] group-hover:animate-float-slow">
+        <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#0c0c10]/90 shadow-2xl backdrop-blur-xl transition-all duration-500 group-hover:-translate-y-2 group-hover:border-blue-500/30 group-hover:shadow-[0_20px_50px_rgba(59,130,246,0.15)] group-hover:animate-float-slow">
           <!-- Window chrome -->
-          <div class="flex items-center gap-2 border-b border-white/5 bg-white/[0.02] px-4 py-3">
+          <div class="flex items-center gap-2 border-b border-slate-200/50 dark:border-white/5 bg-slate-100/50 dark:bg-white/[0.02] px-4 py-3">
             <span class="h-3 w-3 rounded-full bg-red-500/70"></span>
             <span class="h-3 w-3 rounded-full bg-yellow-500/70"></span>
             <span class="h-3 w-3 rounded-full bg-green-500/70"></span>
-            <div class="ml-3 flex-1 rounded-md bg-white/5 px-3 py-1 text-left text-xs text-gray-500 truncate">
+            <div class="ml-3 flex-1 rounded-md bg-slate-100 dark:bg-white/5 px-3 py-1 text-left text-xs text-slate-400 dark:text-gray-500 truncate">
               https://decentrashare.com/storage
             </div>
           </div>
@@ -91,10 +94,10 @@
           <!-- Fake dashboard body -->
           <div class="grid grid-cols-12 gap-3 p-4 text-left">
             <!-- sidebar -->
-            <div class="col-span-4 hidden flex-col justify-between sm:flex border-r border-white/5 pr-3">
+            <div class="col-span-4 hidden flex-col justify-between sm:flex border-r border-slate-200/50 dark:border-white/5 pr-3">
               <div class="flex flex-col gap-1">
                 {#each sidebarItems as item}
-                  <div class="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition-all {item.active ? 'bg-blue-500/10 text-blue-400' : 'text-gray-500'}">
+                  <div class="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition-all {item.active ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-gray-500'}">
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} /></svg>
                     <span class="truncate">{item.name}</span>
                   </div>
@@ -102,15 +105,15 @@
               </div>
 
               <!-- Storage progress widget -->
-              <div class="mt-6 rounded-xl bg-white/[0.02] border border-white/5 p-2.5 text-[9px]">
-                <div class="flex justify-between font-bold text-gray-400 mb-1">
+              <div class="mt-6 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 p-2.5 text-[9px]">
+                <div class="flex justify-between font-bold text-slate-500 dark:text-gray-400 mb-1">
                   <span>Storage</span>
                   <span>65%</span>
                 </div>
-                <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" style="width: 65%"></div>
+                <div class="h-1.5 w-full bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
+                  <div class="h-full bg-blue-600 dark:bg-gradient-to-r dark:from-blue-500 dark:to-cyan-500 rounded-full" style="width: 65%"></div>
                 </div>
-                <p class="text-gray-600 mt-1 font-medium">32.4 GB used</p>
+                <p class="text-slate-400 dark:text-gray-600 mt-1 font-medium">32.4 GB used</p>
               </div>
             </div>
 
@@ -118,28 +121,28 @@
             <div class="col-span-12 grid grid-cols-2 gap-2.5 sm:col-span-8">
               {#each mockFiles as file, i}
                 <div
-                  class="relative rounded-xl border border-white/5 bg-white/[0.02] p-3 transition-all duration-300 hover:border-blue-500/40 hover:bg-white/[0.06] hover:scale-[1.04] hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/10"
+                  class="relative rounded-xl border border-slate-200 dark:border-white/5 bg-white/70 dark:bg-white/[0.02] p-3 transition-all duration-300 hover:border-blue-500/40 hover:bg-slate-100/50 dark:hover:bg-white/[0.06] hover:scale-[1.04] hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/10"
                 >
                   <!-- status badge -->
-                  <span class="absolute top-2.5 right-2.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-white/5 bg-white/[0.03] text-gray-500">
+                  <span class="absolute top-2.5 right-2.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-slate-200 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-slate-400 dark:text-gray-500">
                     {file.status}
                   </span>
 
-                  <div class="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10 ring-1 ring-white/10 transition-transform duration-300 hover:scale-110">
+                  <div class="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10 dark:bg-gradient-to-br dark:from-blue-500/10 dark:to-cyan-500/10 ring-1 ring-slate-200 dark:ring-white/10 transition-transform duration-300 hover:scale-110">
                     {#if file.type === 'pdf'}
-                      <svg class="h-4 w-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                      <svg class="h-4 w-4 text-pink-500 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                     {:else if file.type === 'audio'}
-                      <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                      <svg class="h-4 w-4 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
                     {:else if file.type === 'video'}
-                      <svg class="h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      <svg class="h-4 w-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                     {:else if file.type === 'image'}
-                      <svg class="h-4 w-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <svg class="h-4 w-4 text-amber-500 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     {:else}
-                      <svg class="h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      <svg class="h-4 w-4 text-blue-555 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     {/if}
                   </div>
-                  <div class="truncate text-[11px] font-bold text-gray-200 mt-1">{file.name}</div>
-                  <div class="text-[9px] text-gray-500 mt-0.5">{file.size}</div>
+                  <div class="truncate text-[11px] font-bold text-slate-800 dark:text-gray-200 mt-1">{file.name}</div>
+                  <div class="text-[9px] text-slate-400 dark:text-gray-500 mt-0.5">{file.size}</div>
                 </div>
               {/each}
             </div>
@@ -176,11 +179,14 @@
   }
 
   .shiny-cta {
-    --shiny-cta-bg: #0a0a0f;
-    --shiny-cta-bg-subtle: #1a1a2e;
+    --shiny-cta-bg-start: #2563eb;
+    --shiny-cta-bg-end: #2563eb;
     --shiny-cta-fg: #ffffff;
-    --shiny-cta-highlight: #3b82f6;
-    --shiny-cta-highlight-subtle: #60a5fa;
+    --shiny-cta-highlight: #ffffff;
+    --shiny-cta-highlight-subtle: rgba(255, 255, 255, 0.7);
+    --shiny-cta-shadow-1: rgba(37, 99, 235, 0.35);
+    --shiny-cta-shadow-2: rgba(37, 99, 235, 0.15);
+    --shiny-cta-shadow-inset: rgba(255, 255, 255, 0.2);
     --duration: 3s;
     --shadow-size: 2px;
     --transition: 800ms cubic-bezier(0.25, 1, 0.5, 1);
@@ -205,7 +211,7 @@
     border-radius: 1rem;
     color: var(--shiny-cta-fg);
     background:
-      linear-gradient(var(--shiny-cta-bg), var(--shiny-cta-bg)) padding-box,
+      linear-gradient(to right, var(--shiny-cta-bg-start), var(--shiny-cta-bg-end)) padding-box,
       conic-gradient(
         from calc(var(--gradient-angle) - var(--gradient-angle-offset)),
         transparent,
@@ -214,9 +220,20 @@
         var(--shiny-cta-highlight) calc(var(--gradient-percent) * 3),
         transparent calc(var(--gradient-percent) * 4)
       ) border-box;
-    box-shadow: inset 0 0 0 1px var(--shiny-cta-bg-subtle);
+    box-shadow: inset 0 0 0 1px var(--shiny-cta-shadow-inset);
     transition: var(--transition);
     transition-property: transform, box-shadow, --gradient-angle-offset, --gradient-percent, --gradient-shine;
+  }
+
+  :global(.dark) .shiny-cta {
+    --shiny-cta-bg-start: #0a0a0f;
+    --shiny-cta-bg-end: #0a0a0f;
+    --shiny-cta-fg: #ffffff;
+    --shiny-cta-highlight: #3b82f6;
+    --shiny-cta-highlight-subtle: #60a5fa;
+    --shiny-cta-shadow-1: rgba(59, 130, 246, 0.4);
+    --shiny-cta-shadow-2: rgba(96, 165, 250, 0.2);
+    --shiny-cta-shadow-inset: rgba(96, 165, 250, 0.4);
   }
 
   .shiny-cta::before,
@@ -307,9 +324,9 @@
     --gradient-shine: var(--shiny-cta-highlight-subtle);
     transform: translateY(-2px) scale(1.03);
     box-shadow:
-      0 0 25px rgba(59, 130, 246, 0.4),
-      0 0 50px rgba(96, 165, 250, 0.2),
-      inset 0 0 0 1px rgba(96, 165, 250, 0.4);
+      0 0 25px var(--shiny-cta-shadow-1),
+      0 0 50px var(--shiny-cta-shadow-2),
+      inset 0 0 0 1px var(--shiny-cta-shadow-inset);
   }
 
   .shiny-cta:is(:hover, :focus-visible),

@@ -43,15 +43,11 @@
   />
 </svelte:head>
 
-<div class="relative min-h-screen overflow-x-hidden bg-[#0a0a0c] text-white selection:bg-blue-500/30">
-  <!-- Dynamic Full-Page Grid Backdrop with Dense Circular Masking Spots (Bulatan Lebih Sering Muncul) -->
+<div class="relative min-h-screen overflow-x-hidden bg-slate-50 dark:bg-[#0a0a0c] text-slate-800 dark:text-white selection:bg-blue-500/30 transition-colors duration-300">
+  <!-- Dynamic Full-Page Grid Backdrop with Dense Circular Masking Spots -->
   <div
-    class="pointer-events-none absolute inset-0 z-0 opacity-60"
+    class="pointer-events-none absolute inset-0 z-0 opacity-60 grid-backdrop"
     style="
-      background-image:
-        linear-gradient(to right, rgba(255,255,255,0.22) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255,255,255,0.22) 1px, transparent 1px);
-      background-size: 40px 40px;
       mask-image: 
         radial-gradient(circle 500px at 50% 6%, black 25%, transparent 85%),
         radial-gradient(circle 450px at 20% 18%, black 20%, transparent 80%),
@@ -73,10 +69,10 @@
     "
   ></div>
 
-  <!-- Soft circular dark overlays (bulatan peneduh) for organic depth -->
-  <div class="pointer-events-none absolute left-1/2 top-[700px] z-0 h-[350px] w-[350px] -translate-x-1/2 rounded-full bg-[#0a0a0c] blur-2xl opacity-70"></div>
-  <div class="pointer-events-none absolute right-10 top-[2000px] z-0 h-[400px] w-[400px] rounded-full bg-[#0a0a0c] blur-2xl opacity-70"></div>
-  <div class="pointer-events-none absolute left-10 top-[3400px] z-0 h-[400px] w-[400px] rounded-full bg-[#0a0a0c] blur-2xl opacity-70"></div>
+  <!-- Soft circular overlays for organic depth -->
+  <div class="pointer-events-none absolute left-1/2 top-[700px] z-0 h-[350px] w-[350px] -translate-x-1/2 rounded-full bg-slate-100 dark:bg-[#0a0a0c] blur-2xl opacity-70"></div>
+  <div class="pointer-events-none absolute right-10 top-[2000px] z-0 h-[400px] w-[400px] rounded-full bg-slate-100 dark:bg-[#0a0a0c] blur-2xl opacity-70"></div>
+  <div class="pointer-events-none absolute left-10 top-[3400px] z-0 h-[400px] w-[400px] rounded-full bg-slate-100 dark:bg-[#0a0a0c] blur-2xl opacity-70"></div>
 
   <!-- Navbar -->
   <div class="relative z-[100]">
@@ -90,7 +86,7 @@
       {#each backgroundItems as item}
         {#if item.isCard}
           <div
-            class="absolute rounded-xl border border-white/5 bg-white/[0.03] p-3 shadow-lg shadow-black/20 animate-float-up-fade text-left text-gray-400 select-none opacity-30 dark:opacity-15"
+            class="absolute rounded-xl border border-slate-200/50 dark:border-white/5 bg-white/70 dark:bg-white/[0.03] p-3 shadow-lg shadow-slate-200/20 dark:shadow-black/20 animate-float-up-fade text-left text-slate-500 dark:text-gray-400 select-none opacity-40 dark:opacity-15"
             style="
               left: {item.left}%;
               width: 140px;
@@ -100,22 +96,22 @@
               --rot: {item.rot}deg;
             "
           >
-            <span class="absolute top-2 right-2 text-[8px] font-bold px-1 py-0.5 rounded-full border border-white/5 bg-white/[0.03] text-gray-500 scale-90 origin-top-right">
+            <span class="absolute top-2 right-2 text-[8px] font-bold px-1 py-0.5 rounded-full border border-slate-200 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-slate-400 dark:text-gray-500 scale-90 origin-top-right">
               {item.status}
             </span>
-            <div class="mb-2 flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10 ring-1 ring-white/10">
+            <div class="mb-2 flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600/10 dark:bg-gradient-to-br dark:from-blue-500/10 dark:to-cyan-500/10 ring-1 ring-slate-200 dark:ring-white/10">
               {#if item.type === 'pdf'}
-                <svg class="h-4 w-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                <svg class="h-4 w-4 text-pink-500 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
               {:else if item.type === 'audio'}
-                <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                <svg class="h-4 w-4 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
               {:else if item.type === 'video'}
-                <svg class="h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                <svg class="h-4 w-4 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
               {:else}
-                <svg class="h-4 w-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <svg class="h-4 w-4 text-amber-555 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               {/if}
             </div>
-            <div class="truncate text-[10px] font-bold text-gray-200">{item.name}</div>
-            <div class="text-[8px] text-gray-500 mt-0.5">{item.size}</div>
+            <div class="truncate text-[10px] font-bold text-slate-800 dark:text-gray-200">{item.name}</div>
+            <div class="text-[8px] text-slate-400 dark:text-gray-500 mt-0.5">{item.size}</div>
           </div>
         {:else}
           <div
@@ -131,13 +127,13 @@
             "
           >
             {#if item.type === 'pdf'}
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-pink-400/25"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8M16 17H8"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-pink-500/25 dark:text-pink-400/25"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8M16 17H8"/></svg>
             {:else if item.type === 'audio'}
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-emerald-400/25"><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-emerald-555/25 dark:text-emerald-400/25"><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
             {:else if item.type === 'video'}
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-red-400/25"><path d="M23 7a2 2 0 0 0-2.45-1.45L16 7V5a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2l4.55 1.45A2 2 0 0 0 23 17V7z"/></svg>
+              <svg xmlns="http://www.w3.org/2550/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-red-500/25 dark:text-red-400/25"><path d="M23 7a2 2 0 0 0-2.45-1.45L16 7V5a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2l4.55 1.45A2 2 0 0 0 23 17V7z"/></svg>
             {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-amber-400/25"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-amber-500/25 dark:text-amber-400/25"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             {/if}
           </div>
         {/if}
@@ -157,3 +153,18 @@
   <!-- Footer (Outside background container, clean footer at bottom) -->
   <Footer />
 </div>
+
+<style>
+  :root {
+    --grid-line: rgba(15, 23, 42, 0.05);
+  }
+  :global(.dark) {
+    --grid-line: rgba(255, 255, 255, 0.07);
+  }
+  .grid-backdrop {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+</style>

@@ -16,7 +16,7 @@
 <nav class="flex items-center gap-2 mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 no-scrollbar">
   <button
     onclick={() => navigate?.(null)}
-    class="text-xs font-black tracking-[0.35em] hover:text-white transition-colors {!currentFolder ? 'text-blue-400' : ''}"
+    class="text-xs font-black tracking-[0.35em] hover:text-slate-800 dark:hover:text-white transition-colors {!currentFolder ? 'text-blue-400' : ''}"
   >
     STORAGE
   </button>
@@ -25,7 +25,7 @@
     <span class="text-gray-700">/</span>
     <button
       onclick={() => navigate(folder)}
-      class="text-xs hover:text-white transition-colors {i === breadcrumbs.length - 1 ? 'text-blue-400' : ''}"
+      class="text-xs hover:text-slate-800 dark:hover:text-white transition-colors {i === breadcrumbs.length - 1 ? 'text-blue-400' : ''}"
     >
       {folder.name.toUpperCase()}
     </button>

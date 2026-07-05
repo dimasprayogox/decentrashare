@@ -5,6 +5,7 @@
   import { authService } from '$lib/services/auth/auth';
   import { ethers } from 'ethers';
   import logo from '$lib/assets/logo.png';
+  import { themeController } from '$lib/utils/theme.svelte';
 
   let { userAddress = "0x00...000" } = $props();
   let searchQuery = $state("");
@@ -303,7 +304,7 @@
 {#snippet sortControl()}
     <div class="flex items-center gap-2 w-full max-w-md">
         <div class="relative flex-1">
-            <span class="absolute inset-y-0 left-4 flex items-center text-gray-500">
+            <span class="absolute inset-y-0 left-4 flex items-center text-slate-400 dark:text-gray-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </span>
             <input
@@ -311,14 +312,14 @@
                 bind:value={searchQuery}
                 oninput={updateSearchQuery}
                 placeholder="Search file or folder..."
-                class="w-full bg-white/5 border border-white/10 rounded-2xl py-2 md:py-2.5 pl-11 pr-4 text-xs md:text-sm text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all"
+                class="w-full bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl py-2 md:py-2.5 pl-11 pr-4 text-xs md:text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all"
             />
         </div>
 
         <div class="relative" data-header-sort-container>
             <button
                 onclick={() => showSortDropdown = !showSortDropdown}
-                class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-white/5 border border-white/10 text-white rounded-xl md:rounded-2xl hover:bg-white/10 transition-all"
+                class="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white rounded-xl md:rounded-2xl hover:bg-slate-200/50 dark:hover:bg-white/10 transition-all cursor-pointer"
                 title="Sort"
                 aria-label="Sort files"
             >
@@ -326,29 +327,29 @@
             </button>
 
             {#if showSortDropdown}
-                <div class="absolute right-0 mt-2 w-60 md:w-64 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-2 z-[70] overflow-hidden">
-                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Sort by</div>
+                <div class="absolute right-0 mt-2 w-60 md:w-64 bg-white dark:bg-[#1a1a1e] border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl py-2 z-[70] overflow-hidden">
+                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500">Sort by</div>
                     {#each sortFields as option (option.field)}
-                        <button onclick={() => applySortField(option.field)} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activeSortField === option.field ? 'bg-blue-500/10 text-blue-300' : ''}">
+                        <button onclick={() => applySortField(option.field)} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors {activeSortField === option.field ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400' : ''}">
                             <span>{option.label}</span>
                             {#if activeSortField === option.field}
-                                <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             {/if}
                         </button>
                     {/each}
 
-                    <div class="my-2 border-t border-white/10"></div>
-                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Order</div>
-                    <button onclick={() => applySortDirection('asc')} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activeSortDirection === 'asc' ? 'bg-blue-500/10 text-blue-300' : ''}">
+                    <div class="my-2 border-t border-slate-200 dark:border-white/10"></div>
+                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500">Order</div>
+                    <button onclick={() => applySortDirection('asc')} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors {activeSortDirection === 'asc' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400' : ''}">
                         <span>{activeSortField === 'name' ? 'A - Z' : 'A - Z'}</span>
                         {#if activeSortDirection === 'asc'}
-                            <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         {/if}
                     </button>
-                    <button onclick={() => applySortDirection('desc')} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activeSortDirection === 'desc' ? 'bg-blue-500/10 text-blue-300' : ''}">
+                    <button onclick={() => applySortDirection('desc')} class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors {activeSortDirection === 'desc' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400' : ''}">
                         <span>{activeSortField === 'name' ? 'Z - A' : 'Z - A'}</span>
                         {#if activeSortDirection === 'desc'}
-                            <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         {/if}
                     </button>
                 </div>
@@ -360,7 +361,7 @@
 {#snippet activityControl()}
     <div class="flex items-center gap-2 w-full max-w-md">
         <div class="relative flex-1">
-            <span class="absolute inset-y-0 left-4 flex items-center text-gray-500">
+            <span class="absolute inset-y-0 left-4 flex items-center text-slate-400 dark:text-gray-500">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </span>
             <input
@@ -368,14 +369,14 @@
                 bind:value={activitySearchQuery}
                 oninput={updateActivitySearch}
                 placeholder="Search activity..."
-                class="w-full bg-white/5 border border-white/10 rounded-2xl py-2 md:py-2.5 pl-11 pr-4 text-xs md:text-sm text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all"
+                class="w-full bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl py-2 md:py-2.5 pl-11 pr-4 text-xs md:text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all"
             />
         </div>
 
         <div class="relative" data-activity-filter-container>
             <button
                 onclick={() => showActivityFilterDropdown = !showActivityFilterDropdown}
-                class="relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-white/5 border border-white/10 text-white rounded-xl md:rounded-2xl hover:bg-white/10 transition-all"
+                class="relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white rounded-xl md:rounded-2xl hover:bg-slate-200/50 dark:hover:bg-white/10 transition-all cursor-pointer"
                 title="Filter activity"
                 aria-label="Filter activity"
             >
@@ -386,26 +387,26 @@
             </button>
 
             {#if showActivityFilterDropdown}
-                <div class="absolute right-0 mt-2 w-60 md:w-64 bg-[#1a1a1e] border border-white/10 rounded-xl shadow-2xl py-2 z-[70] overflow-hidden">
-                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Action</div>
+                <div class="absolute right-0 mt-2 w-60 md:w-64 bg-white dark:bg-[#1a1a1e] border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl py-2 z-[70] overflow-hidden">
+                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500">Action</div>
                     <div class="max-h-60 overflow-y-auto">
                         {#each activityActionTypes as option (option.value)}
-                            <button onclick={() => applyActivityAction(option.value)} class="w-full flex items-center justify-between gap-3 px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activityActionFilter === option.value ? 'bg-blue-500/10 text-blue-300' : ''}">
+                            <button onclick={() => applyActivityAction(option.value)} class="w-full flex items-center justify-between gap-3 px-4 py-2 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors {activityActionFilter === option.value ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-300' : ''}">
                                 <span>{option.label}</span>
                                 {#if activityActionFilter === option.value}
-                                    <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                 {/if}
                             </button>
                         {/each}
                     </div>
 
-                    <div class="my-2 border-t border-white/10"></div>
-                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">Type</div>
+                    <div class="my-2 border-t border-slate-200 dark:border-white/10"></div>
+                    <div class="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500">Type</div>
                     {#each activityEntityTypes as option (option.value)}
-                        <button onclick={() => applyActivityEntity(option.value)} class="w-full flex items-center justify-between gap-3 px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors {activityEntityFilter === option.value ? 'bg-blue-500/10 text-blue-300' : ''}">
+                        <button onclick={() => applyActivityEntity(option.value)} class="w-full flex items-center justify-between gap-3 px-4 py-2 text-left text-sm text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors {activityEntityFilter === option.value ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-300' : ''}">
                             <span>{option.label}</span>
                             {#if activityEntityFilter === option.value}
-                                <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             {/if}
                         </button>
                     {/each}
@@ -415,16 +416,16 @@
     </div>
 {/snippet}
 
-<header class="min-h-20 border-b border-white/5 bg-[#0a0a0c]/80 backdrop-blur-xl sticky top-0 z-[60] flex flex-col justify-center px-4 md:px-8 w-full py-3 sm:py-0">
+<header class="min-h-20 border-b border-slate-200/50 dark:border-white/5 bg-slate-50/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl sticky top-0 z-[60] flex flex-col justify-center px-4 md:px-8 w-full py-3 sm:py-0">
     <div class="flex items-center justify-between w-full gap-4">
         <div class="flex items-center gap-4 flex-1 min-w-0">
             <!-- Brand Logo for mobile -->
-            <div class="lg:hidden relative w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-white/10 p-1.5 flex items-center justify-center shrink-0">
+            <div class="lg:hidden relative w-10 h-10 rounded-xl overflow-hidden bg-slate-900/[0.03] dark:bg-white/5 border border-slate-200/50 dark:border-white/10 p-1.5 flex items-center justify-center shrink-0">
                 <img src={logo} alt="DecentraShare Logo" class="w-full h-full object-contain" />
             </div>
             
             <!-- ✅ Dynamic Title with Debug Fallback -->
-            <h2 class="text-sm md:text-lg font-semibold text-white truncate mr-2">
+            <h2 class="text-sm md:text-lg font-semibold text-slate-900 dark:text-white truncate mr-2">
               {#if pageTitle?.sub}
                 <span class="hidden sm:inline text-gray-400">{pageTitle?.main}</span> {pageTitle?.sub}
               {:else}
@@ -472,7 +473,7 @@
                 
                 <!-- Balance -->
                 <div class="flex flex-col text-right pr-1">
-                   <span class="text-[10px] md:text-[11px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-400 leading-none mt-1">
+                   <span class="text-[10px] md:text-[11px] font-extrabold text-slate-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-white dark:to-blue-400 leading-none mt-1">
                     {walletBalance} ETH
                   </span>
                 </div>
@@ -491,6 +492,23 @@
               </button>
             {/if}
 
+            <!-- Theme Toggle Button -->
+            <button
+              onclick={() => themeController.toggle()}
+              class="flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-xl md:rounded-2xl border border-slate-200 bg-white text-slate-800 transition-all hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 cursor-pointer shrink-0"
+              aria-label="Toggle theme"
+            >
+              {#if themeController.theme === 'dark'}
+                <svg class="h-4 w-4 md:h-5 md:w-5 rotate-0 transition-transform duration-300 dark:-rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              {:else}
+                <svg class="h-4 w-4 md:h-5 md:w-5 rotate-0 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+              {/if}
+            </button>
+
             <!-- Divider between wallet details and user info -->
             <div class="w-[1px] h-8 bg-white/10 mx-1 md:mx-2 hidden sm:block"></div>
 
@@ -507,31 +525,31 @@
                         onclick={() => showProfileDropdown = !showProfileDropdown}
                         class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 p-[2px] active:scale-95 transition-transform"
                     >
-                        <div class="w-full h-full rounded-full bg-[#0a0a0c] flex items-center justify-center overflow-hidden">
+                        <div class="w-full h-full rounded-full bg-slate-100 dark:bg-[#0a0a0c] flex items-center justify-center overflow-hidden">
                             {#if profile.avatarUrl}
                                 <img src={profile.avatarUrl} alt="Avatar" class="w-full h-full object-cover" />
                             {:else}
-                                <span class="text-sm font-bold text-white">{getInitials()}</span>
+                                <span class="text-sm font-bold text-slate-700 dark:text-white">{getInitials()}</span>
                             {/if}
                         </div>
                     </button>
 
                     {#if showProfileDropdown}
-                        <div class="absolute right-0 mt-2 w-56 bg-[#121214] border border-white/10 rounded-2xl shadow-2xl p-2 transition-all z-[80]">
-                            <div class="px-3 py-2 mb-1 border-b border-white/5">
-                                <p class="text-sm font-semibold text-white truncate">@{profile.username || 'User'}</p>
-                                <p class="text-xs text-gray-500 truncate">{profile.email || 'user@example.com'}</p>
+                        <div class="absolute right-0 mt-2 w-56 bg-[#121214] border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl dark:shadow-2xl p-2 transition-all z-[80]">
+                            <div class="px-3 py-2 mb-1 border-b border-slate-150 dark:border-white/5">
+                                <p class="text-sm font-semibold text-slate-800 dark:text-white truncate">@{profile.username || 'User'}</p>
+                                <p class="text-xs text-slate-500 dark:text-gray-550 truncate">{profile.email || 'user@example.com'}</p>
                             </div>
                             
-                            <a href="/settings/profile" onclick={() => showProfileDropdown = false} class="w-full text-left px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all flex items-center gap-2">
+                            <a href="/settings/profile" onclick={() => showProfileDropdown = false} class="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-all flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                                 My Profile
                             </a>
-                            <hr class="border-white/5 my-1" />
+                            <hr class="border-slate-150 dark:border-white/5 my-1" />
                             <button
                                 onclick={() => { showProfileDropdown = false; handleLogout(); }}
                                 disabled={isLoggingOut}
-                                class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/5 dark:hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {#if isLoggingOut}
                                     <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
