@@ -28,132 +28,158 @@ enum AccessRoleFolder {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  walletAddress   String    @unique
-  username        String?   @unique
-  email           String?   @unique
-  avatarUrl       String?
-  bio             String?
-  website         String? 
-  role            Role      @default(USER)
-  storageLimit    BigInt?   @default(5368709120) // Batas penyimpanan dalam bytes (default 5GB). NULL = unlimited (mis. ADMIN)
-  nonce           String?
-  nonceExpiresAt  DateTime?
-  refreshToken    String?
+  id String @id @default(uuid())
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  walletAddress String  @unique @db.VarChar(42)
+  username      String? @unique @db.VarChar(50)
+  email         String? @unique @db.VarChar(255)
 
-  pinataGroupId   String?  
-  
+  avatarUrl String? @db.VarChar(500)
+  bio       String? @db.VarChar(500)
+  website   String? @db.VarChar(255)
+
+  role Role @default(USER)
+
+  storageLimit BigInt? @default(5368709120)
+
+  nonce          String?   @db.VarChar(255)
+  nonceExpiresAt DateTime?
+
+  refreshToken String? @db.Text
+
+  pinataGroupId String? @db.VarChar(100)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   documents       Document[]
   folders         Folder[]
   sharedDocuments DocumentAccess[]
   sharedFolders   FolderAccess[]
   activityLogs    ActivityLog[]
 
-
   @@map("users")
 }
 
 model Folder {
-  id        String     @id @default(uuid())
-  name      String
-  ownerId   String
-  owner     User       @relation(fields: [ownerId], references: [id])
+  id String @id @default(uuid())
+
+  name String @db.VarChar(100)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
   documents Document[]
+
   sharedWith FolderAccess[]
 
-  parentId    String? 
-  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  subFolders  Folder[] @relation("FolderHierarchy")
+  parentId   String?
+  parent     Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subFolders Folder[] @relation("FolderHierarchy")
 
-  privacy      PrivacyLevel   @default(PRIVATE)
-  shareToken   String?        @unique
+  privacy PrivacyLevel @default(PRIVATE)
 
-  isArchived   Boolean        @default(false) // Tambahkan ini
-  deletedAt    DateTime?      // Tambahkan ini untuk tracking kapan diarsip
+  shareToken String? @unique @db.VarChar(100)
 
-  createdAt DateTime   @default(now())
-  updatedAt    DateTime @updatedAt 
+  isArchived Boolean   @default(false)
+  deletedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("folders")
 }
 
 model Document {
-  id           String   @id @default(uuid())
-  title        String
-  description  String?
-  fileName     String
-  fileSize     Int
-  mimeType     String
-  ipfsHash     String   @unique
-  fileHash     String   @unique
-  blockchainTx String?
-  isOnChain    Boolean  @default(false)
-  
-  privacy      PrivacyLevel @default(PRIVATE)
-  
-  isArchived   Boolean  @default(false)
-  deletedAt    DateTime? 
+  id String @id @default(uuid())
 
-  folderId     String?
-  folder       Folder?  @relation(fields: [folderId], references: [id])
+  title       String  @db.VarChar(150)
+  description String? @db.VarChar(10000)
 
-  ownerId      String
-  owner        User     @relation(fields: [ownerId], references: [id])
+  fileName String @db.VarChar(255)
 
-  sharedWith   DocumentAccess[]
+  fileSize Int
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt 
+  mimeType String @db.VarChar(100)
+
+  ipfsHash String @unique @db.VarChar(255)
+
+  fileHash String @unique @db.VarChar(64)
+
+  blockchainTx String? @db.VarChar(66)
+
+  isOnChain Boolean @default(false)
+
+  privacy PrivacyLevel @default(PRIVATE)
+
+  isArchived Boolean   @default(false)
+  deletedAt  DateTime?
+
+  folderId String?
+  folder   Folder? @relation(fields: [folderId], references: [id])
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  sharedWith DocumentAccess[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("documents")
 }
 
 model DocumentAccess {
-  id         String   @id @default(uuid())
+  id String @id @default(uuid())
+
   documentId String
   userId     String
-  document   Document @relation(fields: [documentId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
 
-  createdAt  DateTime @default(now())
+  document Document @relation(fields: [documentId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
 
-  @@unique([documentId, userId]) // Mencegah duplikasi akses
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, userId])
   @@map("document_access")
 }
 
 model FolderAccess {
-  id        String   @id @default(uuid())
-  folderId  String
-  userId    String
-  
-  folder    Folder   @relation(fields: [folderId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  id String @id @default(uuid())
+
+  folderId String
+  userId   String
+
+  folder Folder @relation(fields: [folderId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
   role AccessRoleFolder @default(VIEWER)
 
   createdAt DateTime @default(now())
 
-  @@unique([folderId, userId]) // Mencegah duplikasi akses pada folder yang sama
+  @@unique([folderId, userId])
   @@map("folder_access")
 }
 
 model ActivityLog {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  
-  action        String   // Contoh: "UPLOAD", "MOVE", "DELETE", "RESTORE", "SHARE"
-  entityType    String   // "DOCUMENT" atau "FOLDER"
-  entityId      String   // ID Dokumen/Folder terkait
-  entityName    String   // Nama file/folder (Penting buat history kalau aslinya sudah dihapus)
-  
-  // Data Blockchain (Diisi jika aksi berkaitan dengan file, misal UPLOAD/DELETE)
-  blockchainTx  String?
-  
-  details       String?  // Info tambahan, misal: "Moved to folder Research"
-  createdAt     DateTime @default(now())
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  action String @db.VarChar(30)
+
+  entityType String @db.VarChar(30)
+
+  entityId String
+
+  entityName String @db.VarChar(255)
+
+  blockchainTx String? @db.VarChar(66)
+
+  details String? @db.VarChar(10000)
+
+  createdAt DateTime @default(now())
 
   @@map("activity_logs")
 }
