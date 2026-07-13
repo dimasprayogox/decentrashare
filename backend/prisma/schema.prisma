@@ -94,7 +94,7 @@ model Document {
   id String @id @default(uuid())
 
   title       String  @db.VarChar(150)
-  description String? @db.VarChar(10000)
+  description String? @db.Text
 
   fileName String @db.VarChar(255)
 
@@ -177,7 +177,7 @@ model ActivityLog {
 
   blockchainTx String? @db.VarChar(66)
 
-  details String? @db.VarChar(10000)
+  details String? @db.Text
 
   createdAt DateTime @default(now())
 
