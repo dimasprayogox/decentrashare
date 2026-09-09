@@ -4704,3 +4704,307 @@
 {"level":"info","message":"🗑️ Successfully unpinned: QmTestDummyHashExpiredJob","timestamp":"2026-06-07 21:27:49"}
 {"level":"info","message":"✅ Deleted expired unconfirmed document: QmTestDummyHashExpiredJob | expired-job.txt","timestamp":"2026-06-07 21:27:49"}
 {"level":"info","message":"📊 Cleanup summary: 1 cleaned, 0 failed, 0 skipped","timestamp":"2026-06-07 21:27:49"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173","timestamp":"2026-09-09 10:17:43"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\"]","timestamp":"2026-09-09 10:17:44"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:17:44"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:17:44"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:17:44"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:17:44"}
+{"clientVersion":"5.22.0","errorCode":"P1001","level":"error","message":"❌ Failed to connect to database: Can't reach database server at `103.93.160.200:5432`\n\nPlease make sure your database server is running at `103.93.160.200:5432`.","name":"PrismaClientInitializationError","stack":"PrismaClientInitializationError: Can't reach database server at `103.93.160.200:5432`\n\nPlease make sure your database server is running at `103.93.160.200:5432`.\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:112:2492)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-09-09 10:17:49"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173","timestamp":"2026-09-09 10:19:28"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\"]","timestamp":"2026-09-09 10:19:28"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:19:28"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:19:28"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:19:28"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:19:28"}
+{"clientVersion":"5.22.0","errorCode":"P1001","level":"error","message":"❌ Failed to connect to database: Can't reach database server at `localhost:5432`\n\nPlease make sure your database server is running at `localhost:5432`.","name":"PrismaClientInitializationError","stack":"PrismaClientInitializationError: Can't reach database server at `localhost:5432`\n\nPlease make sure your database server is running at `localhost:5432`.\n    at <anonymous> (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:112:2492)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-09-09 10:19:28"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\"]","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"No expired trash items found","timestamp":"2026-09-09 10:24:19"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 10:25:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:25:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:25:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 10:30:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:30:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:30:00"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:32:01"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:32:01"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:32:01"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:32:01"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-09-09 10:32:01"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173,http://localhost:4173","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\",\"http://localhost:4173\"]","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"No expired trash items found","timestamp":"2026-09-09 10:32:11"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173,http://localhost:4173","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\",\"http://localhost:4173\"]","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"No expired trash items found","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:39:01"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 10:40:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:40:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:40:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 10:45:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:45:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:45:00"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 10:50:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:50:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:50:00"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[9nfuv857v] POST /api/auth/logout","method":"POST","requestId":"9nfuv857v","timestamp":"2026-09-09 10:54:56","url":"/api/auth/logout","userAgent":"node"}
+{"duration":23,"level":"info","message":"[9nfuv857v] 401 23ms","requestId":"9nfuv857v","statusCode":401,"timestamp":"2026-09-09 10:54:57"}
+{"ip":"::1","level":"info","message":"[as8ne0yfr] GET /api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","method":"GET","requestId":"as8ne0yfr","timestamp":"2026-09-09 10:54:57","url":"/api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[AUTH] Nonce requested for wallet: 0xeaada6...","timestamp":"2026-09-09 10:54:57","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.3"}
+{"ip":"::1","level":"error","message":"[AUTH] getNonce error: \nInvalid `prisma.user.upsert()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:70:36\n\n  67 const nonce = crypto.randomBytes(16).toString('hex');\n  68 const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000);\n  69 \n→ 70 const user = await prisma.user.upsert(\nThe column `storageLimit` does not exist in the current database.","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.user.upsert()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:70:36\n\n  67 const nonce = crypto.randomBytes(16).toString('hex');\n  68 const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000);\n  69 \n→ 70 const user = await prisma.user.upsert(\nThe column `storageLimit` does not exist in the current database.\n    at handleRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:7319)\n    at handleAndLogRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6623)\n    at request (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6307)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-09-09 10:54:57","walletAddress":"0xeaada62fcfbfa9718dfbdca31caf107322318f91"}
+{"duration":86,"level":"info","message":"[as8ne0yfr] 503 86ms","requestId":"as8ne0yfr","statusCode":503,"timestamp":"2026-09-09 10:54:57"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 10:55:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:55:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:55:00"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:55:11"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:55:11"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:55:11"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:55:11"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-09-09 10:55:11"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173,http://localhost:4173","timestamp":"2026-09-09 10:55:16"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\",\"http://localhost:4173\"]","timestamp":"2026-09-09 10:55:16"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:55:16"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:55:16"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:55:16"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:55:16"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-09-09 10:55:16"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:55:17"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-09-09 10:55:17"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-09-09 10:55:17"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-09-09 10:55:17"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-09-09 10:55:17"}
+{"level":"info","message":"No expired trash items found","timestamp":"2026-09-09 10:55:17"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[55d0bwwqz] POST /api/auth/logout","method":"POST","requestId":"55d0bwwqz","timestamp":"2026-09-09 10:55:22","url":"/api/auth/logout","userAgent":"node"}
+{"duration":8,"level":"info","message":"[55d0bwwqz] 401 8ms","requestId":"55d0bwwqz","statusCode":401,"timestamp":"2026-09-09 10:55:22"}
+{"ip":"::1","level":"info","message":"[bxl7ihj29] GET /api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","method":"GET","requestId":"bxl7ihj29","timestamp":"2026-09-09 10:55:22","url":"/api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[AUTH] Nonce requested for wallet: 0xeaada6...","timestamp":"2026-09-09 10:55:22","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.3"}
+{"ip":"::1","level":"error","message":"[AUTH] getNonce error: \nInvalid `prisma.user.upsert()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:70:36\n\n  67 const nonce = crypto.randomBytes(16).toString('hex');\n  68 const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000);\n  69 \n→ 70 const user = await prisma.user.upsert(\nThe column `storageLimit` does not exist in the current database.","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.user.upsert()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:70:36\n\n  67 const nonce = crypto.randomBytes(16).toString('hex');\n  68 const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000);\n  69 \n→ 70 const user = await prisma.user.upsert(\nThe column `storageLimit` does not exist in the current database.\n    at handleRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:7319)\n    at handleAndLogRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6623)\n    at request (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6307)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-09-09 10:55:22","walletAddress":"0xeaada62fcfbfa9718dfbdca31caf107322318f91"}
+{"duration":22,"level":"info","message":"[bxl7ihj29] 503 22ms","requestId":"bxl7ihj29","statusCode":503,"timestamp":"2026-09-09 10:55:22"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:55:48"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:55:48"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:55:48"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:55:48"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-09-09 10:55:48"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173,http://localhost:4173","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\",\"http://localhost:4173\"]","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-09-09 10:57:10"}
+{"level":"info","message":"No expired trash items found","timestamp":"2026-09-09 10:57:10"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[kj343hiyx] POST /api/auth/logout","method":"POST","requestId":"kj343hiyx","timestamp":"2026-09-09 10:57:16","url":"/api/auth/logout","userAgent":"node"}
+{"duration":7,"level":"info","message":"[kj343hiyx] 401 7ms","requestId":"kj343hiyx","statusCode":401,"timestamp":"2026-09-09 10:57:16"}
+{"ip":"::1","level":"info","message":"[jxukay6n7] GET /api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","method":"GET","requestId":"jxukay6n7","timestamp":"2026-09-09 10:57:16","url":"/api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[AUTH] Nonce requested for wallet: 0xeaada6...","timestamp":"2026-09-09 10:57:16","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.3"}
+{"ip":"::1","level":"error","message":"[AUTH] getNonce error: \nInvalid `prisma.user.upsert()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:70:36\n\n  67 const nonce = crypto.randomBytes(16).toString('hex');\n  68 const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000);\n  69 \n→ 70 const user = await prisma.user.upsert(\nThe column `storageLimit` does not exist in the current database.","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.user.upsert()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:70:36\n\n  67 const nonce = crypto.randomBytes(16).toString('hex');\n  68 const nonceExpiresAt = new Date(Date.now() + 10 * 60 * 1000);\n  69 \n→ 70 const user = await prisma.user.upsert(\nThe column `storageLimit` does not exist in the current database.\n    at handleRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:7319)\n    at handleAndLogRequestError (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6623)\n    at request (/home/dimas/project/decentrashare/backend/node_modules/@prisma/client/runtime/library.js:121:6307)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-09-09 10:57:16","walletAddress":"0xeaada62fcfbfa9718dfbdca31caf107322318f91"}
+{"duration":29,"level":"info","message":"[jxukay6n7] 503 29ms","requestId":"jxukay6n7","statusCode":503,"timestamp":"2026-09-09 10:57:16"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:58:01"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:58:01"}
+{"level":"info","message":"SIGINT received, shutting down gracefully...","timestamp":"2026-09-09 10:58:01"}
+{"level":"info","message":"HTTP server closed","timestamp":"2026-09-09 10:58:01"}
+{"level":"info","message":"✅ Database disconnected successfully","timestamp":"2026-09-09 10:58:01"}
+{"level":"info","message":"[RAW CORS_ORIGIN] http://localhost:3000,http://localhost:5173,http://localhost:4173","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"[CONFIG CORS ORIGIN] [\"http://localhost:3000\",\"http://localhost:5173\",\"http://localhost:4173\"]","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"Searching expired trash items (retention: 60 days, dryRun: false)","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"Scheduled orphaned pin cleanup job: */5 * * * *","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"Scheduled expired trash cleanup job: 17 3 * * *","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"✅ Database connected successfully","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"🚀 Decentrashare API Server running on port 3000","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"🌍 Environment: Development","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"📚 API Documentation: http://localhost:3000/api","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"❤️  Health Check: http://localhost:3000/api/health","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"No expired trash items found","timestamp":"2026-09-09 10:59:03"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 10:59:03"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[p4b6qyyt9] POST /api/auth/logout","method":"POST","requestId":"p4b6qyyt9","timestamp":"2026-09-09 10:59:12","url":"/api/auth/logout","userAgent":"node"}
+{"duration":9,"level":"info","message":"[p4b6qyyt9] 401 9ms","requestId":"p4b6qyyt9","statusCode":401,"timestamp":"2026-09-09 10:59:12"}
+{"ip":"::1","level":"info","message":"[k54c6uuus] GET /api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","method":"GET","requestId":"k54c6uuus","timestamp":"2026-09-09 10:59:12","url":"/api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[AUTH] Nonce requested for wallet: 0xeaada6...","timestamp":"2026-09-09 10:59:12","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.3"}
+{"duration":52,"level":"info","message":"[k54c6uuus] 200 52ms","requestId":"k54c6uuus","statusCode":200,"timestamp":"2026-09-09 10:59:12"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[j8llx2so3] POST /api/auth/login","method":"POST","requestId":"j8llx2so3","timestamp":"2026-09-09 10:59:15","url":"/api/auth/login","userAgent":"node"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[AUTH] Login attempt for wallet: 0xeaada6...","timestamp":"2026-09-09 10:59:15"}
+{"ip":"::ffff:127.0.0.1","level":"error","message":"[AUTH] Login error: Wallet not registered. Please register first.","stack":"Error: Wallet not registered. Please register first.\n    at loginWithWallet (/home/dimas/project/decentrashare/backend/src/modules/auth/auth.service.ts:98:50)\n    at async <anonymous> (/home/dimas/project/decentrashare/backend/src/modules/auth/auth.controller.ts:102:49)\n    at processTicksAndRejections (native:7:39)","timestamp":"2026-09-09 10:59:15","walletAddress":"0xeaada6..."}
+{"duration":18,"level":"info","message":"[j8llx2so3] 404 18ms","requestId":"j8llx2so3","statusCode":404,"timestamp":"2026-09-09 10:59:15"}
+{"ip":"::1","level":"info","message":"[u4rpodnjj] GET /api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","method":"GET","requestId":"u4rpodnjj","timestamp":"2026-09-09 10:59:32","url":"/api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[AUTH] Nonce requested for wallet: 0xeaada6...","timestamp":"2026-09-09 10:59:32","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.3"}
+{"duration":19,"level":"info","message":"[u4rpodnjj] 200 19ms","requestId":"u4rpodnjj","statusCode":200,"timestamp":"2026-09-09 10:59:32"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[5ypc5h6rt] POST /api/auth/register","method":"POST","requestId":"5ypc5h6rt","timestamp":"2026-09-09 10:59:34","url":"/api/auth/register","userAgent":"node"}
+{"email":"tes@example.com","ip":"::ffff:127.0.0.1","level":"info","message":"[AUTH] Register attempt for wallet: 0xeaada6...","timestamp":"2026-09-09 10:59:34","username":"tes"}
+{"level":"info","message":"[AUTH] New user registered: 0xeaada62fcfbfa9718dfbdca31caf107322318f91","timestamp":"2026-09-09 10:59:34"}
+{"level":"info","message":"📁 Created Pinata group \"user-0b69170d-1871-4d96-b758-464b1fcaed56-tes\" for newly registered user 0b69170d-1871-4d96-b758-464b1fcaed56","timestamp":"2026-09-09 10:59:35"}
+{"level":"info","message":"Pinata group ready for user 0b69170d-1871-4d96-b758-464b1fcaed56: 23e08341-edce-45a6-abba-457b443fe804","timestamp":"2026-09-09 10:59:35"}
+{"duration":1682,"level":"info","message":"[5ypc5h6rt] 201 1682ms","requestId":"5ypc5h6rt","statusCode":201,"timestamp":"2026-09-09 10:59:35"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[5nkope2hs] GET /api/documents/me/storage-usage","method":"GET","requestId":"5nkope2hs","timestamp":"2026-09-09 10:59:37","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":45,"level":"info","message":"[5nkope2hs] 200 45ms","requestId":"5nkope2hs","statusCode":200,"timestamp":"2026-09-09 10:59:37"}
+{"ip":"::1","level":"info","message":"[pvi1l3k1k] GET /api/users/me","method":"GET","requestId":"pvi1l3k1k","timestamp":"2026-09-09 10:59:38","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":13,"level":"info","message":"[pvi1l3k1k] 200 13ms","requestId":"pvi1l3k1k","statusCode":200,"timestamp":"2026-09-09 10:59:38"}
+{"ip":"::1","level":"info","message":"[r3948gzzk] GET /api/users/me","method":"GET","requestId":"r3948gzzk","timestamp":"2026-09-09 10:59:38","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":15,"level":"info","message":"[r3948gzzk] 304 15ms","requestId":"r3948gzzk","statusCode":304,"timestamp":"2026-09-09 10:59:38"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[2voz0d9cd] GET /api/documents/me/storage-usage","method":"GET","requestId":"2voz0d9cd","timestamp":"2026-09-09 10:59:41","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":17,"level":"info","message":"[2voz0d9cd] 200 17ms","requestId":"2voz0d9cd","statusCode":200,"timestamp":"2026-09-09 10:59:41"}
+{"ip":"::1","level":"info","message":"[qdl0vow9n] GET /api/folders","method":"GET","requestId":"qdl0vow9n","timestamp":"2026-09-09 10:59:42","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[gkqfarecd] GET /api/documents","method":"GET","requestId":"gkqfarecd","timestamp":"2026-09-09 10:59:42","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[gm1k1dw4m] GET /api/users/me","method":"GET","requestId":"gm1k1dw4m","timestamp":"2026-09-09 10:59:42","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":34,"level":"info","message":"[gkqfarecd] 200 34ms","requestId":"gkqfarecd","statusCode":200,"timestamp":"2026-09-09 10:59:42"}
+{"duration":69,"level":"info","message":"[qdl0vow9n] 200 69ms","requestId":"qdl0vow9n","statusCode":200,"timestamp":"2026-09-09 10:59:42"}
+{"duration":24,"level":"info","message":"[gm1k1dw4m] 304 24ms","requestId":"gm1k1dw4m","statusCode":304,"timestamp":"2026-09-09 10:59:42"}
+{"ip":"::1","level":"info","message":"[p6nvdpw2t] GET /api/folders","method":"GET","requestId":"p6nvdpw2t","timestamp":"2026-09-09 10:59:42","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[b334vatxp] GET /api/documents","method":"GET","requestId":"b334vatxp","timestamp":"2026-09-09 10:59:42","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":20,"level":"info","message":"[b334vatxp] 304 20ms","requestId":"b334vatxp","statusCode":304,"timestamp":"2026-09-09 10:59:42"}
+{"duration":27,"level":"info","message":"[p6nvdpw2t] 304 27ms","requestId":"p6nvdpw2t","statusCode":304,"timestamp":"2026-09-09 10:59:42"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[1ou528n24] GET /api/documents/me/storage-usage","method":"GET","requestId":"1ou528n24","timestamp":"2026-09-09 10:59:49","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":11,"level":"info","message":"[1ou528n24] 200 11ms","requestId":"1ou528n24","statusCode":200,"timestamp":"2026-09-09 10:59:49"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 11:00:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 11:00:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 11:00:00"}
+{"ip":"::1","level":"info","message":"[h6be0aanj] POST /api/documents/check-hashes-onchain","method":"POST","requestId":"h6be0aanj","timestamp":"2026-09-09 11:00:13","url":"/api/documents/check-hashes-onchain","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":484,"level":"info","message":"[h6be0aanj] 200 484ms","requestId":"h6be0aanj","statusCode":200,"timestamp":"2026-09-09 11:00:14"}
+{"ip":"::1","level":"info","message":"[3cotjhsne] GET /api/documents/me/storage-usage","method":"GET","requestId":"3cotjhsne","timestamp":"2026-09-09 11:00:15","url":"/api/documents/me/storage-usage","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":25,"level":"info","message":"[3cotjhsne] 200 25ms","requestId":"3cotjhsne","statusCode":200,"timestamp":"2026-09-09 11:00:15"}
+{"ip":"::1","level":"info","message":"[kep8gl5jl] POST /api/documents/upload","method":"POST","requestId":"kep8gl5jl","timestamp":"2026-09-09 11:00:15","url":"/api/documents/upload","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":5115,"level":"info","message":"[kep8gl5jl] 201 5115ms","requestId":"kep8gl5jl","statusCode":201,"timestamp":"2026-09-09 11:00:20"}
+{"ip":"::1","level":"info","message":"[3rodxjide] POST /api/documents/batch/trigger-blockchain","method":"POST","requestId":"3rodxjide","timestamp":"2026-09-09 11:00:20","url":"/api/documents/batch/trigger-blockchain","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"level":"info","message":"🔍 Batch pre-check result Filtered: 1 new, 0 already on-chain","newItems":1,"skipped":0,"timestamp":"2026-09-09 11:00:21","totalRequested":1}
+{"duration":178,"level":"info","message":"[3rodxjide] 200 178ms","requestId":"3rodxjide","statusCode":200,"timestamp":"2026-09-09 11:00:21"}
+{"ip":"::1","level":"info","message":"[yhz0dvf6i] POST /api/documents/batch/confirm-complete","method":"POST","requestId":"yhz0dvf6i","timestamp":"2026-09-09 11:00:53","url":"/api/documents/batch/confirm-complete","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"count":1,"documentIds":["21476217-4713-4a99-842f-49d41db5d6e5"],"level":"info","message":"🔗 Batch confirm request","timestamp":"2026-09-09 11:00:53","txHash":"0xa8c7731864a862ab9dea837d273d342eaff51203ea778af9206c202e1746dd64","userId":"0b69170d-1871-4d96-b758-464b1fcaed56"}
+{"docsBefore":[{"createdAt":"2026-09-09T04:00:20.792Z","id":"21476217-4713-4a99-842f-49d41db5d6e5","isOnChain":false}],"level":"debug","message":"📋 Documents before update","timestamp":"2026-09-09 11:00:53"}
+{"count":1,"expected":1,"level":"info","message":"📊 Update result","timestamp":"2026-09-09 11:00:53"}
+{"docsAfter":[{"blockchainTx":"0xa8c7731864a862ab9dea837d273d342eaff51203ea778af9206c202e1746dd64","id":"21476217-4713-4a99-842f-49d41db5d6e5","isOnChain":true,"title":"avatir"}],"level":"debug","message":"📋 Documents after update","timestamp":"2026-09-09 11:00:53"}
+{"duration":106,"level":"info","message":"[yhz0dvf6i] 200 106ms","requestId":"yhz0dvf6i","statusCode":200,"timestamp":"2026-09-09 11:00:53"}
+{"ip":"::1","level":"info","message":"[w18ah2esc] GET /api/folders","method":"GET","requestId":"w18ah2esc","timestamp":"2026-09-09 11:00:53","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[3l87jxcl7] GET /api/documents","method":"GET","requestId":"3l87jxcl7","timestamp":"2026-09-09 11:00:53","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":14,"level":"info","message":"[3l87jxcl7] 200 14ms","requestId":"3l87jxcl7","statusCode":200,"timestamp":"2026-09-09 11:00:53"}
+{"duration":19,"level":"info","message":"[w18ah2esc] 304 19ms","requestId":"w18ah2esc","statusCode":304,"timestamp":"2026-09-09 11:00:53"}
+{"ip":"::1","level":"info","message":"[xkfcr7rqk] GET /api/documents/21476217-4713-4a99-842f-49d41db5d6e5/preview","method":"GET","requestId":"xkfcr7rqk","timestamp":"2026-09-09 11:00:58","url":"/api/documents/21476217-4713-4a99-842f-49d41db5d6e5/preview","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"documentId":"21476217-4713-4a99-842f-49d41db5d6e5","error":"\nInvalid `prisma.activityLog.create()` invocation in\n/home/dimas/project/decentrashare/backend/src/modules/document/document.service.ts:181:30\n\n  178   ipfsHash: string\n  179 ) => {\n  180   try {\n→ 181     await prisma.activityLog.create({\n            data: {\n              userId: \"0b69170d-1871-4d96-b758-464b1fcaed56\",\n              action: \"DOWNLOAD\",\n              entityType: \"DOCUMENT\",\n              entityId: \"21476217-4713-4a99-842f-49d41db5d6e5\",\n              entityName: \"avatir\",\n              ipfsHash: \"bafybeidgsbnvvojy7xw4ichcfkojqbs4s2hkqpiirymbvp2ai3oo5nyqyi\",\n              ~~~~~~~~\n              details: \"File downloaded: avatir\",\n          ?   id?: String,\n          ?   blockchainTx?: String | Null,\n          ?   createdAt?: DateTime\n            }\n          })\n\nUnknown argument `ipfsHash`. Available options are marked with ?.","level":"error","message":"❌ Failed to log download activity","timestamp":"2026-09-09 11:01:03"}
+{"duration":7240,"level":"info","message":"[xkfcr7rqk] 200 7240ms","requestId":"xkfcr7rqk","statusCode":200,"timestamp":"2026-09-09 11:01:05"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[k6menbb51] GET /api/documents/me/storage-usage","method":"GET","requestId":"k6menbb51","timestamp":"2026-09-09 11:04:42","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":36,"level":"info","message":"[k6menbb51] 200 36ms","requestId":"k6menbb51","statusCode":200,"timestamp":"2026-09-09 11:04:42"}
+{"ip":"::1","level":"info","message":"[fzdjlit4j] GET /api/users/me","method":"GET","requestId":"fzdjlit4j","timestamp":"2026-09-09 11:04:43","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[9d6wkmf9a] GET /api/folders","method":"GET","requestId":"9d6wkmf9a","timestamp":"2026-09-09 11:04:43","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[iz6javq7g] GET /api/documents","method":"GET","requestId":"iz6javq7g","timestamp":"2026-09-09 11:04:43","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":16,"level":"info","message":"[fzdjlit4j] 200 16ms","requestId":"fzdjlit4j","statusCode":200,"timestamp":"2026-09-09 11:04:43"}
+{"ip":"::1","level":"info","message":"[pg0kkvahp] GET /api/users/me","method":"GET","requestId":"pg0kkvahp","timestamp":"2026-09-09 11:04:43","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":32,"level":"info","message":"[iz6javq7g] 304 32ms","requestId":"iz6javq7g","statusCode":304,"timestamp":"2026-09-09 11:04:43"}
+{"duration":11,"level":"info","message":"[pg0kkvahp] 304 11ms","requestId":"pg0kkvahp","statusCode":304,"timestamp":"2026-09-09 11:04:43"}
+{"ip":"::1","level":"info","message":"[sixy7ij3v] GET /api/documents","method":"GET","requestId":"sixy7ij3v","timestamp":"2026-09-09 11:04:43","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":55,"level":"info","message":"[9d6wkmf9a] 304 55ms","requestId":"9d6wkmf9a","statusCode":304,"timestamp":"2026-09-09 11:04:43"}
+{"duration":14,"level":"info","message":"[sixy7ij3v] 304 14ms","requestId":"sixy7ij3v","statusCode":304,"timestamp":"2026-09-09 11:04:43"}
+{"ip":"::1","level":"info","message":"[5i074ld4x] GET /api/folders","method":"GET","requestId":"5i074ld4x","timestamp":"2026-09-09 11:04:43","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":12,"level":"info","message":"[5i074ld4x] 304 12ms","requestId":"5i074ld4x","statusCode":304,"timestamp":"2026-09-09 11:04:43"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[teqeimbxl] GET /api/documents/me/storage-usage","method":"GET","requestId":"teqeimbxl","timestamp":"2026-09-09 11:04:46","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":7,"level":"info","message":"[teqeimbxl] 200 7ms","requestId":"teqeimbxl","statusCode":200,"timestamp":"2026-09-09 11:04:46"}
+{"ip":"::1","level":"info","message":"[61zj284fb] GET /api/users/me","method":"GET","requestId":"61zj284fb","timestamp":"2026-09-09 11:04:48","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":4,"level":"info","message":"[61zj284fb] 304 4ms","requestId":"61zj284fb","statusCode":304,"timestamp":"2026-09-09 11:04:48"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[2zs9tdxwv] GET /api/documents/me/storage-usage","method":"GET","requestId":"2zs9tdxwv","timestamp":"2026-09-09 11:04:52","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":7,"level":"info","message":"[2zs9tdxwv] 200 7ms","requestId":"2zs9tdxwv","statusCode":200,"timestamp":"2026-09-09 11:04:52"}
+{"ip":"::1","level":"info","message":"[qya6dcu74] GET /api/users/me","method":"GET","requestId":"qya6dcu74","timestamp":"2026-09-09 11:04:52","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":4,"level":"info","message":"[qya6dcu74] 304 4ms","requestId":"qya6dcu74","statusCode":304,"timestamp":"2026-09-09 11:04:52"}
+{"ip":"::1","level":"info","message":"[ub8igcdsf] GET /api/users/me","method":"GET","requestId":"ub8igcdsf","timestamp":"2026-09-09 11:04:52","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":7,"level":"info","message":"[ub8igcdsf] 304 7ms","requestId":"ub8igcdsf","statusCode":304,"timestamp":"2026-09-09 11:04:52"}
+{"level":"info","message":"Starting orphaned pin cleanup job...","timestamp":"2026-09-09 11:05:00"}
+{"level":"info","message":"🔍 Searching for orphaned pins (TTL: 24h, dryRun: false)","timestamp":"2026-09-09 11:05:00"}
+{"level":"info","message":"✅ No orphaned pins found","timestamp":"2026-09-09 11:05:00"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[byjtd9oqf] GET /api/documents/me/storage-usage","method":"GET","requestId":"byjtd9oqf","timestamp":"2026-09-09 11:05:15","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":9,"level":"info","message":"[byjtd9oqf] 200 9ms","requestId":"byjtd9oqf","statusCode":200,"timestamp":"2026-09-09 11:05:15"}
+{"ip":"::1","level":"info","message":"[z5uo4ow38] GET /api/users/me","method":"GET","requestId":"z5uo4ow38","timestamp":"2026-09-09 11:05:15","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":4,"level":"info","message":"[z5uo4ow38] 304 4ms","requestId":"z5uo4ow38","statusCode":304,"timestamp":"2026-09-09 11:05:15"}
+{"ip":"::1","level":"info","message":"[h2u8rvr6a] GET /api/users/me","method":"GET","requestId":"h2u8rvr6a","timestamp":"2026-09-09 11:05:15","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":10,"level":"info","message":"[h2u8rvr6a] 304 10ms","requestId":"h2u8rvr6a","statusCode":304,"timestamp":"2026-09-09 11:05:15"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[h7cl5ai67] GET /api/documents/me/storage-usage","method":"GET","requestId":"h7cl5ai67","timestamp":"2026-09-09 11:05:16","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":7,"level":"info","message":"[h7cl5ai67] 200 7ms","requestId":"h7cl5ai67","statusCode":200,"timestamp":"2026-09-09 11:05:16"}
+{"ip":"::1","level":"info","message":"[pmini8dfy] GET /api/documents/logs?limit=50","method":"GET","requestId":"pmini8dfy","timestamp":"2026-09-09 11:05:18","url":"/api/documents/logs?limit=50","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":9,"level":"info","message":"[pmini8dfy] 200 9ms","requestId":"pmini8dfy","statusCode":200,"timestamp":"2026-09-09 11:05:18"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[lt0x7z8qh] GET /api/documents/me/storage-usage","method":"GET","requestId":"lt0x7z8qh","timestamp":"2026-09-09 11:05:21","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":8,"level":"info","message":"[lt0x7z8qh] 200 8ms","requestId":"lt0x7z8qh","statusCode":200,"timestamp":"2026-09-09 11:05:21"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[huha0h9eu] GET /api/documents/me/storage-usage","method":"GET","requestId":"huha0h9eu","timestamp":"2026-09-09 11:05:23","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":4,"level":"info","message":"[huha0h9eu] 200 4ms","requestId":"huha0h9eu","statusCode":200,"timestamp":"2026-09-09 11:05:23"}
+{"ip":"::1","level":"info","message":"[9ao0g276n] GET /api/users/me","method":"GET","requestId":"9ao0g276n","timestamp":"2026-09-09 11:05:24","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":3,"level":"info","message":"[9ao0g276n] 304 3ms","requestId":"9ao0g276n","statusCode":304,"timestamp":"2026-09-09 11:05:24"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[cqtw7nts6] POST /api/auth/logout","method":"POST","requestId":"cqtw7nts6","timestamp":"2026-09-09 11:05:26","url":"/api/auth/logout","userAgent":"node"}
+{"level":"info","message":"[AUTH] User logged out: 0b69170d-1871-4d96-b758-464b1fcaed56","timestamp":"2026-09-09 11:05:26"}
+{"duration":9,"level":"info","message":"[cqtw7nts6] 200 9ms","requestId":"cqtw7nts6","statusCode":200,"timestamp":"2026-09-09 11:05:26"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[cllumlm3p] POST /api/auth/logout","method":"POST","requestId":"cllumlm3p","timestamp":"2026-09-09 11:05:27","url":"/api/auth/logout","userAgent":"node"}
+{"duration":1,"level":"info","message":"[cllumlm3p] 401 1ms","requestId":"cllumlm3p","statusCode":401,"timestamp":"2026-09-09 11:05:27"}
+{"ip":"::1","level":"info","message":"[mlegnbqnh] GET /api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","method":"GET","requestId":"mlegnbqnh","timestamp":"2026-09-09 11:05:27","url":"/api/auth/nonce/0xeaada62fcfbfa9718dfbdca31caf107322318f91","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[AUTH] Nonce requested for wallet: 0xeaada6...","timestamp":"2026-09-09 11:05:27","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.3"}
+{"duration":9,"level":"info","message":"[mlegnbqnh] 200 9ms","requestId":"mlegnbqnh","statusCode":200,"timestamp":"2026-09-09 11:05:27"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[n0i5s21wy] POST /api/auth/login","method":"POST","requestId":"n0i5s21wy","timestamp":"2026-09-09 11:05:32","url":"/api/auth/login","userAgent":"node"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[AUTH] Login attempt for wallet: 0xeaada6...","timestamp":"2026-09-09 11:05:32"}
+{"level":"info","message":"[AUTH] Login success for wallet: 0xeaada62fcfbfa9718dfbdca31caf107322318f91","timestamp":"2026-09-09 11:05:32"}
+{"duration":83,"level":"info","message":"[n0i5s21wy] 200 83ms","requestId":"n0i5s21wy","statusCode":200,"timestamp":"2026-09-09 11:05:32"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[vx1w2o1di] GET /api/documents/me/storage-usage","method":"GET","requestId":"vx1w2o1di","timestamp":"2026-09-09 11:05:33","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":10,"level":"info","message":"[vx1w2o1di] 200 10ms","requestId":"vx1w2o1di","statusCode":200,"timestamp":"2026-09-09 11:05:33"}
+{"ip":"::1","level":"info","message":"[whichmdic] GET /api/users/me","method":"GET","requestId":"whichmdic","timestamp":"2026-09-09 11:05:33","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[gfs1liqo9] GET /api/folders","method":"GET","requestId":"gfs1liqo9","timestamp":"2026-09-09 11:05:33","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[fyblh2veo] GET /api/documents","method":"GET","requestId":"fyblh2veo","timestamp":"2026-09-09 11:05:33","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":7,"level":"info","message":"[whichmdic] 200 7ms","requestId":"whichmdic","statusCode":200,"timestamp":"2026-09-09 11:05:33"}
+{"ip":"::1","level":"info","message":"[v4ur4wm66] GET /api/users/me","method":"GET","requestId":"v4ur4wm66","timestamp":"2026-09-09 11:05:33","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":11,"level":"info","message":"[fyblh2veo] 304 11ms","requestId":"fyblh2veo","statusCode":304,"timestamp":"2026-09-09 11:05:33"}
+{"duration":14,"level":"info","message":"[gfs1liqo9] 304 14ms","requestId":"gfs1liqo9","statusCode":304,"timestamp":"2026-09-09 11:05:33"}
+{"duration":18,"level":"info","message":"[v4ur4wm66] 304 18ms","requestId":"v4ur4wm66","statusCode":304,"timestamp":"2026-09-09 11:05:33"}
+{"ip":"::1","level":"info","message":"[axvdug8u0] GET /api/documents","method":"GET","requestId":"axvdug8u0","timestamp":"2026-09-09 11:05:33","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[6g2clhmod] GET /api/folders","method":"GET","requestId":"6g2clhmod","timestamp":"2026-09-09 11:05:33","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":16,"level":"info","message":"[axvdug8u0] 304 16ms","requestId":"axvdug8u0","statusCode":304,"timestamp":"2026-09-09 11:05:33"}
+{"duration":17,"level":"info","message":"[6g2clhmod] 304 17ms","requestId":"6g2clhmod","statusCode":304,"timestamp":"2026-09-09 11:05:33"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[ojoj4wyaw] GET /api/documents/me/storage-usage","method":"GET","requestId":"ojoj4wyaw","timestamp":"2026-09-09 11:05:35","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":11,"level":"info","message":"[ojoj4wyaw] 200 11ms","requestId":"ojoj4wyaw","statusCode":200,"timestamp":"2026-09-09 11:05:35"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[gkqybp3cy] GET /api/documents/me/storage-usage","method":"GET","requestId":"gkqybp3cy","timestamp":"2026-09-09 11:05:37","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":7,"level":"info","message":"[gkqybp3cy] 200 7ms","requestId":"gkqybp3cy","statusCode":200,"timestamp":"2026-09-09 11:05:37"}
+{"ip":"::1","level":"info","message":"[h5k5cylhm] GET /api/admin/users?page=1&limit=20","method":"GET","requestId":"h5k5cylhm","timestamp":"2026-09-09 11:05:37","url":"/api/admin/users?page=1&limit=20","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":33,"level":"info","message":"[h5k5cylhm] 200 33ms","requestId":"h5k5cylhm","statusCode":200,"timestamp":"2026-09-09 11:05:37"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[purqcfgwc] GET /api/documents/me/storage-usage","method":"GET","requestId":"purqcfgwc","timestamp":"2026-09-09 11:05:38","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":9,"level":"info","message":"[purqcfgwc] 200 9ms","requestId":"purqcfgwc","statusCode":200,"timestamp":"2026-09-09 11:05:38"}
+{"ip":"::1","level":"info","message":"[igmkzkcrr] GET /api/admin/users?page=1&limit=20","method":"GET","requestId":"igmkzkcrr","timestamp":"2026-09-09 11:05:38","url":"/api/admin/users?page=1&limit=20","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":12,"level":"info","message":"[igmkzkcrr] 304 12ms","requestId":"igmkzkcrr","statusCode":304,"timestamp":"2026-09-09 11:05:38"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[q29wrarff] GET /api/documents/me/storage-usage","method":"GET","requestId":"q29wrarff","timestamp":"2026-09-09 11:05:41","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":7,"level":"info","message":"[q29wrarff] 200 7ms","requestId":"q29wrarff","statusCode":200,"timestamp":"2026-09-09 11:05:41"}
+{"ip":"::ffff:127.0.0.1","level":"info","message":"[aq6x1ccwe] GET /api/documents/me/storage-usage","method":"GET","requestId":"aq6x1ccwe","timestamp":"2026-09-09 11:05:42","url":"/api/documents/me/storage-usage","userAgent":"node"}
+{"duration":4,"level":"info","message":"[aq6x1ccwe] 200 4ms","requestId":"aq6x1ccwe","statusCode":200,"timestamp":"2026-09-09 11:05:42"}
+{"ip":"::1","level":"info","message":"[b65rdjkzw] GET /api/folders","method":"GET","requestId":"b65rdjkzw","timestamp":"2026-09-09 11:05:42","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[44k4phjx7] GET /api/documents","method":"GET","requestId":"44k4phjx7","timestamp":"2026-09-09 11:05:42","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[f97h4i3tz] GET /api/users/me","method":"GET","requestId":"f97h4i3tz","timestamp":"2026-09-09 11:05:42","url":"/api/users/me","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":16,"level":"info","message":"[44k4phjx7] 304 16ms","requestId":"44k4phjx7","statusCode":304,"timestamp":"2026-09-09 11:05:42"}
+{"duration":21,"level":"info","message":"[b65rdjkzw] 304 21ms","requestId":"b65rdjkzw","statusCode":304,"timestamp":"2026-09-09 11:05:42"}
+{"duration":14,"level":"info","message":"[f97h4i3tz] 304 14ms","requestId":"f97h4i3tz","statusCode":304,"timestamp":"2026-09-09 11:05:42"}
+{"ip":"::1","level":"info","message":"[iidffzvf0] GET /api/documents","method":"GET","requestId":"iidffzvf0","timestamp":"2026-09-09 11:05:42","url":"/api/documents","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"[hu77z83lx] GET /api/folders","method":"GET","requestId":"hu77z83lx","timestamp":"2026-09-09 11:05:42","url":"/api/folders","userAgent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"}
+{"duration":7,"level":"info","message":"[iidffzvf0] 304 7ms","requestId":"iidffzvf0","statusCode":304,"timestamp":"2026-09-09 11:05:42"}
+{"duration":18,"level":"info","message":"[hu77z83lx] 304 18ms","requestId":"hu77z83lx","statusCode":304,"timestamp":"2026-09-09 11:05:42"}
