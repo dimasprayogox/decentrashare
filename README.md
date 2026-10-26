@@ -39,25 +39,39 @@ Key Features
 Screenshots
 Add genuine screenshots captured from the running application to docs/screenshots/. The image paths below are ready to use once those files are added. Do not replace them with illustrative mockups if the goal is to show the actual application.
 
-File Manager
+
+## Screenshots
+
+### Landing Page
 <p align="center">
-  <img src="docs/screenshots/file-manager.png" alt="DecentraShare file manager showing the user's files and folders" width="90%" />
+  <img src="docs/screenshots/hero.png" alt="DecentraShare landing page" width="100%" />
 </p>
 
-Wallet Authentication
+### File Manager
 <p align="center">
-  <img src="docs/screenshots/wallet-authentication.png" alt="DecentraShare wallet authentication screen" width="90%" />
+  <img src="docs/screenshots/file-manager.png" alt="DecentraShare file manager" width="100%" />
 </p>
 
-File Details & Verification
+### Document Preview
 <p align="center">
-  <img src="docs/screenshots/file-verification.png" alt="DecentraShare file details and blockchain verification information" width="90%" />
+  <img src="docs/screenshots/document-preview.png" alt="Document preview in DecentraShare" width="100%" />
 </p>
 
-Sharing & Access Control
+### Wallet Activity
 <p align="center">
-  <img src="docs/screenshots/sharing-permissions.png" alt="DecentraShare file sharing and permission settings" width="90%" />
+  <img src="docs/screenshots/wallet-activity.png" alt="Wallet activity in DecentraShare" width="100%" />
 </p>
+
+### MetaMask Transaction Request
+<p align="center">
+  <img src="docs/screenshots/metamask-transaction.png" alt="MetaMask transaction confirmation request" width="80%" />
+</p>
+
+### Smart Contract on Etherscan
+<p align="center">
+  <img src="docs/screenshots/etherscan-contract.png" alt="DecentraShare smart contract on Etherscan" width="100%" />
+</p>
+
 
 How It Works
 1. Authenticate — the user connects an EVM wallet and signs a nonce-based challenge.
